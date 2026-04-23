@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, TextInput, StyleSheet } from 'react-native';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
-import { spacing, radius } from '../theme/spacing';
+import { radius } from '../theme/spacing';
+import { Caption } from './ui/text';
+import { Chip } from './ui/Chip';
 
 export function AccordChips({
   value,
@@ -15,8 +17,7 @@ export function AccordChips({
 
   function add() {
     const a = draft.trim().toLowerCase();
-    if (!a) return;
-    if (value.includes(a)) {
+    if (!a || value.includes(a)) {
       setDraft('');
       return;
     }
@@ -29,50 +30,48 @@ export function AccordChips({
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Accords</Text>
-      <View style={styles.chips}>
+    <View>
+      <Caption style={{ marginBottom: 10 }}>Accords</Caption>
+      <View style={styles.box}>
         {value.map((a) => (
-          <Pressable key={a} onPress={() => remove(a)} style={styles.chip}>
-            <Text style={styles.chipText}>{a} ×</Text>
-          </Pressable>
+          <Chip key={a} label={a} size="sm" onRemove={() => remove(a)} />
         ))}
+        <TextInput
+          value={draft}
+          onChangeText={setDraft}
+          onSubmitEditing={add}
+          placeholder={value.length === 0 ? 'Type a note and press return' : '+ add'}
+          placeholderTextColor={colors.textMuted}
+          returnKeyType="done"
+          blurOnSubmit={false}
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={styles.input}
+        />
       </View>
-      <TextInput
-        style={styles.input}
-        placeholder="Add an accord (press enter)"
-        placeholderTextColor={colors.textMuted}
-        value={draft}
-        onChangeText={setDraft}
-        onSubmitEditing={add}
-        returnKeyType="done"
-        autoCapitalize="none"
-      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { marginVertical: spacing.md },
-  label: { ...typography.caption, color: colors.textDim, marginBottom: spacing.xs },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.sm },
-  chip: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceElevated,
+  box: {
+    minHeight: 56,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    borderRadius: radius.sm,
+    padding: 10,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    alignItems: 'center',
   },
-  chipText: { ...typography.bodyDim, color: colors.text },
   input: {
     ...typography.body,
+    fontSize: 13,
     color: colors.text,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    minWidth: 120,
+    flexGrow: 1,
+    padding: 0,
   },
 });

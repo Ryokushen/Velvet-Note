@@ -1,8 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { CONCENTRATIONS, type Concentration } from '../types/fragrance';
 import { colors } from '../theme/colors';
-import { typography } from '../theme/typography';
-import { spacing, radius } from '../theme/spacing';
+import { Caption } from './ui/text';
 
 export function ConcentrationPicker({
   value,
@@ -12,8 +11,8 @@ export function ConcentrationPicker({
   onChange: (v: Concentration) => void;
 }) {
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Concentration</Text>
+    <View>
+      <Caption style={{ marginBottom: 10 }}>Concentration</Caption>
       <View style={styles.row}>
         {CONCENTRATIONS.map((c) => {
           const selected = value === c;
@@ -21,9 +20,22 @@ export function ConcentrationPicker({
             <Pressable
               key={c}
               onPress={() => onChange(c)}
-              style={[styles.pill, selected && styles.pillSelected]}
+              style={[
+                styles.pill,
+                {
+                  backgroundColor: selected ? colors.accentMuted : 'transparent',
+                  borderColor: selected ? colors.accent : colors.border,
+                },
+              ]}
             >
-              <Text style={[styles.text, selected && styles.textSelected]}>{c}</Text>
+              <Text
+                style={[
+                  styles.label,
+                  { color: selected ? colors.text : colors.textDim },
+                ]}
+              >
+                {c}
+              </Text>
             </Pressable>
           );
         })}
@@ -33,18 +45,12 @@ export function ConcentrationPicker({
 }
 
 const styles = StyleSheet.create({
-  container: { marginVertical: spacing.md },
-  label: { ...typography.caption, color: colors.textDim, marginBottom: spacing.xs },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: colors.border,
   },
-  pillSelected: { backgroundColor: colors.accentMuted, borderColor: colors.accent },
-  text: { ...typography.bodyDim, color: colors.textDim },
-  textSelected: { color: colors.text },
+  label: { fontSize: 12, letterSpacing: 0.6 },
 });

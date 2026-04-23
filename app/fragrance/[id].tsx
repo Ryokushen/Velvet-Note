@@ -8,20 +8,29 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   useFragrancesQuery,
   useUpdateFragrance,
   useDeleteFragrance,
 } from '../../hooks/useFragrances';
-import { RatingSlider } from '../../components/RatingSlider';
 import { AccordChips } from '../../components/AccordChips';
 import { ConcentrationPicker } from '../../components/ConcentrationPicker';
+import { RatingDots } from '../../components/ui/RatingDots';
+import { RatingNumeral } from '../../components/ui/RatingNumeral';
+import { NotesRows } from '../../components/ui/NotesRows';
+import { GhostButton } from '../../components/ui/Button';
+import { Caption, Serif } from '../../components/ui/text';
+import { SectionDivider } from '../../components/ui/SectionDivider';
+import { IconChevronLeft } from '../../components/ui/Icon';
 import type { Concentration } from '../../types/fragrance';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { spacing, radius } from '../../theme/spacing';
+import { radius } from '../../theme/spacing';
 
 export default function Detail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,7 +45,7 @@ export default function Detail() {
   const [name, setName] = useState('');
   const [concentration, setConcentration] = useState<Concentration | null>(null);
   const [accords, setAccords] = useState<string[]>([]);
-  const [rating, setRating] = useState(5);
+  const [rating, setRating] = useState(0);
 
   useEffect(() => {
     if (!fragrance) return;
@@ -44,14 +53,14 @@ export default function Detail() {
     setName(fragrance.name);
     setConcentration(fragrance.concentration);
     setAccords(fragrance.accords);
-    setRating(fragrance.rating ?? 5);
+    setRating(fragrance.rating ?? 0);
   }, [fragrance?.id]);
 
   if (!fragrance) {
     return (
-      <View style={styles.center}>
+      <SafeAreaView style={styles.center} edges={['top']}>
         <ActivityIndicator color={colors.accent} />
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -68,7 +77,7 @@ export default function Detail() {
           name: name.trim(),
           concentration,
           accords,
-          rating,
+          rating: rating > 0 ? rating : null,
         },
       });
       setEditing(false);
@@ -79,17 +88,17 @@ export default function Detail() {
 
   function confirmDelete() {
     Alert.alert(
-      'Delete fragrance',
+      'Remove from shelf',
       `Remove ${fragrance!.brand} ${fragrance!.name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Remove',
           style: 'destructive',
           onPress: async () => {
             try {
               await del.mutateAsync(fragrance!.id);
-              router.replace('/(tabs)' as never);
+              router.replace('/' as never);
             } catch (e: any) {
               Alert.alert('Could not delete', e.message ?? 'Unknown error');
             }
@@ -101,118 +110,152 @@ export default function Detail() {
 
   if (editing) {
     return (
-      <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
-        <Text style={styles.fieldLabel}>Brand</Text>
-        <TextInput style={styles.input} value={brand} onChangeText={setBrand} />
-        <Text style={styles.fieldLabel}>Name</Text>
-        <TextInput style={styles.input} value={name} onChangeText={setName} />
-        <ConcentrationPicker value={concentration} onChange={setConcentration} />
-        <AccordChips value={accords} onChange={setAccords} />
-        <RatingSlider value={rating} onChange={setRating} />
-
-        <Pressable style={styles.primary} onPress={save} disabled={update.isPending}>
-          {update.isPending ? (
-            <ActivityIndicator color={colors.text} />
-          ) : (
-            <Text style={styles.primaryText}>Save changes</Text>
-          )}
-        </Pressable>
-        <Pressable style={styles.secondary} onPress={() => setEditing(false)}>
-          <Text style={styles.secondaryText}>Cancel</Text>
-        </Pressable>
-      </ScrollView>
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <Pressable onPress={() => setEditing(false)} style={styles.headerAction}>
+            <Text style={styles.headerText}>Cancel</Text>
+          </Pressable>
+          <Caption tone="dim">Editing</Caption>
+          <Pressable onPress={save} style={styles.headerAction} disabled={update.isPending}>
+            <Text style={[styles.headerText, styles.headerSave]}>Save</Text>
+          </Pressable>
+        </View>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ScrollView
+            contentContainerStyle={styles.editScroll}
+            keyboardShouldPersistTaps="handled"
+          >
+            <EditField label="Brand" value={brand} onChangeText={setBrand} />
+            <EditField label="Name" value={name} onChangeText={setName} serif />
+            <ConcentrationPicker value={concentration} onChange={setConcentration} />
+            <AccordChips value={accords} onChange={setAccords} />
+            <View>
+              <Caption style={{ marginBottom: 10 }}>Rating</Caption>
+              <RatingDots value={rating} onChange={setRating} />
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     );
   }
 
+  const since = fragrance.created_at ? formatMonthYear(fragrance.created_at) : null;
+
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
-      <Text style={styles.brand}>{fragrance.brand}</Text>
-      <Text style={styles.name}>{fragrance.name}</Text>
-      {fragrance.concentration ? (
-        <Text style={styles.conc}>{fragrance.concentration}</Text>
-      ) : null}
-
-      <View style={styles.ratingRow}>
-        <Text style={styles.fieldLabel}>Rating</Text>
-        <Text style={styles.rating}>
-          {fragrance.rating != null ? fragrance.rating.toFixed(1) : '—'}
-        </Text>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} style={styles.headerAction} hitSlop={8}>
+          <IconChevronLeft size={22} />
+        </Pressable>
+        <View />
+        <Pressable onPress={() => setEditing(true)} style={styles.headerAction}>
+          <Text style={styles.headerText}>Edit</Text>
+        </Pressable>
       </View>
-
-      {fragrance.accords.length > 0 && (
-        <>
-          <Text style={styles.fieldLabel}>Accords</Text>
-          <View style={styles.chips}>
-            {fragrance.accords.map((a) => (
-              <View key={a} style={styles.chip}>
-                <Text style={styles.chipText}>{a}</Text>
-              </View>
-            ))}
+      <ScrollView contentContainerStyle={styles.readScroll}>
+        <Caption style={{ marginBottom: 10 }}>{fragrance.brand}</Caption>
+        <Serif size={34} style={{ marginBottom: 14, lineHeight: 40 }}>
+          {fragrance.name}
+        </Serif>
+        {fragrance.concentration ? (
+          <View style={styles.metaRow}>
+            <Caption>{fragrance.concentration}</Caption>
           </View>
-        </>
-      )}
+        ) : null}
 
-      <Pressable style={styles.primary} onPress={() => setEditing(true)}>
-        <Text style={styles.primaryText}>Edit</Text>
-      </Pressable>
-      <Pressable style={styles.danger} onPress={confirmDelete}>
-        <Text style={styles.dangerText}>Delete</Text>
-      </Pressable>
-    </ScrollView>
+        <View style={{ marginBottom: 40 }}>
+          <RatingNumeral value={fragrance.rating} />
+        </View>
+
+        <SectionDivider />
+
+        <Caption style={{ marginBottom: 20 }}>Notes</Caption>
+        <View style={{ marginBottom: 40 }}>
+          <NotesRows accords={fragrance.accords} />
+        </View>
+
+        {since ? (
+          <>
+            <SectionDivider marginVertical={24} />
+            <Caption style={{ marginBottom: 12 }}>On the shelf since</Caption>
+            <Text style={styles.sinceValue}>{since}</Text>
+          </>
+        ) : null}
+
+        <View style={{ paddingBottom: 48, marginTop: 32 }}>
+          <GhostButton danger onPress={confirmDelete} loading={del.isPending}>
+            Remove from shelf
+          </GhostButton>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
+function EditField({
+  label,
+  serif,
+  ...rest
+}: { label: string; serif?: boolean } & React.ComponentProps<typeof TextInput>) {
+  return (
+    <View>
+      <Caption style={{ marginBottom: 8 }}>{label}</Caption>
+      <TextInput
+        {...rest}
+        placeholderTextColor={colors.textMuted}
+        style={[styles.input, serif && { fontFamily: typography.serif, fontSize: 17 }]}
+      />
+    </View>
+  );
+}
+
+function formatMonthYear(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+}
+
 const styles = StyleSheet.create({
-  container: { padding: spacing.lg },
+  container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
-  brand: { ...typography.caption, color: colors.textMuted, marginBottom: 2 },
-  name: { ...typography.display, color: colors.text, marginBottom: spacing.xs },
-  conc: { ...typography.bodyDim, color: colors.textDim, marginBottom: spacing.lg },
-  ratingRow: { marginVertical: spacing.md },
-  rating: { ...typography.title, color: colors.accent },
-  fieldLabel: { ...typography.caption, color: colors.textDim, marginBottom: spacing.xs },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
-  chip: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: colors.border,
+  header: {
+    height: 52,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSoft,
   },
-  chipText: { ...typography.bodyDim, color: colors.text },
-  input: {
-    ...typography.body,
+  headerAction: { padding: 6, minWidth: 44 },
+  headerText: {
+    color: colors.textDim,
+    fontSize: 12,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    fontWeight: '500',
+  },
+  headerSave: { color: colors.accent, textAlign: 'right' },
+  readScroll: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 },
+  editScroll: { padding: 20, paddingBottom: 40, gap: 20 },
+  metaRow: { flexDirection: 'row', alignItems: 'baseline', gap: 16, marginBottom: 32 },
+  sinceValue: {
+    fontFamily: typography.serif,
+    fontSize: 20,
     color: colors.text,
+    marginBottom: 32,
+  },
+  input: {
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
+    borderRadius: radius.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: colors.text,
   },
-  primary: {
-    backgroundColor: colors.accent,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    marginTop: spacing.lg,
-  },
-  primaryText: { ...typography.body, color: colors.text, fontWeight: '500' },
-  secondary: {
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  secondaryText: { ...typography.bodyDim, color: colors.textDim },
-  danger: {
-    borderWidth: 1,
-    borderColor: colors.error,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  dangerText: { ...typography.body, color: colors.error },
 });

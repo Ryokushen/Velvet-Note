@@ -1,21 +1,65 @@
-import { useEffect, useState } from 'react';
-import type { Session } from '@supabase/supabase-js';
+import {
+  createElement,
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
-export function useAuth() {
+type AuthContextValue = {
+  session: Session | null;
+  loading: boolean;
+  user: User | null;
+};
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    let alive = true;
+
+    supabase.auth.getSession()
+      .then(({ data }) => {
+        if (!alive) return;
+        setSession(data.session);
+      })
+      .finally(() => {
+        if (alive) {
+          setLoading(false);
+        }
+      });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (!alive) return;
+      setSession(s);
       setLoading(false);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-    });
-    return () => sub.subscription.unsubscribe();
+
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
-  return { session, loading, user: session?.user ?? null };
+  const value = useMemo(
+    () => ({ session, loading, user: session?.user ?? null }),
+    [session, loading],
+  );
+
+  return createElement(AuthContext.Provider, { value }, children);
+}
+
+export function useAuth() {
+  const value = useContext(AuthContext);
+  if (!value) {
+    throw new Error('useAuth must be used within AuthProvider.');
+  }
+  return value;
 }

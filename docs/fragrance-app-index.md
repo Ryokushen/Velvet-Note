@@ -8,12 +8,13 @@ type: index
 
 Hub: [[Fragrance App]]
 
-Status: `idea`
+Status: `phase-1-core-complete` (as of 2026-04-23 — Tasks 1–21, 24, 25 shipped; 22/23 deferred to Phase 4; 26 pending smoke test + dogfood)
 
 Personal fragrance collection tracker. Mobile-first Expo + Supabase, shipped in phases. Core job is a searchable catalog of the bottles I own. Working name is "Fragrance App"; leading public-name candidate is *Velvet Note*. UI/UX biases toward a premium collector aesthetic from day one.
 
 **Repo location:**
-- Mac: `~/Artificial/Obsidian/Fragrance App/` (to be created)
+- Mac: `~/Artificial/Obsidian/Fragrance App/`
+- GitHub: https://github.com/Ryokushen/Velvet-Note
 
 ## Notes
 

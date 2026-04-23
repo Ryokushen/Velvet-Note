@@ -2,7 +2,7 @@
 tags:
   - project
 type: app-idea
-status: idea
+status: phase-1-core-complete
 ---
 
 # Fragrance App

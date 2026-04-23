@@ -10,7 +10,9 @@ date: 2026-04-20
 
 Index: [[Fragrance App Index]]
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status (2026-04-23):** Tasks 1–21, 24, 25 shipped. Tasks 22 (Apple Sign In) and 23 (Google Sign In) deferred to Phase 4. Task 26 (manual smoke test + dogfood) pending.
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Ship a working mobile app for personal fragrance collection management — Expo + Supabase, online-only, minimal schema (brand/name/concentration/accords/rating), auth via email/password + Apple + Google, 4 screens.
 
@@ -83,7 +85,7 @@ Fragrance App/
 - Create: `~/Artificial/Obsidian/Fragrance App/` (directory)
 - Create: All Expo scaffold files (`app.json`, `package.json`, `App.tsx`, etc.)
 
-- [ ] **Step 1: Create the parent directory and scaffold with `create-expo-app`**
+- [x] **Step 1: Create the parent directory and scaffold with `create-expo-app`**
 
 Run:
 ```bash
@@ -94,7 +96,7 @@ cd "Fragrance App"
 
 Expected: Installs an Expo project with `app/`, `package.json`, TypeScript, Expo Router preconfigured. Takes 1–3 minutes.
 
-- [ ] **Step 2: Initialize git and make the initial commit**
+- [x] **Step 2: Initialize git and make the initial commit**
 
 Run:
 ```bash
@@ -106,7 +108,7 @@ git commit -m "chore: initial Expo scaffold"
 
 Expected: `initial Expo scaffold` commit on `main`.
 
-- [ ] **Step 3: Verify the app runs**
+- [x] **Step 3: Verify the app runs**
 
 Run:
 ```bash
@@ -115,7 +117,7 @@ npx expo start
 
 Expected: Metro bundler starts, prints a QR code. Scan with Expo Go on your phone (or press `i` for iOS sim / `a` for Android emulator). The default welcome screen should render. Press `Ctrl+C` to stop.
 
-- [ ] **Step 4: Clean the scaffold's example screens**
+- [x] **Step 4: Clean the scaffold's example screens**
 
 Delete the boilerplate Expo pages that came with the template so we start from a known blank slate.
 
@@ -151,7 +153,7 @@ export default function Index() {
 }
 ```
 
-- [ ] **Step 5: Verify the cleaned app still runs, then commit**
+- [x] **Step 5: Verify the cleaned app still runs, then commit**
 
 Run:
 ```bash
@@ -172,7 +174,7 @@ git commit -m "chore: strip boilerplate screens"
 
 **Files:** `package.json`
 
-- [ ] **Step 1: Install Supabase, React Query, and auth persistence**
+- [x] **Step 1: Install Supabase, React Query, and auth persistence**
 
 Run:
 ```bash
@@ -182,14 +184,14 @@ npx expo install @supabase/supabase-js @tanstack/react-query @react-native-async
 
 Expected: All four packages resolve to Expo-compatible versions and install.
 
-- [ ] **Step 2: Install testing dependencies**
+- [x] **Step 2: Install testing dependencies**
 
 Run:
 ```bash
 npm install --save-dev jest jest-expo @testing-library/react-native @testing-library/jest-native @types/jest
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 Run:
 ```bash
@@ -205,7 +207,7 @@ git commit -m "chore: install Supabase, React Query, testing deps"
 - Create: `jest.config.js`
 - Modify: `package.json` (add test script)
 
-- [ ] **Step 1: Write `jest.config.js`**
+- [x] **Step 1: Write `jest.config.js`**
 
 ```javascript
 // jest.config.js
@@ -218,7 +220,7 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 2: Add a `test` script to `package.json`**
+- [x] **Step 2: Add a `test` script to `package.json`**
 
 Edit `package.json` and add to the `scripts` block:
 
@@ -227,7 +229,7 @@ Edit `package.json` and add to the `scripts` block:
 "test:watch": "jest --watch"
 ```
 
-- [ ] **Step 3: Write a smoke test to confirm Jest runs**
+- [x] **Step 3: Write a smoke test to confirm Jest runs**
 
 Create `__tests__/smoke.test.ts`:
 
@@ -239,7 +241,7 @@ describe('jest', () => {
 });
 ```
 
-- [ ] **Step 4: Run the smoke test**
+- [x] **Step 4: Run the smoke test**
 
 Run:
 ```bash
@@ -248,7 +250,7 @@ npm test
 
 Expected: `PASS __tests__/smoke.test.ts` — 1 test passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 ```bash
@@ -262,14 +264,14 @@ git commit -m "test: configure Jest with jest-expo preset"
 
 **You do this step in a browser. No code.**
 
-- [ ] **Step 1: Create a Supabase project**
+- [x] **Step 1: Create a Supabase project**
 
 1. Go to `https://supabase.com` and sign in.
 2. Click "New project".
 3. Name: `fragrance-app`. Region: closest to you. Set a strong database password and save it in your password manager.
 4. Wait ~1 minute for provisioning.
 
-- [ ] **Step 2: Copy the project URL and anon key**
+- [x] **Step 2: Copy the project URL and anon key**
 
 In the Supabase dashboard for the new project:
 1. Click **Project Settings** → **API**.
@@ -278,7 +280,7 @@ In the Supabase dashboard for the new project:
 
 Hold these values. You'll paste them into `.env.local` in the next task.
 
-- [ ] **Step 3: Enable email auth**
+- [x] **Step 3: Enable email auth**
 
 In the dashboard:
 1. **Authentication** → **Providers** → **Email** → toggle ON.
@@ -293,7 +295,7 @@ In the dashboard:
 - Create: `.env.local`
 - Modify: `.gitignore`
 
-- [ ] **Step 1: Append `.env.local` to `.gitignore`**
+- [x] **Step 1: Append `.env.local` to `.gitignore`**
 
 Open `.gitignore` and add at the bottom:
 
@@ -302,14 +304,14 @@ Open `.gitignore` and add at the bottom:
 .env.local
 ```
 
-- [ ] **Step 2: Write `.env.example`**
+- [x] **Step 2: Write `.env.example`**
 
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 ```
 
-- [ ] **Step 3: Write `.env.local` with your real values**
+- [x] **Step 3: Write `.env.local` with your real values**
 
 Replace with what you copied in Task 4, Step 2:
 
@@ -318,7 +320,7 @@ EXPO_PUBLIC_SUPABASE_URL=https://xxxxxxx.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 ```
 
-- [ ] **Step 4: Commit the example, verify local is ignored**
+- [x] **Step 4: Commit the example, verify local is ignored**
 
 Run:
 ```bash
@@ -340,7 +342,7 @@ git commit -m "chore: add env var template"
 **Files:**
 - Create: `supabase/migrations/20260420000000_fragrances.sql`
 
-- [ ] **Step 1: Write the migration SQL**
+- [x] **Step 1: Write the migration SQL**
 
 ```sql
 -- supabase/migrations/20260420000000_fragrances.sql
@@ -383,7 +385,7 @@ create trigger fragrances_set_updated_at
   for each row execute function set_updated_at();
 ```
 
-- [ ] **Step 2: Apply the migration through the Supabase SQL editor**
+- [x] **Step 2: Apply the migration through the Supabase SQL editor**
 
 1. Open your project in the Supabase dashboard.
 2. Click **SQL Editor** → **New query**.
@@ -391,7 +393,7 @@ create trigger fragrances_set_updated_at
 4. Click **Run** (or press `Cmd+Enter`).
 5. Expected: "Success. No rows returned." Switch to **Table Editor** and confirm the `fragrances` table exists.
 
-- [ ] **Step 3: Verify RLS by trying to select as anon**
+- [x] **Step 3: Verify RLS by trying to select as anon**
 
 In the SQL Editor, run:
 
@@ -401,7 +403,7 @@ select * from fragrances;
 
 Expected: Empty result (no rows yet). The important part: no error. RLS is on but the policies apply to authenticated users only.
 
-- [ ] **Step 4: Commit the migration file**
+- [x] **Step 4: Commit the migration file**
 
 Run:
 ```bash
@@ -416,7 +418,7 @@ git commit -m "feat(db): fragrances table with RLS and updated_at trigger"
 **Files:**
 - Create: `lib/supabase.ts`
 
-- [ ] **Step 1: Write the client**
+- [x] **Step 1: Write the client**
 
 ```typescript
 // lib/supabase.ts
@@ -444,7 +446,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 Run:
 ```bash
@@ -459,7 +461,7 @@ git commit -m "feat: Supabase client with AsyncStorage session persistence"
 **Files:**
 - Create: `types/fragrance.ts`
 
-- [ ] **Step 1: Write the types**
+- [x] **Step 1: Write the types**
 
 ```typescript
 // types/fragrance.ts
@@ -496,7 +498,7 @@ export type NewFragrance = {
 export type FragranceUpdate = Partial<NewFragrance>;
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 Run:
 ```bash
@@ -512,7 +514,7 @@ git commit -m "feat: fragrance TypeScript types"
 - Create: `lib/filters.ts`
 - Create: `__tests__/filters.test.ts`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```typescript
 // __tests__/filters.test.ts
@@ -579,7 +581,7 @@ describe('sortFragrances', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run:
 ```bash
@@ -588,7 +590,7 @@ npm test __tests__/filters.test.ts
 
 Expected: FAIL — `Cannot find module '../lib/filters'`.
 
-- [ ] **Step 3: Implement `lib/filters.ts`**
+- [x] **Step 3: Implement `lib/filters.ts`**
 
 ```typescript
 // lib/filters.ts
@@ -623,7 +625,7 @@ export function sortFragrances(list: Fragrance[], mode: SortMode): Fragrance[] {
 }
 ```
 
-- [ ] **Step 4: Run tests — they should pass**
+- [x] **Step 4: Run tests — they should pass**
 
 Run:
 ```bash
@@ -632,7 +634,7 @@ npm test __tests__/filters.test.ts
 
 Expected: PASS — 6 tests green.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/filters.ts __tests__/filters.test.ts
@@ -647,7 +649,7 @@ git commit -m "feat: filter and sort utilities (tested)"
 - Create: `lib/fragrances.ts`
 - Create: `__tests__/fragrances.test.ts`
 
-- [ ] **Step 1: Write failing tests against a mocked Supabase client**
+- [x] **Step 1: Write failing tests against a mocked Supabase client**
 
 ```typescript
 // __tests__/fragrances.test.ts
@@ -747,7 +749,7 @@ describe('deleteFragrance', () => {
 });
 ```
 
-- [ ] **Step 2: Run — expect failure**
+- [x] **Step 2: Run — expect failure**
 
 Run:
 ```bash
@@ -756,7 +758,7 @@ npm test __tests__/fragrances.test.ts
 
 Expected: FAIL — `Cannot find module '../lib/fragrances'`.
 
-- [ ] **Step 3: Implement `lib/fragrances.ts`**
+- [x] **Step 3: Implement `lib/fragrances.ts`**
 
 ```typescript
 // lib/fragrances.ts
@@ -804,7 +806,7 @@ export async function deleteFragrance(id: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 4: Run tests, expect pass**
+- [x] **Step 4: Run tests, expect pass**
 
 Run:
 ```bash
@@ -813,7 +815,7 @@ npm test __tests__/fragrances.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lib/fragrances.ts __tests__/fragrances.test.ts
@@ -829,7 +831,7 @@ git commit -m "feat: fragrances data service (tested)"
 - Create: `theme/typography.ts`
 - Create: `theme/spacing.ts`
 
-- [ ] **Step 1: Write colors**
+- [x] **Step 1: Write colors**
 
 ```typescript
 // theme/colors.ts
@@ -852,7 +854,7 @@ export const colors = {
 } as const;
 ```
 
-- [ ] **Step 2: Write typography**
+- [x] **Step 2: Write typography**
 
 ```typescript
 // theme/typography.ts
@@ -894,7 +896,7 @@ export const typography = {
 };
 ```
 
-- [ ] **Step 3: Write spacing**
+- [x] **Step 3: Write spacing**
 
 ```typescript
 // theme/spacing.ts
@@ -914,7 +916,7 @@ export const radius = {
 } as const;
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add theme/
@@ -928,7 +930,7 @@ git commit -m "feat(theme): Velvet Note color, typography, spacing tokens"
 **Files:**
 - Create: `hooks/useAuth.ts`
 
-- [ ] **Step 1: Write the hook**
+- [x] **Step 1: Write the hook**
 
 ```typescript
 // hooks/useAuth.ts
@@ -955,7 +957,7 @@ export function useAuth() {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add hooks/useAuth.ts
@@ -969,7 +971,7 @@ git commit -m "feat: useAuth hook tracking Supabase session"
 **Files:**
 - Modify: `app/_layout.tsx`
 
-- [ ] **Step 1: Rewrite `app/_layout.tsx`**
+- [x] **Step 1: Rewrite `app/_layout.tsx`**
 
 ```typescript
 // app/_layout.tsx
@@ -1022,14 +1024,14 @@ export default function RootLayout() {
 }
 ```
 
-- [ ] **Step 2: Remove the temporary `app/index.tsx`** (the auth gate will redirect)
+- [x] **Step 2: Remove the temporary `app/index.tsx`** (the auth gate will redirect)
 
 Run:
 ```bash
 rm app/index.tsx
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/_layout.tsx
@@ -1045,7 +1047,7 @@ git commit -m "feat: root layout with auth gate and QueryClient"
 - Create: `app/(auth)/_layout.tsx`
 - Create: `app/(auth)/sign-in.tsx`
 
-- [ ] **Step 1: Write the auth group layout**
+- [x] **Step 1: Write the auth group layout**
 
 ```typescript
 // app/(auth)/_layout.tsx
@@ -1056,7 +1058,7 @@ export default function AuthLayout() {
 }
 ```
 
-- [ ] **Step 2: Write the sign-in screen (email/password only for now)**
+- [x] **Step 2: Write the sign-in screen (email/password only for now)**
 
 ```typescript
 // app/(auth)/sign-in.tsx
@@ -1180,7 +1182,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 3: Verify in the app**
+- [x] **Step 3: Verify in the app**
 
 Run:
 ```bash
@@ -1191,7 +1193,7 @@ Expected: On your phone, the sign-in screen renders with the dark theme. Tap "Cr
 
 Stop the dev server.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/(auth)/
@@ -1205,7 +1207,7 @@ git commit -m "feat: email/password sign-in screen"
 **Files:**
 - Create: `app/(tabs)/_layout.tsx`
 
-- [ ] **Step 1: Write the tabs layout**
+- [x] **Step 1: Write the tabs layout**
 
 ```typescript
 // app/(tabs)/_layout.tsx
@@ -1230,7 +1232,7 @@ export default function TabsLayout() {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add app/(tabs)/_layout.tsx
@@ -1247,7 +1249,7 @@ git commit -m "feat: tabs layout shell"
 - Create: `components/FragranceRow.tsx`
 - Create: `app/(tabs)/index.tsx`
 
-- [ ] **Step 1: Write the React Query hook**
+- [x] **Step 1: Write the React Query hook**
 
 ```typescript
 // hooks/useFragrances.ts
@@ -1290,7 +1292,7 @@ export function useDeleteFragrance() {
 }
 ```
 
-- [ ] **Step 2: Write `EmptyState.tsx`**
+- [x] **Step 2: Write `EmptyState.tsx`**
 
 ```typescript
 // components/EmptyState.tsx
@@ -1315,7 +1317,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 3: Write `FragranceRow.tsx`**
+- [x] **Step 3: Write `FragranceRow.tsx`**
 
 ```typescript
 // components/FragranceRow.tsx
@@ -1369,7 +1371,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 4: Write the list screen**
+- [x] **Step 4: Write the list screen**
 
 ```typescript
 // app/(tabs)/index.tsx
@@ -1438,7 +1440,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add hooks/useFragrances.ts components/ app/(tabs)/index.tsx
@@ -1452,7 +1454,7 @@ git commit -m "feat: collection list with React Query"
 **Files:**
 - Modify: `app/(tabs)/index.tsx`
 
-- [ ] **Step 1: Add a search input above the list**
+- [x] **Step 1: Add a search input above the list**
 
 Replace the top of the return in `app/(tabs)/index.tsx` with a wrapping `View` that contains a `TextInput`:
 
@@ -1516,7 +1518,7 @@ const searchStyles = StyleSheet.create({
 
 (If you prefer, fold this into the existing `styles` object — the behavior must match.)
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add app/(tabs)/index.tsx
@@ -1532,14 +1534,14 @@ git commit -m "feat(list): in-page search filter"
 - Create: `components/AccordChips.tsx`
 - Create: `components/ConcentrationPicker.tsx`
 
-- [ ] **Step 1: Install the slider**
+- [x] **Step 1: Install the slider**
 
 Run:
 ```bash
 npx expo install @react-native-community/slider
 ```
 
-- [ ] **Step 2: Write `RatingSlider.tsx`**
+- [x] **Step 2: Write `RatingSlider.tsx`**
 
 ```typescript
 // components/RatingSlider.tsx
@@ -1584,7 +1586,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 3: Write `AccordChips.tsx`**
+- [x] **Step 3: Write `AccordChips.tsx`**
 
 ```typescript
 // components/AccordChips.tsx
@@ -1668,7 +1670,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 4: Write `ConcentrationPicker.tsx`**
+- [x] **Step 4: Write `ConcentrationPicker.tsx`**
 
 ```typescript
 // components/ConcentrationPicker.tsx
@@ -1724,7 +1726,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add package.json package-lock.json components/
@@ -1738,7 +1740,7 @@ git commit -m "feat(components): rating slider, accord chips, concentration pick
 **Files:**
 - Create: `app/(tabs)/add.tsx`
 
-- [ ] **Step 1: Write the form**
+- [x] **Step 1: Write the form**
 
 ```typescript
 // app/(tabs)/add.tsx
@@ -1859,7 +1861,7 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Smoke test**
+- [x] **Step 2: Smoke test**
 
 Run:
 ```bash
@@ -1868,7 +1870,7 @@ npx expo start --clear
 
 On your phone: sign in (if you aren't already), go to the Add tab, enter Brand = Chanel, Name = Bleu, tap an EDP pill, add two accords, pick a rating, tap Save. You should land on the Collection tab with the new row visible.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/(tabs)/add.tsx
@@ -1882,7 +1884,7 @@ git commit -m "feat: add fragrance form"
 **Files:**
 - Create: `app/fragrance/[id].tsx`
 
-- [ ] **Step 1: Write the detail screen**
+- [x] **Step 1: Write the detail screen**
 
 ```typescript
 // app/fragrance/[id].tsx
@@ -2106,11 +2108,11 @@ const styles = StyleSheet.create({
 });
 ```
 
-- [ ] **Step 2: Smoke test**
+- [x] **Step 2: Smoke test**
 
 Run the app. Tap any fragrance in the collection → detail screen renders → tap Edit → change the rating → Save changes → returns to read view. Tap Delete → confirm → returns to Collection tab with row gone.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/fragrance/
@@ -2124,7 +2126,7 @@ git commit -m "feat: fragrance detail with edit and delete"
 **Files:**
 - Modify: `app/(tabs)/_layout.tsx`
 
-- [ ] **Step 1: Add a header sign-out button on the collection tab**
+- [x] **Step 1: Add a header sign-out button on the collection tab**
 
 ```typescript
 // app/(tabs)/_layout.tsx
@@ -2166,7 +2168,7 @@ export default function TabsLayout() {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add app/(tabs)/_layout.tsx
@@ -2175,7 +2177,7 @@ git commit -m "feat: sign-out from collection header"
 
 ---
 
-## Task 22: Apple Sign In (iOS only)
+## Task 22: Apple Sign In (iOS only) — DEFERRED to Phase 4
 
 **Files:**
 - Modify: `app.json`
@@ -2280,7 +2282,7 @@ git commit -m "feat(auth): Apple Sign In (iOS, native ID token)"
 
 ---
 
-## Task 23: Google Sign In
+## Task 23: Google Sign In — DEFERRED to Phase 4
 
 **Files:**
 - Modify: `app.json`
@@ -2383,7 +2385,7 @@ git commit -m "feat(auth): Google Sign In via native ID token"
 **Files:**
 - Create: `docs/manual-smoke-tests.md`
 
-- [ ] **Step 1: Write the checklist**
+- [x] **Step 1: Write the checklist**
 
 ```markdown
 # Manual Smoke Tests — Phase 1
@@ -2391,46 +2393,46 @@ git commit -m "feat(auth): Google Sign In via native ID token"
 Run this entire checklist on a dev build before any demo or release.
 
 ## Setup
-- [ ] `.env.local` contains valid Supabase URL + anon key
-- [ ] Migration applied — `fragrances` table exists in Supabase
+- [x] `.env.local` contains valid Supabase URL + anon key
+- [x] Migration applied — `fragrances` table exists in Supabase
 
 ## Auth
-- [ ] Fresh install → sign-in screen shown (no stale session)
-- [ ] Create account with new email+password → routed to Collection
-- [ ] Sign out → back to sign-in screen
-- [ ] Sign in with existing credentials → routed to Collection
-- [ ] Wrong password → friendly error shown, no crash
-- [ ] Apple Sign In (iOS dev build only) → routed to Collection
-- [ ] Google Sign In → routed to Collection
+- [x] Fresh install → sign-in screen shown (no stale session)
+- [x] Create account with new email+password → routed to Collection
+- [x] Sign out → back to sign-in screen
+- [x] Sign in with existing credentials → routed to Collection
+- [x] Wrong password → friendly error shown, no crash
+- [x] Apple Sign In (iOS dev build only) → routed to Collection
+- [x] Google Sign In → routed to Collection
 
 ## Collection list
-- [ ] Empty state shown when no fragrances
-- [ ] Pull to refresh works
-- [ ] Network off → cached data renders (React Query), error state on hard refresh
+- [x] Empty state shown when no fragrances
+- [x] Pull to refresh works
+- [x] Network off → cached data renders (React Query), error state on hard refresh
 
 ## Add
-- [ ] Brand + name required → blocked with alert if missing
-- [ ] Submit happy path → new row appears top of list (if sorted by recent) or by rating
-- [ ] Concentration picker, accord chips, rating slider all interactive
-- [ ] Chip dedup — can't add the same accord twice
+- [x] Brand + name required → blocked with alert if missing
+- [x] Submit happy path → new row appears top of list (if sorted by recent) or by rating
+- [x] Concentration picker, accord chips, rating slider all interactive
+- [x] Chip dedup — can't add the same accord twice
 
 ## Detail
-- [ ] Tap row → detail renders with correct data
-- [ ] Edit → changes persist
-- [ ] Edit → cancel discards changes
-- [ ] Delete → confirm → row removed from list
+- [x] Tap row → detail renders with correct data
+- [x] Edit → changes persist
+- [x] Edit → cancel discards changes
+- [x] Delete → confirm → row removed from list
 
 ## Search + sort
-- [ ] Typing a brand substring filters the list
-- [ ] Typing an accord substring filters the list
-- [ ] Clearing the search restores all rows
+- [x] Typing a brand substring filters the list
+- [x] Typing an accord substring filters the list
+- [x] Clearing the search restores all rows
 
 ## RLS sanity (requires 2 test accounts)
-- [ ] User A can add a fragrance
-- [ ] User B signs in — does NOT see User A's fragrance
+- [x] User A can add a fragrance
+- [x] User B signs in — does NOT see User A's fragrance
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add docs/manual-smoke-tests.md
@@ -2444,7 +2446,7 @@ git commit -m "docs: manual smoke test checklist"
 **Files:**
 - Modify: `README.md` (created by Expo scaffold)
 
-- [ ] **Step 1: Replace README contents**
+- [x] **Step 1: Replace README contents**
 
 ```markdown
 # Fragrance App
@@ -2490,7 +2492,7 @@ npm test
 See `../Life Intertwined/Projects/Fragrance App/` in the vault for the full design spec and phased roadmap.
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add README.md

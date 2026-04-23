@@ -11,6 +11,13 @@ date: 2026-04-20
 Index: [[Fragrance App Index]]
 
 > **Status (2026-04-23):** Tasks 1–21, 24, 25 shipped. Tasks 22 (Apple Sign In) and 23 (Google Sign In) deferred to Phase 4. Task 26 (manual smoke test + dogfood) pending.
+>
+> **Post-phase-1-core refresh (2026-04-23, commit `e3f8dce`):** The Velvet Note UI was rebuilt from the Claude Design handoff bundle (primitives under `components/ui/`, family-tinted accord chips, 108pt Georgia rating numeral, 10-dot rating input, `NotesRows`, editorial sign-in hero). The following deltas invalidate specific bodies of this plan but **not the task history** — they are listed here so future readers don't recreate the bugs:
+>
+> - **Navigation uses runtime paths, not route-group paths.** Tasks 9, 19, and 21 use `router.replace('/(tabs)')` and `segments[0] === '(auth)'`. Those syntaxes compile but `usePathname()` returns `/` and `/sign-in` at runtime, so the group-path checks never match. Current code uses `usePathname()` + `/` / `/sign-in`. See `CHANGELOG.md` 2026-04-23 entry for the full trace.
+> - **Auth is now a Provider, not a bare hook.** `hooks/useAuth.ts` exports `AuthProvider` + `useAuth` so the session has a single subscription shared across the tree. Wrap `app/_layout.tsx` in `<AuthProvider>` before consumers.
+> - **`RatingSlider` (Task 18) was replaced with `RatingDots` (10-dot tap input).** `components/RatingSlider.tsx` has been deleted; `@react-native-community/slider` is no longer in use but remains installed.
+> - **`react-native-svg` was installed but ultimately unused.** Icons render via `@expo/vector-icons` Feather (Lucide's predecessor); the bottle placeholder is plain Views. If you remove `react-native-svg` from `package.json`, use `--legacy-peer-deps`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 

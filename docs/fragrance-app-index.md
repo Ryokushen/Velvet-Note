@@ -27,6 +27,9 @@ Approved design spec: motivation, architecture, data model, phased roadmap (1 â†
 - [[Fragrance App - Design Brief]]
 Paste-into-Figma companion: locked Phase 1 tokens (palette, type, spacing) plus open design questions (imagery, note hierarchy, accords, calendar, motion, iconography).
 
+- [[Fragrance App - Designer Engagement Brief]]
+First-person prompt to send to a hired UI/UX designer. Describes the aesthetic intent, what's locked, what's open, scope for the first Figma deliverable.
+
 ## Related
 
 - [[Fragrance App]]

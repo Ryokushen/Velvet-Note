@@ -24,6 +24,9 @@ Approved design spec: motivation, architecture, data model, phased roadmap (1 â†
 - [[Fragrance App - Phase 1 Implementation Plan]]
 26 bite-sized tasks to ship Phase 1 (scaffold, Supabase, auth, 4 screens, Velvet Note theme, manual smoke tests).
 
+- [[Fragrance App - Design Brief]]
+Paste-into-Figma companion: locked Phase 1 tokens (palette, type, spacing) plus open design questions (imagery, note hierarchy, accords, calendar, motion, iconography).
+
 ## Related
 
 - [[Fragrance App]]

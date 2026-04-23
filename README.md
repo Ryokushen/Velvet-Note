@@ -1,50 +1,46 @@
-# Welcome to your Expo app 👋
+# Fragrance App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Personal fragrance collection tracker. Mobile-first (Expo + React Native), Supabase backend.
 
-## Get started
+Working name in code. Leading public-name candidate: *Velvet Note*.
 
-1. Install dependencies
+## Run locally
 
+1. Install dependencies:
    ```bash
    npm install
    ```
-
-2. Start the app
-
+2. Copy `.env.example` to `.env.local` and fill in your Supabase URL and anon key.
+3. Apply the database migration in `supabase/migrations/` via the Supabase SQL editor.
+4. Start the bundler:
    ```bash
    npx expo start
    ```
+5. Scan the QR code with Expo Go.
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+Apple / Google sign-in are deferred to Phase 4. When they land, they will require a dev build:
 ```bash
-npm run reset-project
+npx expo prebuild
+npx expo run:ios   # or run:android
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Test
 
-## Learn more
+```bash
+npm test
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Phase 1 scope
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Shipped:
+- Auth: email/password
+- Collection list with search
+- Add fragrance: brand, name, concentration, accords, rating
+- Detail view with edit + delete
+- Online-only (offline is Phase 3)
 
-## Join the community
+Deferred to Phase 4:
+- Apple Sign In
+- Google Sign In
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+See `docs/design-spec.md` and `docs/phase-1-plan.md` for the full design spec and phased roadmap.

@@ -87,6 +87,8 @@ export default function SignIn() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            autoComplete="email"
+            textContentType="emailAddress"
             placeholder="you@example.com"
           />
           <Field
@@ -94,13 +96,17 @@ export default function SignIn() {
             value={password}
             onChangeText={(v) => { setPassword(v); if (errorMsg) setErrorMsg(null); }}
             secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+            textContentType={mode === 'signin' ? 'password' : 'newPassword'}
             placeholder="••••••••"
           />
         </View>
 
         {errorMsg ? (
           <View style={styles.errorBox}>
-            <Caption tone="dim" style={styles.errorLabel}>— Couldn't sign in</Caption>
+            <Caption tone="dim" style={styles.errorLabel}>— Could not sign in</Caption>
             <Text style={styles.errorText}>{errorMsg}</Text>
           </View>
         ) : notice ? (

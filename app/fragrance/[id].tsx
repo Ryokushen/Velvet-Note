@@ -37,6 +37,12 @@ export default function Detail() {
   const router = useRouter();
   const { data } = useFragrancesQuery();
   const fragrance = useMemo(() => data?.find((f) => f.id === id), [data, id]);
+  const fragranceId = fragrance?.id;
+  const fragranceBrand = fragrance?.brand;
+  const fragranceName = fragrance?.name;
+  const fragranceConcentration = fragrance?.concentration;
+  const fragranceAccords = fragrance?.accords;
+  const fragranceRating = fragrance?.rating;
   const update = useUpdateFragrance();
   const del = useDeleteFragrance();
 
@@ -48,13 +54,20 @@ export default function Detail() {
   const [rating, setRating] = useState(0);
 
   useEffect(() => {
-    if (!fragrance) return;
-    setBrand(fragrance.brand);
-    setName(fragrance.name);
-    setConcentration(fragrance.concentration);
-    setAccords(fragrance.accords);
-    setRating(fragrance.rating ?? 0);
-  }, [fragrance?.id]);
+    if (!fragranceId) return;
+    setBrand(fragranceBrand ?? '');
+    setName(fragranceName ?? '');
+    setConcentration(fragranceConcentration ?? null);
+    setAccords(fragranceAccords ?? []);
+    setRating(fragranceRating ?? 0);
+  }, [
+    fragranceId,
+    fragranceBrand,
+    fragranceName,
+    fragranceConcentration,
+    fragranceAccords,
+    fragranceRating,
+  ]);
 
   if (!fragrance) {
     return (

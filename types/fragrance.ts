@@ -16,6 +16,10 @@ export interface Fragrance {
   concentration: Concentration | null;
   accords: string[];
   rating: number | null;
+  catalog_id: string | null;
+  image_url: string | null;
+  catalog_description: string | null;
+  catalog_source: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -26,6 +30,10 @@ export type NewFragrance = {
   concentration: Concentration | null;
   accords: string[];
   rating: number | null;
+  catalog_id?: string | null;
+  image_url?: string | null;
+  catalog_description?: string | null;
+  catalog_source?: string | null;
 };
 
 export type FragranceUpdate = Partial<NewFragrance>;

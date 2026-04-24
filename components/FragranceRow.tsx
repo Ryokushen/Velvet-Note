@@ -3,7 +3,7 @@ import type { Fragrance } from '../types/fragrance';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { Caption, Serif } from './ui/text';
-import { BottlePlaceholder } from './ui/BottlePlaceholder';
+import { BottleArt } from './BottleArt';
 
 export function FragranceRow({
   fragrance,
@@ -20,9 +20,7 @@ export function FragranceRow({
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && { opacity: 0.75 }]}>
       {withImage && (
-        <View style={styles.thumb}>
-          <BottlePlaceholder width={36} height={56} tintOpacity={0.15} />
-        </View>
+        <BottleArt imageUrl={fragrance.image_url} width={56} height={72} />
       )}
       <View style={styles.main}>
         <Caption style={{ marginBottom: 4 }}>{fragrance.brand}</Caption>
@@ -52,14 +50,6 @@ const styles = StyleSheet.create({
     gap: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSoft,
-  },
-  thumb: {
-    width: 56,
-    height: 72,
-    backgroundColor: colors.surface,
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   main: { flex: 1, minWidth: 0 },
   subline: {

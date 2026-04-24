@@ -99,6 +99,7 @@ export default function Collection() {
                 <FragranceRow
                   fragrance={item}
                   onPress={() => router.push(`/fragrance/${item.id}` as never)}
+                  withImage
                 />
               )}
               refreshing={isRefetching}

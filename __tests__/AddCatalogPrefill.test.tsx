@@ -36,13 +36,18 @@ describe('Add catalog prefill', () => {
     fireEvent.press(getByText('Save to shelf'));
 
     await waitFor(() => {
-      expect(mockMutateAsync).toHaveBeenCalledWith({
-        brand: 'Indult',
-        name: 'Tihota Eau de Parfum',
-        concentration: null,
-        accords: ['vanilla bean', 'musks'],
-        rating: null,
-      });
+      expect(mockMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          brand: 'Indult',
+          name: 'Tihota Eau de Parfum',
+          concentration: null,
+          accords: ['vanilla bean', 'musks'],
+          rating: null,
+          catalog_id: 'indult-tihota-eau-de-parfum',
+          image_url: 'https://static.luckyscent.com/images/products/37401.jpg?width=400&404=product.png',
+          catalog_source: 'kaggle:nandini1999/perfume-recommendation-dataset',
+        }),
+      );
     });
   });
 });

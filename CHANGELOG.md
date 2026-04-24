@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-04-24 - Persist catalog metadata on shelf entries
+
+### Summary
+
+Saved selected catalog metadata with user-owned shelf rows and surfaced bottle art in the collection and detail views.
+
+### Shipped
+
+- Added optional catalog metadata columns to `fragrances`.
+- Saved catalog id, image URL, description, and source when adding from a local catalog match.
+- Added shared `BottleArt` rendering with image fallback to the existing bottle placeholder.
+- Displayed bottle art in collection rows and fragrance detail.
+
+### Verification
+
+- `npm.cmd test -- --runInBand`
+- `npm.cmd run lint`
+- `.\node_modules\.bin\tsc.cmd --noEmit`
+
 ## 2026-04-24 - Add Parfumo shared catalog import path
 
 ### Summary

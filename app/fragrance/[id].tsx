@@ -28,6 +28,7 @@ import { GhostButton, PrimaryButton } from '../../components/ui/Button';
 import { Caption, Serif } from '../../components/ui/text';
 import { SectionDivider } from '../../components/ui/SectionDivider';
 import { IconChevronLeft } from '../../components/ui/Icon';
+import { BottleArt } from '../../components/BottleArt';
 import type { Concentration } from '../../types/fragrance';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -196,9 +197,14 @@ export default function Detail() {
           keyboardShouldPersistTaps="handled"
         >
           <Caption style={{ marginBottom: 10 }}>{fragrance.brand}</Caption>
-          <Serif size={34} style={{ marginBottom: 14, lineHeight: 40 }}>
-            {fragrance.name}
-          </Serif>
+          <View style={styles.heroRow}>
+            <View style={styles.heroText}>
+              <Serif size={34} style={{ marginBottom: 14, lineHeight: 40 }}>
+                {fragrance.name}
+              </Serif>
+            </View>
+            <BottleArt imageUrl={fragrance.image_url} width={96} height={124} />
+          </View>
           {fragrance.concentration ? (
             <View style={styles.metaRow}>
               <Caption>{fragrance.concentration}</Caption>
@@ -215,6 +221,14 @@ export default function Detail() {
           <View style={{ marginBottom: 40 }}>
             <NotesRows accords={fragrance.accords} />
           </View>
+
+          {fragrance.catalog_description ? (
+            <>
+              <SectionDivider marginVertical={24} />
+              <Caption style={{ marginBottom: 12 }}>Catalog notes</Caption>
+              <Text style={styles.catalogDescription}>{fragrance.catalog_description}</Text>
+            </>
+          ) : null}
 
           <SectionDivider marginVertical={24} />
 
@@ -367,7 +381,22 @@ const styles = StyleSheet.create({
   headerSave: { color: colors.accent, textAlign: 'right' },
   readScroll: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 },
   editScroll: { padding: 20, paddingBottom: 40, gap: 20 },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 18,
+    marginBottom: 14,
+  },
+  heroText: {
+    flex: 1,
+    minWidth: 0,
+  },
   metaRow: { flexDirection: 'row', alignItems: 'baseline', gap: 16, marginBottom: 32 },
+  catalogDescription: {
+    ...typography.body,
+    color: colors.textDim,
+    lineHeight: 22,
+  },
   wearHeader: {
     marginBottom: 14,
   },

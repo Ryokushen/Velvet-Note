@@ -46,7 +46,7 @@ Shipped:
 - Auth: email/password
 - Collection list with search
 - Add fragrance: local catalog lookup/prefill, brand, name, concentration, curated/free-text accords, rating
-- Detail view with edit + delete
+- Detail view with catalog bottle art, notes, edit, and delete
 - Wear logging from fragrance detail and selected Calendar days
 - Calendar tab with month grid, same-day wear counts, selected-day detail/edit/delete, and by-bottle view
 - Online-only (offline is Phase 3)

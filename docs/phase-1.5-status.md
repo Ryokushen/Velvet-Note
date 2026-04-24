@@ -23,6 +23,7 @@ Shipped:
 - Calendar tab between Collection and Add.
 - Calendar Month view with day dots and selected-day detail sheet.
 - Calendar selected-day wear entry: press plus, choose a bottle, save a wear for that date.
+- Calendar selected-day wear editing and deletion from the day sheet.
 - Calendar By bottle view with last-worn labels and sparkline markers.
 - Curated local accord descriptor vocabulary and autocomplete, still stored in `fragrances.accords`.
 - Local Kaggle catalog import and Add-screen lookup/prefill, still saved as user-owned `fragrances` rows.
@@ -64,11 +65,10 @@ Temporary test users were removed from Supabase after verification.
 
 ## Intentional Gaps
 
-- Wear editing/deleting UI is not implemented yet, although service functions exist.
 - Calendar does not yet show multiple dots/counts for multiple wears on the same day; it uses the first wear's accent dot.
 - Detail/list do not yet surface "last worn" summary outside the detail wear history section.
 - No dedicated E2E test suite yet; Playwright was used as an ad hoc smoke check.
 
 ## Next Good Slice
 
-Add wear editing/deleting UI from the Calendar selected-day detail sheet.
+Add a compact "last worn" summary to the collection list and fragrance detail header.

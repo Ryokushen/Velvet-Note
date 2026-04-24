@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-04-24 - Add Calendar wear edit and delete actions
+
+### Summary
+
+Added Calendar day-sheet controls for correcting or removing logged wears.
+
+### Shipped
+
+- Added edit controls to prefill the selected day's wear form from an existing wear.
+- Added delete controls for individual wears in the selected-day sheet.
+- Reused the existing `useUpdateWear` and `useDeleteWear` mutations so React Query invalidation stays centralized.
+
+### Verification
+
+- `npm.cmd test -- --runInBand __tests__/calendarWearEntry.test.tsx`
+- `npm.cmd test -- --runInBand`
+- `npm.cmd run lint`
+- `.\node_modules\.bin\tsc.cmd --noEmit`
+
 ## 2026-04-24 - Add local catalog lookup and Calendar follow-ups
 
 ### Summary

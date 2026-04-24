@@ -13,9 +13,20 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/EmptyState';
 import { Caption, Serif } from '../../components/ui/text';
-import { IconChevronLeft, IconChevronRight, IconPlus } from '../../components/ui/Icon';
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconEdit,
+  IconPlus,
+  IconTrash,
+} from '../../components/ui/Icon';
 import { useFragrancesQuery } from '../../hooks/useFragrances';
-import { useCreateWear, useWearsQuery } from '../../hooks/useWears';
+import {
+  useCreateWear,
+  useDeleteWear,
+  useUpdateWear,
+  useWearsQuery,
+} from '../../hooks/useWears';
 import type { Fragrance } from '../../types/fragrance';
 import type { Wear } from '../../types/wear';
 import { colors } from '../../theme/colors';
@@ -34,10 +45,13 @@ export default function CalendarScreen() {
   const wears = useWearsQuery();
   const fragrances = useFragrancesQuery();
   const createWear = useCreateWear();
+  const updateWear = useUpdateWear();
+  const deleteWear = useDeleteWear();
   const [mode, setMode] = useState<CalendarMode>('month');
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState(() => todayLocalDate());
   const [loggingDay, setLoggingDay] = useState(false);
+  const [editingWearId, setEditingWearId] = useState<string | null>(null);
   const [selectedFragranceId, setSelectedFragranceId] = useState('');
   const [wearNotes, setWearNotes] = useState('');
 
@@ -80,8 +94,23 @@ export default function CalendarScreen() {
 
   function resetWearEntry() {
     setLoggingDay(false);
+    setEditingWearId(null);
     setSelectedFragranceId('');
     setWearNotes('');
+  }
+
+  function startAddWear() {
+    setEditingWearId(null);
+    setSelectedFragranceId('');
+    setWearNotes('');
+    setLoggingDay(true);
+  }
+
+  function startEditWear(wear: Wear) {
+    setEditingWearId(wear.id);
+    setSelectedFragranceId(wear.fragrance_id);
+    setWearNotes(wear.notes ?? '');
+    setLoggingDay(true);
   }
 
   async function saveSelectedDayWear() {
@@ -89,15 +118,34 @@ export default function CalendarScreen() {
       Alert.alert('Choose a bottle', 'Pick a bottle before saving this wear.');
       return;
     }
+    const input = {
+      fragrance_id: selectedFragranceId,
+      worn_on: selectedDate,
+      notes: wearNotes.trim() ? wearNotes.trim() : null,
+    };
     try {
-      await createWear.mutateAsync({
-        fragrance_id: selectedFragranceId,
-        worn_on: selectedDate,
-        notes: wearNotes.trim() ? wearNotes.trim() : null,
-      });
+      if (editingWearId) {
+        await updateWear.mutateAsync({ id: editingWearId, input });
+      } else {
+        await createWear.mutateAsync(input);
+      }
       resetWearEntry();
     } catch (e: any) {
-      Alert.alert('Could not log wear', e.message ?? 'Unknown error');
+      Alert.alert(
+        editingWearId ? 'Could not update wear' : 'Could not log wear',
+        e.message ?? 'Unknown error',
+      );
+    }
+  }
+
+  async function deleteCalendarWear(wear: Wear) {
+    try {
+      await deleteWear.mutateAsync(wear.id);
+      if (editingWearId === wear.id) {
+        resetWearEntry();
+      }
+    } catch (e: any) {
+      Alert.alert('Could not delete wear', e.message ?? 'Unknown error');
     }
   }
 
@@ -199,14 +247,18 @@ export default function CalendarScreen() {
                   fragrances={fragrances.data ?? []}
                   fragranceById={fragranceById}
                   logging={loggingDay}
+                  editing={Boolean(editingWearId)}
                   selectedFragranceId={selectedFragranceId}
                   notes={wearNotes}
-                  saving={createWear.isPending}
-                  onAdd={() => setLoggingDay(true)}
+                  saving={createWear.isPending || updateWear.isPending}
+                  deleting={deleteWear.isPending}
+                  onAdd={startAddWear}
                   onCancelAdd={resetWearEntry}
                   onSelectFragrance={setSelectedFragranceId}
                   onChangeNotes={setWearNotes}
                   onSave={saveSelectedDayWear}
+                  onEditWear={startEditWear}
+                  onDeleteWear={deleteCalendarWear}
                   onOpenFragrance={(fragranceId) => router.push(`/fragrance/${fragranceId}` as never)}
                 />
               ) : null}
@@ -258,14 +310,18 @@ function DayDetail({
   fragrances,
   fragranceById,
   logging,
+  editing,
   selectedFragranceId,
   notes,
   saving,
+  deleting,
   onAdd,
   onCancelAdd,
   onSelectFragrance,
   onChangeNotes,
   onSave,
+  onEditWear,
+  onDeleteWear,
   onOpenFragrance,
 }: {
   date: Date;
@@ -273,14 +329,18 @@ function DayDetail({
   fragrances: Fragrance[];
   fragranceById: Map<string, Fragrance>;
   logging: boolean;
+  editing: boolean;
   selectedFragranceId: string;
   notes: string;
   saving: boolean;
+  deleting: boolean;
   onAdd: () => void;
   onCancelAdd: () => void;
   onSelectFragrance: (fragranceId: string) => void;
   onChangeNotes: (notes: string) => void;
   onSave: () => void;
+  onEditWear: (wear: Wear) => void;
+  onDeleteWear: (wear: Wear) => void;
   onOpenFragrance: (fragranceId: string) => void;
 }) {
   return (
@@ -306,35 +366,54 @@ function DayDetail({
         {wears.length > 0 ? (
           wears.map((wear) => {
             const fragrance = fragranceById.get(wear.fragrance_id);
+            const labelName = fragrance?.name ?? 'Unknown bottle';
             return (
-              <Pressable
-                key={wear.id}
-                onPress={() => onOpenFragrance(wear.fragrance_id)}
-                style={({ pressed }) => [styles.dayWearRow, pressed && { opacity: 0.75 }]}
-              >
+              <View key={wear.id} style={styles.dayWearRow}>
                 <View
                   style={[
                     styles.dayWearAccent,
                     { backgroundColor: accentFor(wear.fragrance_id) },
                   ]}
                 />
-                <View style={styles.dayWearMain}>
+                <Pressable
+                  onPress={() => onOpenFragrance(wear.fragrance_id)}
+                  style={({ pressed }) => [styles.dayWearMain, pressed && { opacity: 0.75 }]}
+                >
                   <Caption style={{ marginBottom: 3 }}>
                     {fragrance?.brand ?? 'Unknown'}
                   </Caption>
                   <Serif size={16} numberOfLines={1}>
-                    {fragrance?.name ?? 'Unknown bottle'}
+                    {labelName}
                   </Serif>
                   {wear.notes ? (
                     <Text style={styles.dayWearNote} numberOfLines={2}>
                       {wear.notes}
                     </Text>
                   ) : null}
-                </View>
+                </Pressable>
                 {fragrance?.concentration ? (
                   <Caption tone="dim">{fragrance.concentration}</Caption>
                 ) : null}
-              </Pressable>
+                <View style={styles.dayWearActions}>
+                  <Pressable
+                    onPress={() => onEditWear(wear)}
+                    accessibilityLabel={`Edit wear for ${labelName}`}
+                    style={styles.dayWearAction}
+                    hitSlop={8}
+                  >
+                    <IconEdit size={15} color={colors.textMuted} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => onDeleteWear(wear)}
+                    accessibilityLabel={`Delete wear for ${labelName}`}
+                    disabled={deleting}
+                    style={[styles.dayWearAction, deleting && { opacity: 0.5 }]}
+                    hitSlop={8}
+                  >
+                    <IconTrash size={15} color={colors.textMuted} />
+                  </Pressable>
+                </View>
+              </View>
             );
           })
         ) : (
@@ -344,7 +423,7 @@ function DayDetail({
 
       {logging ? (
         <View style={styles.dayEntry}>
-          <Caption style={{ marginBottom: 10 }}>Choose bottle</Caption>
+          <Caption style={{ marginBottom: 10 }}>{editing ? 'Edit wear' : 'Choose bottle'}</Caption>
           <View style={styles.dayEntryBottleList}>
             {fragrances.map((fragrance) => {
               const selected = fragrance.id === selectedFragranceId;
@@ -380,7 +459,7 @@ function DayDetail({
               disabled={saving}
               style={[styles.dayEntryPrimary, saving && { opacity: 0.6 }]}
             >
-              <Text style={styles.dayEntryPrimaryText}>Save wear</Text>
+              <Text style={styles.dayEntryPrimaryText}>{editing ? 'Save changes' : 'Save wear'}</Text>
             </Pressable>
           </View>
         </View>
@@ -780,6 +859,17 @@ const styles = StyleSheet.create({
     color: colors.textDim,
     fontSize: 12,
     marginTop: 4,
+  },
+  dayWearActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dayWearAction: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyDay: {
     ...typography.bodyDim,

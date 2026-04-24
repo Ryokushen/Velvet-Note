@@ -34,6 +34,18 @@ fragrance-data/
 
 The repo migration/import SQL is the canonical app version. The external SQL files are useful as source notes from the normalization pass.
 
+## Windows `psql`
+
+This workstation has a user-local PostgreSQL client installed at:
+
+```text
+C:\Users\charl\Tools\PostgreSQL\16.2\pgsql\bin\psql.exe
+```
+
+That bin directory is saved to the user PATH for future PowerShell sessions. New terminals can call `psql` directly; the current terminal can use the full path if PATH has not refreshed yet.
+
+Use a session-pooler connection string for IPv4 networks. Keep the password in the local environment or prompt entry, not in the repo.
+
 ## Import
 
 Apply the repo migration through the normal Supabase migration path first. If applying manually with `psql`:
@@ -61,8 +73,9 @@ Current production import, 2026-04-24:
 - staged rows copied: `59,324`
 - distinct catalog rows upserted: `59,280`
 - staging rows after cleanup: `0`
+- search ranking migration applied: `20260424030000_catalog_search_rank.sql`
 
-App lookup uses `search_catalog_fragrances(search_text, match_limit)` so the Add flow can search brand, bottle name, accords, and top/middle/base notes through a single RPC.
+App lookup uses `search_catalog_fragrances(search_text, match_limit)` so the Add flow can search brand, bottle name, accords, and top/middle/base notes through a single RPC. Migration `20260424030000_catalog_search_rank.sql` updates ranking to prioritize match quality and exact note position before falling back to rating count.
 
 ## Table Boundary
 

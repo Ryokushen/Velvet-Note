@@ -57,7 +57,7 @@ describe('Add catalog prefill', () => {
     fireEvent.changeText(getByPlaceholderText('Search catalog by bottle, brand, or note'), 'chergui');
 
     await waitFor(() => {
-      expect(searchSupabaseCatalog).toHaveBeenCalledWith('chergui', 5);
+      expect(searchSupabaseCatalog).toHaveBeenCalledWith('chergui', 20);
       expect(getByText('Chergui')).toBeTruthy();
     });
 

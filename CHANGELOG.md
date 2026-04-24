@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-04-24 - Improve shared catalog search ranking
+
+### Summary
+
+Adjusted catalog search ranking so note searches do not collapse into the same most-popular rows.
+
+### Shipped
+
+- Added a replacement `search_catalog_fragrances` migration that ranks match quality before popularity.
+- Exact brand/name matches rank first, followed by exact accord/top/middle/base note matches.
+- Exact note position now breaks ties before rating count.
+- Raised Add-screen catalog results to 20 and made the result panel independently scrollable.
+
+### Verification
+
+- `npm.cmd test -- --runInBand`
+- `npm.cmd run lint`
+- `.\node_modules\.bin\tsc.cmd --noEmit`
+- Live Supabase RPC smoke: `search_catalog_fragrances('vanilla', 8)` and `search_catalog_fragrances('sandalwood', 8)` returned distinct ranked result sets.
+
 ## 2026-04-24 - Add note-aware shared catalog search
 
 ### Summary

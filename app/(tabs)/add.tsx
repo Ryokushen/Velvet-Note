@@ -45,7 +45,7 @@ export default function Add() {
       return undefined;
     }
 
-    searchSupabaseCatalog(query, 5)
+    searchSupabaseCatalog(query, 20)
       .then((results) => {
         if (!cancelled) {
           setCatalogResults(results);
@@ -129,7 +129,12 @@ export default function Add() {
               style={styles.input}
             />
             {catalogResults.length > 0 ? (
-              <View style={styles.catalogResults}>
+              <ScrollView
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
+                style={styles.catalogResults}
+                contentContainerStyle={styles.catalogResultsContent}
+              >
                 {catalogResults.map((entry) => (
                   <Pressable
                     key={entry.id}
@@ -151,7 +156,7 @@ export default function Add() {
                     </View>
                   </Pressable>
                 ))}
-              </View>
+              </ScrollView>
             ) : null}
             {selectedCatalog ? (
               <View style={styles.selectedCatalog}>
@@ -241,6 +246,9 @@ const styles = StyleSheet.create({
   },
   catalogResults: {
     marginTop: 10,
+    maxHeight: 430,
+  },
+  catalogResultsContent: {
     gap: 8,
   },
   catalogResult: {

@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -14,7 +15,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { Caption, Serif } from '../../components/ui/text';
 import { IconChevronLeft, IconChevronRight, IconPlus } from '../../components/ui/Icon';
 import { useFragrancesQuery } from '../../hooks/useFragrances';
-import { useWearsQuery } from '../../hooks/useWears';
+import { useCreateWear, useWearsQuery } from '../../hooks/useWears';
 import type { Fragrance } from '../../types/fragrance';
 import type { Wear } from '../../types/wear';
 import { colors } from '../../theme/colors';
@@ -32,9 +33,13 @@ export default function CalendarScreen() {
   const router = useRouter();
   const wears = useWearsQuery();
   const fragrances = useFragrancesQuery();
+  const createWear = useCreateWear();
   const [mode, setMode] = useState<CalendarMode>('month');
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState(() => todayLocalDate());
+  const [loggingDay, setLoggingDay] = useState(false);
+  const [selectedFragranceId, setSelectedFragranceId] = useState('');
+  const [wearNotes, setWearNotes] = useState('');
 
   const fragranceById = useMemo(() => {
     const map = new Map<string, Fragrance>();
@@ -65,17 +70,35 @@ export default function CalendarScreen() {
     const next = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + delta, 1);
     setVisibleMonth(next);
     setSelectedDate(isSameMonth(new Date(), next) ? todayLocalDate() : '');
+    resetWearEntry();
   }
 
-  function openLogHint() {
-    Alert.alert(
-      'Log a wear',
-      'Open a bottle from Collection, then use Log today from the detail screen.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Open collection', onPress: () => router.push('/' as never) },
-      ],
-    );
+  function selectDate(dateKey: string) {
+    setSelectedDate(dateKey);
+    resetWearEntry();
+  }
+
+  function resetWearEntry() {
+    setLoggingDay(false);
+    setSelectedFragranceId('');
+    setWearNotes('');
+  }
+
+  async function saveSelectedDayWear() {
+    if (!selectedDate || !selectedFragranceId) {
+      Alert.alert('Choose a bottle', 'Pick a bottle before saving this wear.');
+      return;
+    }
+    try {
+      await createWear.mutateAsync({
+        fragrance_id: selectedFragranceId,
+        worn_on: selectedDate,
+        notes: wearNotes.trim() ? wearNotes.trim() : null,
+      });
+      resetWearEntry();
+    } catch (e: any) {
+      Alert.alert('Could not log wear', e.message ?? 'Unknown error');
+    }
   }
 
   return (
@@ -139,7 +162,7 @@ export default function CalendarScreen() {
                   return (
                     <Pressable
                       key={cell.key}
-                      onPress={() => setSelectedDate(cell.dateKey)}
+                      onPress={() => selectDate(cell.dateKey)}
                       style={[
                         styles.dayCell,
                         isSelected && styles.dayCellSelected,
@@ -173,8 +196,17 @@ export default function CalendarScreen() {
                 <DayDetail
                   date={selectedDateObj}
                   wears={selectedWears}
+                  fragrances={fragrances.data ?? []}
                   fragranceById={fragranceById}
-                  onAdd={openLogHint}
+                  logging={loggingDay}
+                  selectedFragranceId={selectedFragranceId}
+                  notes={wearNotes}
+                  saving={createWear.isPending}
+                  onAdd={() => setLoggingDay(true)}
+                  onCancelAdd={resetWearEntry}
+                  onSelectFragrance={setSelectedFragranceId}
+                  onChangeNotes={setWearNotes}
+                  onSave={saveSelectedDayWear}
                   onOpenFragrance={(fragranceId) => router.push(`/fragrance/${fragranceId}` as never)}
                 />
               ) : null}
@@ -223,14 +255,32 @@ function SegmentedControl({
 function DayDetail({
   date,
   wears,
+  fragrances,
   fragranceById,
+  logging,
+  selectedFragranceId,
+  notes,
+  saving,
   onAdd,
+  onCancelAdd,
+  onSelectFragrance,
+  onChangeNotes,
+  onSave,
   onOpenFragrance,
 }: {
   date: Date;
   wears: Wear[];
+  fragrances: Fragrance[];
   fragranceById: Map<string, Fragrance>;
+  logging: boolean;
+  selectedFragranceId: string;
+  notes: string;
+  saving: boolean;
   onAdd: () => void;
+  onCancelAdd: () => void;
+  onSelectFragrance: (fragranceId: string) => void;
+  onChangeNotes: (notes: string) => void;
+  onSave: () => void;
   onOpenFragrance: (fragranceId: string) => void;
 }) {
   return (
@@ -242,7 +292,12 @@ function DayDetail({
             {formatMonthDay(date)}
           </Serif>
         </View>
-        <Pressable onPress={onAdd} style={styles.addDayButton} hitSlop={8}>
+        <Pressable
+          onPress={onAdd}
+          accessibilityLabel="Log wear for selected day"
+          style={styles.addDayButton}
+          hitSlop={8}
+        >
           <IconPlus size={18} color={colors.textMuted} />
         </Pressable>
       </View>
@@ -286,6 +341,50 @@ function DayDetail({
           <Text style={styles.emptyDay}>Nothing worn.</Text>
         )}
       </View>
+
+      {logging ? (
+        <View style={styles.dayEntry}>
+          <Caption style={{ marginBottom: 10 }}>Choose bottle</Caption>
+          <View style={styles.dayEntryBottleList}>
+            {fragrances.map((fragrance) => {
+              const selected = fragrance.id === selectedFragranceId;
+              return (
+                <Pressable
+                  key={fragrance.id}
+                  onPress={() => onSelectFragrance(fragrance.id)}
+                  style={[
+                    styles.dayEntryBottle,
+                    selected && styles.dayEntryBottleSelected,
+                  ]}
+                >
+                  <Caption style={{ marginBottom: 3 }}>{fragrance.brand}</Caption>
+                  <Text style={styles.dayEntryBottleName}>{fragrance.name}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <TextInput
+            value={notes}
+            onChangeText={onChangeNotes}
+            placeholder="Optional note"
+            placeholderTextColor={colors.textMuted}
+            multiline
+            style={styles.dayEntryNotes}
+          />
+          <View style={styles.dayEntryActions}>
+            <Pressable onPress={onCancelAdd} style={styles.dayEntrySecondary}>
+              <Text style={styles.dayEntrySecondaryText}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              onPress={onSave}
+              disabled={saving}
+              style={[styles.dayEntryPrimary, saving && { opacity: 0.6 }]}
+            >
+              <Text style={styles.dayEntryPrimaryText}>Save wear</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -686,6 +785,72 @@ const styles = StyleSheet.create({
     ...typography.bodyDim,
     color: colors.textMuted,
     fontSize: 13,
+  },
+  dayEntry: {
+    marginTop: 18,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSoft,
+    paddingTop: 16,
+  },
+  dayEntryBottleList: {
+    gap: 8,
+  },
+  dayEntryBottle: {
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  dayEntryBottleSelected: {
+    borderColor: colors.accent,
+  },
+  dayEntryBottleName: {
+    fontFamily: typography.serif,
+    fontSize: 16,
+    color: colors.text,
+  },
+  dayEntryNotes: {
+    minHeight: 68,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: colors.text,
+    textAlignVertical: 'top',
+  },
+  dayEntryActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 12,
+  },
+  dayEntrySecondary: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  dayEntrySecondaryText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  dayEntryPrimary: {
+    borderRadius: radius.sm,
+    backgroundColor: colors.accent,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  dayEntryPrimaryText: {
+    fontSize: 12,
+    color: colors.background,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    fontWeight: '600',
   },
   bottleList: {
     paddingTop: 8,

@@ -12,7 +12,7 @@ Index: [[Fragrance App Index]]
 
 ## Current State
 
-Phase 1.5 wear logging and the Calendar UI are shipped on `main`. The remaining items below are follow-on improvements, not blockers for this phase.
+Phase 1.5 wear logging and the Calendar UI are shipped on `main`. Calendar day-sheet logging for arbitrary selected dates has been added after the initial Phase 1.5 shipment. The remaining items below are follow-on improvements, not blockers for this phase.
 
 Shipped:
 
@@ -22,7 +22,9 @@ Shipped:
 - Fragrance detail "Log today" flow with optional note.
 - Calendar tab between Collection and Add.
 - Calendar Month view with day dots and selected-day detail sheet.
+- Calendar selected-day wear entry: press plus, choose a bottle, save a wear for that date.
 - Calendar By bottle view with last-worn labels and sparkline markers.
+- Curated local accord descriptor vocabulary and autocomplete, still stored in `fragrances.accords`.
 - Velvet Note handoff checked in under `docs/design-handoff/velvet-note/`.
 
 Key commits:
@@ -58,7 +60,6 @@ Temporary test users were removed from Supabase after verification.
 
 ## Intentional Gaps
 
-- Day-sheet plus button currently routes users toward logging from a fragrance detail screen; arbitrary past-date logging is not implemented yet.
 - Wear editing/deleting UI is not implemented yet, although service functions exist.
 - Calendar does not yet show multiple dots/counts for multiple wears on the same day; it uses the first wear's accent dot.
 - Detail/list do not yet surface "last worn" summary outside the detail wear history section.
@@ -66,10 +67,4 @@ Temporary test users were removed from Supabase after verification.
 
 ## Next Good Slice
 
-Add a date-aware wear entry flow:
-
-- Tap a Calendar day.
-- Press the plus action.
-- Pick one fragrance from the user's collection.
-- Save a `wears` row for the selected date.
-- Refresh the selected-day detail and By bottle view.
+Add wear editing/deleting UI from the Calendar selected-day detail sheet.

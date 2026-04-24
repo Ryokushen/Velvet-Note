@@ -28,6 +28,7 @@ Run this checklist on a dev build before any demo or release.
 - [ ] Brand + name required, blocked with alert if missing
 - [ ] Submit happy path adds new row to Collection
 - [ ] Concentration picker, accord chips, and rating dots are interactive
+- [ ] Accord chip autocomplete suggests curated descriptors while typing
 - [ ] Chip dedup prevents adding the same accord twice
 
 ## Detail
@@ -45,6 +46,8 @@ Run this checklist on a dev build before any demo or release.
 - [ ] Month grid renders current month with weekday row
 - [ ] A day with a logged wear shows an accent dot
 - [ ] Tapping a day shows selected-day detail
+- [ ] Pressing the selected-day plus opens bottle choices
+- [ ] Choosing a bottle and saving creates a wear for the selected date
 - [ ] Logged wear appears in the selected-day detail sheet
 - [ ] By bottle toggle shows last-worn status and sparkline markers
 - [ ] Month previous/next controls navigate without crashing

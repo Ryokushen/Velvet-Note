@@ -1,0 +1,94 @@
+{
+  "family_accords": [
+    {
+      "label": "fougere",
+      "ui_family": "fresh",
+      "description": "Lavender and bergamot over coumarin, oakmoss, and aromatic herbs."
+    },
+    {
+      "label": "chypre",
+      "ui_family": "woody",
+      "description": "Bright citrus sliding into mossy, resinous, patchouli or labdanum depth."
+    },
+    {
+      "label": "amber",
+      "ui_family": "oriental",
+      "description": "Warm vanilla, benzoin, labdanum, tonka, balsam, and resin structure."
+    },
+    {
+      "label": "gourmand",
+      "ui_family": "oriental",
+      "description": "Edible dessert register: vanilla, caramel, cacao, praline, honey, or sugar."
+    },
+    {
+      "label": "aquatic",
+      "ui_family": "fresh",
+      "description": "Marine, ozonic, watery, calone-like freshness."
+    },
+    {
+      "label": "woody amber",
+      "ui_family": "woody",
+      "description": "Modern transparent wood built from ambroxan, iso e super, cashmeran, and related materials."
+    },
+    {
+      "label": "leather",
+      "ui_family": "woody",
+      "description": "Dry, smoky, suede, birch tar, saffron, labdanum, or animalic leather impression."
+    },
+    {
+      "label": "animalic",
+      "ui_family": "oriental",
+      "description": "Indolic, musky, civet-like, castoreum-like, or bodily warmth."
+    },
+    {
+      "label": "tobacco",
+      "ui_family": "oriental",
+      "description": "Dried leaf, hay, vanilla, spice, smoke, dried fruit, or tobacco pouch character."
+    },
+    {
+      "label": "aldehydic floral",
+      "ui_family": "floral",
+      "description": "Soapy, waxy aldehydic lift over rose, jasmine, iris, ylang, or white florals."
+    }
+  ],
+  "house_signature_accords": [
+    {
+      "label": "guerlinade",
+      "ui_family": "oriental"
+    },
+    {
+      "label": "mugler praline",
+      "ui_family": "oriental"
+    },
+    {
+      "label": "chanel aldehydic floral",
+      "ui_family": "floral"
+    },
+    {
+      "label": "tom ford tobacco vanilla",
+      "ui_family": "oriental"
+    },
+    {
+      "label": "le labo santal 33",
+      "ui_family": "woody"
+    },
+    {
+      "label": "creed ambergris",
+      "ui_family": "fresh"
+    }
+  ],
+  "ellena_micro_accords": [
+    "chocolate",
+    "sugared almonds",
+    "orange blossom",
+    "strawberry",
+    "tomato",
+    "freesia"
+  ],
+  "bench_exercises": [
+    "pseudo fougere",
+    "pseudo amber",
+    "forest",
+    "spiced tea"
+  ]
+}

@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { View, TextInput, StyleSheet } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, View, Text, TextInput, StyleSheet } from 'react-native';
+import { normalizeAccord, suggestAccords } from '../lib/accordVocabulary';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { radius } from '../theme/spacing';
@@ -14,9 +15,10 @@ export function AccordChips({
   onChange: (v: string[]) => void;
 }) {
   const [draft, setDraft] = useState('');
+  const suggestions = useMemo(() => suggestAccords(draft, value, 6), [draft, value]);
 
-  function add() {
-    const a = draft.trim().toLowerCase();
+  function add(next = draft) {
+    const a = normalizeAccord(next);
     if (!a || value.includes(a)) {
       setDraft('');
       return;
@@ -39,7 +41,7 @@ export function AccordChips({
         <TextInput
           value={draft}
           onChangeText={setDraft}
-          onSubmitEditing={add}
+          onSubmitEditing={() => add()}
           placeholder={value.length === 0 ? 'Type a note and press return' : '+ add'}
           placeholderTextColor={colors.textMuted}
           returnKeyType="done"
@@ -49,6 +51,19 @@ export function AccordChips({
           style={styles.input}
         />
       </View>
+      {suggestions.length > 0 && (
+        <View style={styles.suggestions}>
+          {suggestions.map((suggestion) => (
+            <Pressable
+              key={suggestion}
+              onPress={() => add(suggestion)}
+              style={styles.suggestion}
+            >
+              <Text style={styles.suggestionText}>{suggestion}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -73,5 +88,23 @@ const styles = StyleSheet.create({
     minWidth: 120,
     flexGrow: 1,
     padding: 0,
+  },
+  suggestions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  suggestion: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: colors.surfaceElevated,
+  },
+  suggestionText: {
+    fontSize: 12,
+    color: colors.textDim,
   },
 });

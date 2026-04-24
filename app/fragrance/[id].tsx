@@ -18,12 +18,13 @@ import {
   useUpdateFragrance,
   useDeleteFragrance,
 } from '../../hooks/useFragrances';
+import { useCreateWear, useFragranceWearsQuery } from '../../hooks/useWears';
 import { AccordChips } from '../../components/AccordChips';
 import { ConcentrationPicker } from '../../components/ConcentrationPicker';
 import { RatingDots } from '../../components/ui/RatingDots';
 import { RatingNumeral } from '../../components/ui/RatingNumeral';
 import { NotesRows } from '../../components/ui/NotesRows';
-import { GhostButton } from '../../components/ui/Button';
+import { GhostButton, PrimaryButton } from '../../components/ui/Button';
 import { Caption, Serif } from '../../components/ui/text';
 import { SectionDivider } from '../../components/ui/SectionDivider';
 import { IconChevronLeft } from '../../components/ui/Icon';
@@ -45,6 +46,8 @@ export default function Detail() {
   const fragranceRating = fragrance?.rating;
   const update = useUpdateFragrance();
   const del = useDeleteFragrance();
+  const wears = useFragranceWearsQuery(fragranceId);
+  const createWear = useCreateWear();
 
   const [editing, setEditing] = useState(false);
   const [brand, setBrand] = useState('');
@@ -52,6 +55,7 @@ export default function Detail() {
   const [concentration, setConcentration] = useState<Concentration | null>(null);
   const [accords, setAccords] = useState<string[]>([]);
   const [rating, setRating] = useState(0);
+  const [wearNotes, setWearNotes] = useState('');
 
   useEffect(() => {
     if (!fragranceId) return;
@@ -121,6 +125,21 @@ export default function Detail() {
     );
   }
 
+  async function logWearToday() {
+    if (!fragranceId) return;
+    try {
+      await createWear.mutateAsync({
+        fragrance_id: fragranceId,
+        worn_on: todayLocalDate(),
+        notes: wearNotes.trim() ? wearNotes.trim() : null,
+      });
+      setWearNotes('');
+      Alert.alert('Wear logged', `${fragrance!.brand} ${fragrance!.name} was added to today's wear history.`);
+    } catch (e: any) {
+      Alert.alert('Could not log wear', e.message ?? 'Unknown error');
+    }
+  }
+
   if (editing) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -168,43 +187,117 @@ export default function Detail() {
           <Text style={styles.headerText}>Edit</Text>
         </Pressable>
       </View>
-      <ScrollView contentContainerStyle={styles.readScroll}>
-        <Caption style={{ marginBottom: 10 }}>{fragrance.brand}</Caption>
-        <Serif size={34} style={{ marginBottom: 14, lineHeight: 40 }}>
-          {fragrance.name}
-        </Serif>
-        {fragrance.concentration ? (
-          <View style={styles.metaRow}>
-            <Caption>{fragrance.concentration}</Caption>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.readScroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Caption style={{ marginBottom: 10 }}>{fragrance.brand}</Caption>
+          <Serif size={34} style={{ marginBottom: 14, lineHeight: 40 }}>
+            {fragrance.name}
+          </Serif>
+          {fragrance.concentration ? (
+            <View style={styles.metaRow}>
+              <Caption>{fragrance.concentration}</Caption>
+            </View>
+          ) : null}
+
+          <View style={{ marginBottom: 40 }}>
+            <RatingNumeral value={fragrance.rating} />
           </View>
-        ) : null}
 
-        <View style={{ marginBottom: 40 }}>
-          <RatingNumeral value={fragrance.rating} />
-        </View>
+          <SectionDivider />
 
-        <SectionDivider />
+          <Caption style={{ marginBottom: 20 }}>Notes</Caption>
+          <View style={{ marginBottom: 40 }}>
+            <NotesRows accords={fragrance.accords} />
+          </View>
 
-        <Caption style={{ marginBottom: 20 }}>Notes</Caption>
-        <View style={{ marginBottom: 40 }}>
-          <NotesRows accords={fragrance.accords} />
-        </View>
+          <SectionDivider marginVertical={24} />
 
-        {since ? (
-          <>
-            <SectionDivider marginVertical={24} />
-            <Caption style={{ marginBottom: 12 }}>On the shelf since</Caption>
-            <Text style={styles.sinceValue}>{since}</Text>
-          </>
-        ) : null}
+          <View style={styles.wearHeader}>
+            <View>
+              <Caption style={{ marginBottom: 8 }}>Wear history</Caption>
+              <Text style={styles.wearSummary}>{wearSummary(wears.data?.length ?? 0)}</Text>
+            </View>
+          </View>
 
-        <View style={{ paddingBottom: 48, marginTop: 32 }}>
-          <GhostButton danger onPress={confirmDelete} loading={del.isPending}>
-            Remove from shelf
-          </GhostButton>
-        </View>
-      </ScrollView>
+          <TextInput
+            value={wearNotes}
+            onChangeText={setWearNotes}
+            placeholder="Optional note for today's wear"
+            placeholderTextColor={colors.textMuted}
+            multiline
+            style={styles.notesInput}
+          />
+          <PrimaryButton loading={createWear.isPending} onPress={logWearToday}>
+            Log today
+          </PrimaryButton>
+
+          <WearHistory
+            loading={wears.isLoading}
+            error={wears.error}
+            wears={wears.data ?? []}
+          />
+
+          {since ? (
+            <>
+              <SectionDivider marginVertical={24} />
+              <Caption style={{ marginBottom: 12 }}>On the shelf since</Caption>
+              <Text style={styles.sinceValue}>{since}</Text>
+            </>
+          ) : null}
+
+          <View style={{ paddingBottom: 48, marginTop: 32 }}>
+            <GhostButton danger onPress={confirmDelete} loading={del.isPending}>
+              Remove from shelf
+            </GhostButton>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+function WearHistory({
+  loading,
+  error,
+  wears,
+}: {
+  loading: boolean;
+  error: unknown;
+  wears: { id: string; worn_on: string; notes: string | null }[];
+}) {
+  if (loading) {
+    return (
+      <View style={styles.wearState}>
+        <ActivityIndicator color={colors.accent} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return <Text style={styles.wearEmpty}>Wear history could not be loaded.</Text>;
+  }
+
+  if (wears.length === 0) {
+    return <Text style={styles.wearEmpty}>No wears logged yet.</Text>;
+  }
+
+  return (
+    <View style={styles.wearList}>
+      {wears.slice(0, 3).map((wear) => (
+        <View key={wear.id} style={styles.wearRow}>
+          <View>
+            <Text style={styles.wearDate}>{formatWearDate(wear.worn_on)}</Text>
+            {wear.notes ? <Text style={styles.wearNote}>{wear.notes}</Text> : null}
+          </View>
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -231,6 +324,26 @@ function formatMonthYear(iso: string): string {
   return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 }
 
+function todayLocalDate(): string {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatWearDate(value: string): string {
+  const d = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function wearSummary(count: number): string {
+  if (count === 0) return 'Start tracking when this bottle gets worn.';
+  if (count === 1) return '1 wear logged';
+  return `${count} wears logged`;
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
@@ -255,6 +368,60 @@ const styles = StyleSheet.create({
   readScroll: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 },
   editScroll: { padding: 20, paddingBottom: 40, gap: 20 },
   metaRow: { flexDirection: 'row', alignItems: 'baseline', gap: 16, marginBottom: 32 },
+  wearHeader: {
+    marginBottom: 14,
+  },
+  wearSummary: {
+    ...typography.bodyDim,
+    color: colors.textDim,
+  },
+  notesInput: {
+    minHeight: 76,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.text,
+    textAlignVertical: 'top',
+    marginBottom: 12,
+  },
+  wearState: {
+    minHeight: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wearEmpty: {
+    ...typography.bodyDim,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    marginTop: 18,
+  },
+  wearList: {
+    marginTop: 20,
+    gap: 10,
+  },
+  wearRow: {
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  wearDate: {
+    fontFamily: typography.serif,
+    fontSize: 17,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  wearNote: {
+    ...typography.bodyDim,
+    color: colors.textDim,
+  },
   sinceValue: {
     fontFamily: typography.serif,
     fontSize: 20,

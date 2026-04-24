@@ -12,7 +12,7 @@ Index: [[Fragrance App Index]]
 
 ## Current State
 
-Phase 1.5 wear logging and the Calendar UI are shipped on `main`. Calendar day-sheet logging for arbitrary selected dates, curated accord autocomplete, and local catalog lookup/prefill have been added after the initial Phase 1.5 shipment. The remaining items below are follow-on improvements, not blockers for this phase.
+Phase 1.5 wear logging and the Calendar UI are shipped on `main`. Calendar day-sheet logging for arbitrary selected dates and curated accord autocomplete were added after the initial Phase 1.5 shipment. Catalog lookup has moved beyond this phase: the local Kaggle lookup was superseded by the Phase 2 shared Supabase catalog search path.
 
 Shipped:
 
@@ -27,7 +27,8 @@ Shipped:
 - Calendar selected-day wear editing and confirmed deletion from the day sheet.
 - Calendar By bottle view with last-worn labels and sparkline markers.
 - Curated local accord descriptor vocabulary and autocomplete, still stored in `fragrances.accords`.
-- Local Kaggle catalog import and Add-screen lookup/prefill, still saved as user-owned `fragrances` rows.
+- Local Kaggle catalog import, retained as a lightweight image/source dataset.
+- Shared Supabase `catalog_fragrances` lookup and Add-screen prefill, still saved as user-owned `fragrances` rows with optional catalog metadata.
 - Velvet Note handoff checked in under `docs/design-handoff/velvet-note/`.
 
 Key commits:
@@ -37,11 +38,17 @@ Key commits:
 - `0fca8be` - accord autocomplete and selected-date Calendar wear entry.
 - `ca4222e` - Kaggle catalog import pipeline and normalized local catalog.
 - `deb5846` - Add-screen catalog lookup and prefill.
+- `23e9433` - Parfumo shared catalog import path.
+- `785737c` - persisted catalog metadata on shelf entries.
+- `ba9ba7c` - Add search moved to Supabase RPC.
+- `5c820df` - catalog search ranking and scrollable results.
 
 Live Supabase project:
 
 - Project ref: `aekzcttzqfwlxbsueqrf` (`velvet-note`).
-- Migration applied through Supabase MCP as `wears`.
+- `wears` migration is applied.
+- `catalog_fragrances` is seeded with the Parfumo TidyTuesday snapshot.
+- `search_catalog_fragrances(search_text, match_limit)` is live for Add-screen catalog search.
 
 ## Verification
 
@@ -71,4 +78,4 @@ Temporary test users were removed from Supabase after verification.
 
 ## Next Good Slice
 
-Add a compact "last worn" summary to the collection list and fragrance detail header.
+Surface richer shared catalog metadata in the app: top/middle/base notes, year, perfumers, and rating metadata on Add results and fragrance detail.

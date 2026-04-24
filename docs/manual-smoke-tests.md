@@ -5,7 +5,8 @@ Run this checklist on a dev build before any demo or release.
 ## Setup
 
 - [ ] `.env.local` contains valid Supabase URL + anon key
-- [ ] Migrations applied: `fragrances` and `wears` tables exist in Supabase
+- [ ] Migrations applied: `fragrances`, `wears`, and `catalog_fragrances` tables exist in Supabase
+- [ ] `search_catalog_fragrances(search_text, match_limit)` RPC exists and is granted to anon/authenticated users
 
 ## Auth
 
@@ -27,7 +28,9 @@ Run this checklist on a dev build before any demo or release.
 
 - [ ] Brand + name required, blocked with alert if missing
 - [ ] Catalog lookup finds a bottle by name, brand, or note
-- [ ] Selecting a catalog result prefills brand, name, and accords
+- [ ] Searching `vanilla` and `sandalwood` returns distinct catalog result sets
+- [ ] Catalog result panel scrolls beyond the first five visible rows
+- [ ] Selecting a catalog result prefills brand, name, concentration when present, and accords
 - [ ] Submit happy path adds new row to Collection
 - [ ] Concentration picker, accord chips, and rating dots are interactive
 - [ ] Accord chip autocomplete suggests curated descriptors while typing

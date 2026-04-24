@@ -13,8 +13,10 @@ Index: [[Fragrance App Index]]
 > **Status override (updated 2026-04-24):** Phase 1 email/password collection MVP is tagged as `phase-1` at commit `8cb9d66`. Tasks 22 (Apple Sign In) and 23 (Google Sign In) remain deferred to Phase 4. Manual email/password smoke passed before tagging; longer personal dogfood remains an ongoing product practice rather than a blocking Phase 1 task.
 >
 > **Phase 1.5 follow-on:** Wear logging and the mockup-driven Calendar tab landed after the Phase 1 tag. See `docs/phase-1.5-status.md` for shipped state and follow-ups.
+>
+> **Phase 2 catalog follow-on:** Shared Supabase catalog search is now live via `catalog_fragrances` and `search_catalog_fragrances(search_text, match_limit)`. Barcode scanning, contribution/moderation, and LLM fallback remain Phase 2 follow-ups.
 
-> **Status (2026-04-23):** Tasks 1–21, 24, 25 shipped. Tasks 22 (Apple Sign In) and 23 (Google Sign In) deferred to Phase 4. Task 26 (manual smoke test + dogfood) pending.
+> **Historical status (2026-04-23):** Tasks 1–21, 24, 25 shipped. Tasks 22 (Apple Sign In) and 23 (Google Sign In) deferred to Phase 4. Task 26 had not been completed in this historical snapshot; the 2026-04-24 override above is current.
 >
 > **Post-phase-1-core refresh (2026-04-23, commit `e3f8dce`):** The Velvet Note UI was rebuilt from the Claude Design handoff bundle (primitives under `components/ui/`, family-tinted accord chips, 108pt Georgia rating numeral, 10-dot rating input, `NotesRows`, editorial sign-in hero). The following deltas invalidate specific bodies of this plan but **not the task history** — they are listed here so future readers don't recreate the bugs:
 >
@@ -31,7 +33,7 @@ Index: [[Fragrance App Index]]
 
 **Tech Stack:** Expo SDK (latest), Expo Router, React Native, TypeScript, Supabase JS client v2, `@tanstack/react-query`, `@react-native-async-storage/async-storage` (auth persistence), `expo-apple-authentication`, `@react-native-google-signin/google-signin`, Jest + `@testing-library/react-native`.
 
-**Repo location:** `C:\Users\593528\Documents\Project AI\Velvet-Note`
+**Current repo location:** `C:\Users\charl\Artificial\Obsidian\Obsidian Vault\Velvet-Note`
 
 **Historical note:** The task body below preserves early Mac/vault setup commands and Phase 1 assumptions for traceability.
 

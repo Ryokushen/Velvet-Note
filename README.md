@@ -11,7 +11,7 @@ Some internal package/file names still use `fragrance-app`; the product name in 
    npm install
    ```
 2. Copy `.env.example` to `.env.local` and fill in your Supabase URL and anon key.
-3. Apply database migrations in `supabase/migrations/` via the Supabase SQL editor.
+3. Apply database migrations in `supabase/migrations/` via the Supabase SQL editor or `psql`.
 4. Start the bundler:
    ```bash
    npx expo start
@@ -49,7 +49,13 @@ Shipped:
 - Detail view with catalog bottle art, notes, edit, and delete
 - Wear logging from fragrance detail and selected Calendar days
 - Calendar tab with month grid, same-day wear counts, selected-day detail/edit/delete, and by-bottle view
+- Shared Parfumo catalog in Supabase with brand/name/accord/note search ranking
 - Online-only (offline is Phase 3)
+
+Deferred to Phase 2:
+- Barcode scanning
+- Contribution/moderation flow for unknown catalog rows
+- LLM fallback for unknown entries
 
 Deferred to Phase 4:
 - Apple Sign In
@@ -57,6 +63,6 @@ Deferred to Phase 4:
 
 Milestones:
 - `phase-1` tag: Phase 1 email/password collection MVP
-- `main`: Phase 1.5 wear calendar plus Supabase catalog lookup/prefill
+- `main`: Phase 1.5 wear calendar plus Phase 2 shared catalog lookup/prefill foundation
 
 See `docs/design-spec.md`, `docs/phase-1-plan.md`, `docs/phase-1.5-status.md`, and `docs/parfumo-catalog-import.md` for the full spec, roadmap, and catalog import notes.

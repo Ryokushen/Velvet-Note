@@ -25,11 +25,11 @@ Do not commit the raw CSV, zip, or generated `parfumo_seed.csv`.
 
 ```text
 fragrance-data/
-├── parfumo_data_clean.csv
-├── normalize_parfumo.py
-├── parfumo_seed.csv
-├── parfumo_schema.sql
-└── parfumo_migrate.sql
++-- parfumo_data_clean.csv
++-- normalize_parfumo.py
++-- parfumo_seed.csv
++-- parfumo_schema.sql
+`-- parfumo_migrate.sql
 ```
 
 The repo migration/import SQL is the canonical app version. The external SQL files are useful as source notes from the normalization pass.

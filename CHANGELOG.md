@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-04-24 - Audit docs for Phase 2 catalog state
+
+### Summary
+
+Updated project documentation so the current state reflects the live shared Supabase catalog instead of the earlier local-catalog phase.
+
+### Shipped
+
+- Updated README scope and milestones for the Phase 2 catalog-search foundation.
+- Updated hub/index/status notes to mark `catalog_fragrances` and the search RPC as live.
+- Revised the design spec data model and roadmap around `catalog_fragrances`, barcode, moderation, and LLM fallback.
+- Expanded manual smoke tests for catalog RPC setup, distinct note searches, and scrollable Add results.
+
+### Verification
+
+- Documentation audit with `rg` for stale local-catalog, pending, and historical path language.
+
 ## 2026-04-24 - Improve shared catalog search ranking
 
 ### Summary

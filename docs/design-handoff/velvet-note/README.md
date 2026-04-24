@@ -1,6 +1,6 @@
 # Velvet Note Design Handoff
 
-Source: `C:\Users\593528\Downloads\Velvet Note.zip`, extracted into this repo on 2026-04-24.
+Source: `Velvet Note.zip`, extracted into this repo on 2026-04-24. The original local download path is no longer relevant.
 
 This is the current UI reference for the Velvet Note visual system after the initial Phase 1 implementation.
 

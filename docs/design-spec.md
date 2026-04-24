@@ -3,7 +3,7 @@ tags:
   - project
 type: spec
 status: approved
-date: 2026-04-20
+date: 2026-04-24
 ---
 
 # Fragrance App - Design Spec
@@ -12,7 +12,7 @@ Index: [[Fragrance App Index]]
 
 ## Overview
 
-Status note, 2026-04-24: Phase 1.5 now includes wear logging, Calendar month/by-bottle views, same-day wear counts, selected-date wear entry/edit/confirmed delete, curated accord autocomplete, and Supabase catalog lookup/prefill. The shared Supabase catalog seed is loaded and searchable by brand, bottle name, accords, and notes; barcode scanning and contribution/moderation flow remain Phase 2.
+Status note, 2026-04-24: Phase 1.5 includes wear logging, Calendar month/by-bottle views, same-day wear counts, selected-date wear entry/edit/confirmed delete, and curated accord autocomplete. Phase 2 catalog foundation is also live: the shared Supabase catalog seed is loaded and searchable by brand, bottle name, accords, and notes. Barcode scanning, contribution/moderation, and LLM fallback remain Phase 2 follow-ups.
 
 A personal fragrance collection tracker. Mobile-first (Expo / React Native, iOS + Android), backed by Supabase. Core job: remember what I own — a searchable catalog of my bottles with brand, name, concentration, accords, and a personal rating. Shipped in phases so real usage drives what gets built next.
 
@@ -40,26 +40,27 @@ Catalog-first. The app is primarily a searchable list of bottles I own. Everythi
 
 Key decisions made during brainstorming:
 
-- **Mobile-first** — Expo / React Native, not a vault-native or web-first app
-- **Publishable someday** — architecture must support multi-user from day one (Supabase RLS), even though I'm the only user initially
-- **Barcode + text-search entry** — for when Phase 2 arrives. Not manual-only long-term.
-- **Curated-seed fragrance DB + LLM fallback** — for Phase 2 lookups. Legally clean, grows with use.
-- **Offline-first** — eventually (Phase 3). Not day one.
-- **Lean schema** — only the fields I'd actually search by: brand, name, concentration, accords, rating.
+- **Mobile-first** - Expo / React Native, not a vault-native or web-first app
+- **Publishable someday** - architecture must support multi-user from day one (Supabase RLS), even though I'm the only user initially
+- **Text-search entry** - shipped through the shared Supabase catalog RPC.
+- **Barcode entry** - still planned for Phase 2. Not manual-only long-term.
+- **Curated-seed fragrance DB + LLM fallback** - Parfumo seed is live; LLM fallback remains a Phase 2 follow-up.
+- **Offline-first** - eventually (Phase 3). Not day one.
+- **Lean schema** - only the fields I'd actually search by: brand, name, concentration, accords, rating.
 
 ## Architecture
 
 ### Stack
 
 - **Client:** Expo (React Native) with Expo Router for file-based navigation. TypeScript.
-- **Backend:** Supabase — Postgres, Auth, Row-Level Security.
-- **Data layer (Phase 1):** Supabase JS client directly. React Query for caching and mutations.
+- **Backend:** Supabase - Postgres, Auth, Row-Level Security.
+- **Data layer:** Supabase JS client directly. React Query for caching and mutations.
 - **Offline sync (Phase 3):** WatermelonDB or PowerSync on top of local SQLite.
 - **Barcode (Phase 2):** `expo-barcode-scanner` + Expo Camera.
 
 ### Repo
 
-- Windows location: `C:\Users\593528\Documents\Project AI\Velvet-Note`
+- Windows location: `C:\Users\charl\Artificial\Obsidian\Obsidian Vault\Velvet-Note`
 - GitHub: `https://github.com/Ryokushen/Velvet-Note`
 - Historical vault note hub: `Projects/Fragrance App.md`
 
@@ -122,6 +123,33 @@ alter table wears enable row level security;
 
 Accords stay as `text[]` for simplicity in Phase 1. If the set becomes messy in real use, Phase 2 can normalize into a controlled dimension table plus a join table.
 
+### Phase 2: `catalog_fragrances`
+
+The shared read-only catalog is seeded from the Parfumo TidyTuesday 2024-12-10 snapshot. It stays separate from user-owned shelf rows.
+
+```sql
+create table catalog_fragrances (
+  id uuid primary key default gen_random_uuid(),
+  parfumo_url text unique not null,
+  brand text not null,
+  name text not null,
+  release_year int,
+  concentration text check (concentration in ('EDT', 'EDP', 'Parfum', 'Cologne', 'Other')),
+  raw_concentration text,
+  accords text[] not null default '{}',
+  notes_top text[] not null default '{}',
+  notes_middle text[] not null default '{}',
+  notes_base text[] not null default '{}',
+  perfumers text[] not null default '{}',
+  rating_value numeric,
+  rating_count int,
+  source text not null default 'parfumo_tidytuesday_2024_12_10',
+  imported_at timestamptz not null default now()
+);
+```
+
+`catalog_fragrances` is public-read through RLS and searched through `search_catalog_fragrances(search_text, match_limit)`, which ranks exact brand/name matches, exact accord/note matches, note position, then rating popularity. User-owned `fragrances` rows can store optional catalog metadata (`catalog_id`, `image_url`, `catalog_description`, `catalog_source`) without making catalog rows user-owned.
+
 ## Phased Roadmap
 
 ### Phase 1 — Collection MVP
@@ -175,12 +203,13 @@ Scope:
 
 Scope:
 
-- Expo Camera + `expo-barcode-scanner`
-- New tables: `fragrance_catalog` (shared, public-read) and `fragrance_catalog_contributions` (moderation queue)
-- Promote reviewed local Kaggle/curated catalog data into Supabase
-- Add flow: local catalog prefill exists; Phase 2 moves catalog search to Supabase and adds barcode scanning
-- Text search against the shared catalog (Postgres full-text or Supabase search)
-- LLM fallback (Claude API) for unknown entries — generates accord/note suggestions, user confirms before saving
+- Shipped: shared public-read `catalog_fragrances` table seeded from Parfumo.
+- Shipped: Add flow searches Supabase via `search_catalog_fragrances(search_text, match_limit)`.
+- Shipped: selected catalog metadata can persist on user-owned shelf rows.
+- Next: surface richer catalog fields in the app, especially top/middle/base notes, year, perfumers, and rating metadata.
+- Next: Expo Camera barcode scanning.
+- Next: contribution/moderation queue for unknown or corrected catalog rows.
+- Later: LLM fallback for unknown entries, generating accord/note suggestions that the user confirms before saving.
 
 ### Phase 3 — Offline-First
 
@@ -222,9 +251,10 @@ CI is optional in Phase 1. GitHub Actions can run typecheck + Jest on PR; EAS CI
 
 ## Open Items / Deferred
 
-- **Shared fragrance catalog schema** — finalized in Phase 2
-- **LLM fallback prompt design** — Phase 2
+- **Barcode scanning** — Phase 2 follow-up
+- **Contribution/moderation flow** — Phase 2 follow-up
+- **LLM fallback prompt design** — Phase 2 follow-up
 - **Offline sync library choice** (WatermelonDB vs PowerSync vs custom) — Phase 3
 - **App Store compliance checklist** — Phase 4
-- **Photos of bottles** — not in the current schema; revisit with Phase 2 catalog lookup
+- **Bottle imagery enrichment** — shelf rows can store `image_url`, but the Parfumo seed does not include image URLs
 - **Wear metadata richness** (occasion, weather, longevity) — Phase 1.5 shipped with date + notes; expand only if used

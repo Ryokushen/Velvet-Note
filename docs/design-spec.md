@@ -12,7 +12,7 @@ Index: [[Fragrance App Index]]
 
 ## Overview
 
-Status note, 2026-04-24: Phase 1.5 now includes wear logging, Calendar month/by-bottle views, same-day wear counts, selected-date wear entry/edit/confirmed delete, curated accord autocomplete, and local catalog lookup/prefill. The shared Supabase catalog, barcode scanning, and contribution/moderation flow remain Phase 2.
+Status note, 2026-04-24: Phase 1.5 now includes wear logging, Calendar month/by-bottle views, same-day wear counts, selected-date wear entry/edit/confirmed delete, curated accord autocomplete, and Supabase catalog lookup/prefill. The shared Supabase catalog seed is loaded; barcode scanning and contribution/moderation flow remain Phase 2.
 
 A personal fragrance collection tracker. Mobile-first (Expo / React Native, iOS + Android), backed by Supabase. Core job: remember what I own — a searchable catalog of my bottles with brand, name, concentration, accords, and a personal rating. Shipped in phases so real usage drives what gets built next.
 

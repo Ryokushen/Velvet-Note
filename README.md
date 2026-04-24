@@ -45,7 +45,7 @@ npm test
 Shipped:
 - Auth: email/password
 - Collection list with search
-- Add fragrance: local catalog lookup/prefill, brand, name, concentration, curated/free-text accords, rating
+- Add fragrance: Supabase catalog lookup/prefill, brand, name, concentration, curated/free-text accords, rating
 - Detail view with catalog bottle art, notes, edit, and delete
 - Wear logging from fragrance detail and selected Calendar days
 - Calendar tab with month grid, same-day wear counts, selected-day detail/edit/delete, and by-bottle view
@@ -57,6 +57,6 @@ Deferred to Phase 4:
 
 Milestones:
 - `phase-1` tag: Phase 1 email/password collection MVP
-- `main`: Phase 1.5 wear calendar plus local catalog lookup/prefill
+- `main`: Phase 1.5 wear calendar plus Supabase catalog lookup/prefill
 
 See `docs/design-spec.md`, `docs/phase-1-plan.md`, `docs/phase-1.5-status.md`, and `docs/parfumo-catalog-import.md` for the full spec, roadmap, and catalog import notes.

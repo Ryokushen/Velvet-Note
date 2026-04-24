@@ -56,8 +56,14 @@ psql $env:SUPABASE_DB_URL -f "supabase/imports/parfumo_migrate.sql"
 
 The import SQL truncates `catalog_fragrances_staging` after a successful upsert so future refreshes can repeat the `\copy` and upsert steps.
 
+Current production import, 2026-04-24:
+
+- staged rows copied: `59,324`
+- distinct catalog rows upserted: `59,280`
+- staging rows after cleanup: `0`
+
 ## Table Boundary
 
 - `catalog_fragrances` is shared, read-only to app users, and seeded from external public catalog data.
 - `fragrances` remains user-scoped and stores bottles personally saved to the shelf.
-- A personal fragrance can later reference a catalog row through catalog metadata without making the catalog itself user-owned.
+- A personal fragrance references a catalog row through optional catalog metadata without making the catalog itself user-owned.

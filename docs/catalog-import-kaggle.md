@@ -4,7 +4,7 @@ Source: https://www.kaggle.com/datasets/nandini1999/perfume-recommendation-datas
 
 Use this as the first local catalog source for bottle images and descriptive fragrance information. The dataset includes perfume name, brand, description, notes, and image URL fields.
 
-Parfumo is now the preferred Phase 2 shared catalog seed. See `docs/parfumo-catalog-import.md` for the Supabase `catalog_fragrances` import path. Keep the Kaggle import available as the lightweight local Add-screen lookup and image source until the shared catalog API replaces it.
+Parfumo is now the preferred Phase 2 shared catalog seed. See `docs/parfumo-catalog-import.md` for the Supabase `catalog_fragrances` import path. Keep the Kaggle import available as the lightweight local image/source dataset while Supabase catalog search becomes the primary Add-screen lookup path.
 
 ## License
 
@@ -50,6 +50,6 @@ Each row is normalized to:
 
 ## App Integration
 
-The Add screen reads `data/catalog/perfume-recommendation-catalog.json` locally for catalog lookup. Selecting a result prefills brand, name, and accords while still saving a normal user-owned row in `fragrances`.
+The Add screen now searches the Supabase `catalog_fragrances` table for catalog lookup. Selecting a result prefills brand, name, concentration when available, and accords while still saving a normal user-owned row in `fragrances`.
 
-Keep this catalog separate from Supabase until the lookup behavior and normalized fields feel right. The next persistence step is a `catalog_fragrances` table so a personal bottle can reference a catalog entry without copying every external field into the user's collection row.
+Keep the Kaggle JSON in the repo until image enrichment has a better source. The shared catalog table is the canonical lookup path for Phase 2.

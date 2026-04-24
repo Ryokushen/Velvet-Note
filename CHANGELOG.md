@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-04-24 - Use Supabase shared catalog search in Add flow
+
+### Summary
+
+Switched Add-screen catalog lookup from the local Kaggle JSON file to the shared Supabase `catalog_fragrances` table.
+
+### Shipped
+
+- Added async Supabase catalog search against `catalog_fragrances`.
+- Normalized shared catalog rows into the existing Add-flow catalog result shape.
+- Prefilled concentration from shared catalog rows when available.
+- Kept local JSON search utility available for tests/fallback data work.
+
+### Verification
+
+- `npm.cmd test -- --runInBand`
+- `npm.cmd run lint`
+- `.\node_modules\.bin\tsc.cmd --noEmit`
+
 ## 2026-04-24 - Persist catalog metadata on shelf entries
 
 ### Summary

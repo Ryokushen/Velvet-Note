@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ScrollView,
   View,
@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCreateFragrance } from '../../hooks/useFragrances';
-import { notesToAccords, searchCatalog, type CatalogFragrance } from '../../lib/catalog';
+import { notesToAccords, searchSupabaseCatalog, type CatalogFragrance } from '../../lib/catalog';
 import { AccordChips } from '../../components/AccordChips';
 import { ConcentrationPicker } from '../../components/ConcentrationPicker';
 import { RatingDots } from '../../components/ui/RatingDots';
@@ -35,12 +35,38 @@ export default function Add() {
   const [rating, setRating] = useState(0);
   const [catalogQuery, setCatalogQuery] = useState('');
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogFragrance | null>(null);
-  const catalogResults = useMemo(() => searchCatalog(catalogQuery, 5), [catalogQuery]);
+  const [catalogResults, setCatalogResults] = useState<CatalogFragrance[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const query = catalogQuery.trim();
+    if (query.length < 2) {
+      setCatalogResults([]);
+      return undefined;
+    }
+
+    searchSupabaseCatalog(query, 5)
+      .then((results) => {
+        if (!cancelled) {
+          setCatalogResults(results);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCatalogResults([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [catalogQuery]);
 
   function applyCatalogEntry(entry: CatalogFragrance) {
     setSelectedCatalog(entry);
     setBrand(entry.brand);
     setName(entry.name);
+    setConcentration(entry.concentration ?? null);
     setAccords(notesToAccords(entry.notes));
     setCatalogQuery('');
   }
@@ -96,7 +122,7 @@ export default function Add() {
             <TextInput
               value={catalogQuery}
               onChangeText={setCatalogQuery}
-              placeholder="Search catalog by bottle, brand, or note"
+              placeholder="Search catalog by bottle or brand"
               placeholderTextColor={colors.textMuted}
               autoCapitalize="words"
               autoCorrect={false}
@@ -134,7 +160,7 @@ export default function Add() {
                   <Caption style={{ marginBottom: 4 }}>Catalog match</Caption>
                   <Text style={styles.catalogResultName}>{selectedCatalog.name}</Text>
                   <Text style={styles.catalogResultNotes} numberOfLines={2}>
-                    Image and notes will be saved with this shelf entry.
+                    Catalog metadata will be saved with this shelf entry.
                   </Text>
                 </View>
               </View>

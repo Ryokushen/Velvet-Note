@@ -1,5 +1,6 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import Add from '../app/(tabs)/add';
+import { searchSupabaseCatalog } from '../lib/catalog';
 
 const mockMutateAsync = jest.fn();
 const mockReplace = jest.fn();
@@ -14,6 +15,10 @@ jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+jest.mock('../components/BottleArt', () => ({
+  BottleArt: () => null,
+}));
+
 jest.mock('../hooks/useFragrances', () => ({
   useCreateFragrance: () => ({
     mutateAsync: mockMutateAsync,
@@ -21,31 +26,55 @@ jest.mock('../hooks/useFragrances', () => ({
   }),
 }));
 
+jest.mock('../lib/catalog', () => ({
+  notesToAccords: (notes: string[]) => notes.map((note) => note.trim().toLowerCase()).filter(Boolean),
+  searchSupabaseCatalog: jest.fn(),
+}));
+
 describe('Add catalog prefill', () => {
   beforeEach(() => {
     mockMutateAsync.mockReset();
     mockMutateAsync.mockResolvedValue({});
     mockReplace.mockReset();
+    (searchSupabaseCatalog as jest.Mock).mockReset();
+    (searchSupabaseCatalog as jest.Mock).mockResolvedValue([
+      {
+        id: 'catalog-1',
+        brand: 'Serge Lutens',
+        name: 'Chergui',
+        concentration: 'EDP',
+        description: '',
+        notes: ['Sweet', 'Spicy', 'Tobacco Leaf'],
+        imageUrl: null,
+        source: 'parfumo_tidytuesday_2024_12_10',
+      },
+    ]);
   });
 
-  it('prefills the add form from a catalog result before saving', async () => {
+  it('prefills the add form from a Supabase catalog result before saving', async () => {
     const { getByPlaceholderText, getByText } = render(<Add />);
 
-    fireEvent.changeText(getByPlaceholderText('Search catalog by bottle, brand, or note'), 'tihota');
-    fireEvent.press(getByText('Tihota Eau de Parfum'));
+    fireEvent.changeText(getByPlaceholderText('Search catalog by bottle or brand'), 'chergui');
+
+    await waitFor(() => {
+      expect(searchSupabaseCatalog).toHaveBeenCalledWith('chergui', 5);
+      expect(getByText('Chergui')).toBeTruthy();
+    });
+
+    fireEvent.press(getByText('Chergui'));
     fireEvent.press(getByText('Save to shelf'));
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({
-          brand: 'Indult',
-          name: 'Tihota Eau de Parfum',
-          concentration: null,
-          accords: ['vanilla bean', 'musks'],
+          brand: 'Serge Lutens',
+          name: 'Chergui',
+          concentration: 'EDP',
+          accords: ['sweet', 'spicy', 'tobacco leaf'],
           rating: null,
-          catalog_id: 'indult-tihota-eau-de-parfum',
-          image_url: 'https://static.luckyscent.com/images/products/37401.jpg?width=400&404=product.png',
-          catalog_source: 'kaggle:nandini1999/perfume-recommendation-dataset',
+          catalog_id: 'catalog-1',
+          image_url: null,
+          catalog_source: 'parfumo_tidytuesday_2024_12_10',
         }),
       );
     });

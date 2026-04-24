@@ -122,7 +122,7 @@ export default function Add() {
             <TextInput
               value={catalogQuery}
               onChangeText={setCatalogQuery}
-              placeholder="Search catalog by bottle or brand"
+              placeholder="Search catalog by bottle, brand, or note"
               placeholderTextColor={colors.textMuted}
               autoCapitalize="words"
               autoCorrect={false}

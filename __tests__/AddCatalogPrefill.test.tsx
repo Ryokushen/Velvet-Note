@@ -54,7 +54,7 @@ describe('Add catalog prefill', () => {
   it('prefills the add form from a Supabase catalog result before saving', async () => {
     const { getByPlaceholderText, getByText } = render(<Add />);
 
-    fireEvent.changeText(getByPlaceholderText('Search catalog by bottle or brand'), 'chergui');
+    fireEvent.changeText(getByPlaceholderText('Search catalog by bottle, brand, or note'), 'chergui');
 
     await waitFor(() => {
       expect(searchSupabaseCatalog).toHaveBeenCalledWith('chergui', 5);

@@ -72,12 +72,10 @@ export async function searchSupabaseCatalog(
     return [];
   }
 
-  const { data, error } = await supabase
-    .from('catalog_fragrances')
-    .select('id, brand, name, concentration, accords, notes_top, notes_middle, notes_base, source')
-    .or(`brand.ilike.%${escapePostgrestSearch(q)}%,name.ilike.%${escapePostgrestSearch(q)}%`)
-    .order('rating_count', { ascending: false, nullsFirst: false })
-    .limit(limit);
+  const { data, error } = await supabase.rpc('search_catalog_fragrances', {
+    search_text: q,
+    match_limit: limit,
+  });
 
   if (error) {
     throw new Error(error.message);
@@ -117,8 +115,4 @@ function uniqueText(values: string[]): string[] {
     result.push(trimmed);
   });
   return result;
-}
-
-function escapePostgrestSearch(value: string): string {
-  return value.replace(/[,%]/g, (char) => `\\${char}`);
 }

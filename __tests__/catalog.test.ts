@@ -10,6 +10,7 @@ jest.mock('../lib/supabase', () => {
   return {
     supabase: {
       from: jest.fn(() => builder),
+      rpc: jest.fn(),
       __builder: builder,
     },
   };
@@ -40,7 +41,7 @@ describe('catalog', () => {
   });
 
   it('searches the shared Supabase catalog and normalizes notes', async () => {
-    builder.limit.mockResolvedValueOnce({
+    supabase.rpc.mockResolvedValueOnce({
       data: [
         {
           id: 'catalog-1',
@@ -59,13 +60,10 @@ describe('catalog', () => {
 
     const results = await searchSupabaseCatalog('chergui', 5);
 
-    expect(supabase.from).toHaveBeenCalledWith('catalog_fragrances');
-    expect(builder.select).toHaveBeenCalledWith(
-      'id, brand, name, concentration, accords, notes_top, notes_middle, notes_base, source',
-    );
-    expect(builder.or).toHaveBeenCalledWith('brand.ilike.%chergui%,name.ilike.%chergui%');
-    expect(builder.order).toHaveBeenCalledWith('rating_count', { ascending: false, nullsFirst: false });
-    expect(builder.limit).toHaveBeenCalledWith(5);
+    expect(supabase.rpc).toHaveBeenCalledWith('search_catalog_fragrances', {
+      search_text: 'chergui',
+      match_limit: 5,
+    });
     expect(results).toEqual([
       {
         id: 'catalog-1',
@@ -84,5 +82,6 @@ describe('catalog', () => {
     await expect(searchSupabaseCatalog('c')).resolves.toEqual([]);
 
     expect(supabase.from).not.toHaveBeenCalled();
+    expect(supabase.rpc).not.toHaveBeenCalled();
   });
 });

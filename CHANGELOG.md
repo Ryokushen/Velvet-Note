@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-04-24 - Add note-aware shared catalog search
+
+### Summary
+
+Moved shared catalog lookup behind a Supabase RPC so Add search can match brand, bottle name, accords, and note arrays.
+
+### Shipped
+
+- Added `search_catalog_fragrances(search_text, match_limit)` migration.
+- Updated the Add catalog helper to call the RPC instead of brand/name-only REST filters.
+- Restored Add-screen copy to advertise bottle, brand, or note search.
+
+### Verification
+
+- `npm.cmd test -- --runInBand`
+- `npm.cmd run lint`
+- `.\node_modules\.bin\tsc.cmd --noEmit`
+- Live Supabase RPC smoke: `search_catalog_fragrances('vanilla', 3)` returned Parfumo rows with vanilla notes.
+
 ## 2026-04-24 - Use Supabase shared catalog search in Add flow
 
 ### Summary

@@ -62,6 +62,8 @@ Current production import, 2026-04-24:
 - distinct catalog rows upserted: `59,280`
 - staging rows after cleanup: `0`
 
+App lookup uses `search_catalog_fragrances(search_text, match_limit)` so the Add flow can search brand, bottle name, accords, and top/middle/base notes through a single RPC.
+
 ## Table Boundary
 
 - `catalog_fragrances` is shared, read-only to app users, and seeded from external public catalog data.

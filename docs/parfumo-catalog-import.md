@@ -1,0 +1,63 @@
+# Parfumo Catalog Import
+
+Source: Parfumo TidyTuesday snapshot, 2024-12-10.
+
+This import seeds the shared Phase 2 `catalog_fragrances` table. It does not seed or overwrite personal rows in the Phase 1 `fragrances` table.
+
+## Files
+
+Seed artifacts stay outside this repo:
+
+```text
+C:\Users\charl\Artificial\Obsidian\Obsidian Vault\fragrance-data\
+```
+
+Repo-owned import files:
+
+```text
+supabase/migrations/20260424010000_catalog_fragrances.sql
+supabase/imports/parfumo_migrate.sql
+```
+
+Do not commit the raw CSV, zip, or generated `parfumo_seed.csv`.
+
+## External Seed Artifacts
+
+```text
+fragrance-data/
+├── parfumo_data_clean.csv
+├── normalize_parfumo.py
+├── parfumo_seed.csv
+├── parfumo_schema.sql
+└── parfumo_migrate.sql
+```
+
+The repo migration/import SQL is the canonical app version. The external SQL files are useful as source notes from the normalization pass.
+
+## Import
+
+Apply the repo migration through the normal Supabase migration path first. If applying manually with `psql`:
+
+```powershell
+psql $env:SUPABASE_DB_URL -f "supabase/migrations/20260424010000_catalog_fragrances.sql"
+```
+
+Copy the external seed into the staging table:
+
+```powershell
+psql $env:SUPABASE_DB_URL -c "\copy catalog_fragrances_staging FROM 'C:/Users/charl/Artificial/Obsidian/Obsidian Vault/fragrance-data/parfumo_seed.csv' WITH (FORMAT csv, HEADER true)"
+```
+
+Upsert into the shared catalog and print the sanity report:
+
+```powershell
+psql $env:SUPABASE_DB_URL -f "supabase/imports/parfumo_migrate.sql"
+```
+
+The import SQL truncates `catalog_fragrances_staging` after a successful upsert so future refreshes can repeat the `\copy` and upsert steps.
+
+## Table Boundary
+
+- `catalog_fragrances` is shared, read-only to app users, and seeded from external public catalog data.
+- `fragrances` remains user-scoped and stores bottles personally saved to the shelf.
+- A personal fragrance can later reference a catalog row through catalog metadata without making the catalog itself user-owned.

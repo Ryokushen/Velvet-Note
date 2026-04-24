@@ -59,4 +59,4 @@ Milestones:
 - `phase-1` tag: Phase 1 email/password collection MVP
 - `main`: Phase 1.5 wear calendar plus local catalog lookup/prefill
 
-See `docs/design-spec.md`, `docs/phase-1-plan.md`, and `docs/phase-1.5-status.md` for the full spec and roadmap.
+See `docs/design-spec.md`, `docs/phase-1-plan.md`, `docs/phase-1.5-status.md`, and `docs/parfumo-catalog-import.md` for the full spec, roadmap, and catalog import notes.

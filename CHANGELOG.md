@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-04-24 - Add Parfumo shared catalog import path
+
+### Summary
+
+Added repo-owned Supabase infrastructure for the Phase 2 shared fragrance catalog while keeping large seed artifacts outside git.
+
+### Shipped
+
+- Added `catalog_fragrances` and `catalog_fragrances_staging` schema migration with RLS, read grants, and array indexes.
+- Added a Parfumo staging-to-catalog upsert script with duplicate URL protection and a coverage sanity report.
+- Documented the external `fragrance-data` seed location and import commands.
+- Marked the Kaggle import as the current local lookup source and Parfumo as the Phase 2 shared catalog seed.
+
+### Verification
+
+- `npm.cmd test -- --runInBand`
+- `npm.cmd run lint`
+- `.\node_modules\.bin\tsc.cmd --noEmit`
+
 ## 2026-04-24 - Add Calendar wear counts and delete confirmation
 
 ### Summary

@@ -2,7 +2,9 @@
 
 Source: https://www.kaggle.com/datasets/nandini1999/perfume-recommendation-dataset/data
 
-Use this as the first external catalog source for bottle images and descriptive fragrance information. The dataset is expected to include perfume name, brand, description, notes, and image URL fields.
+Use this as the first local catalog source for bottle images and descriptive fragrance information. The dataset includes perfume name, brand, description, notes, and image URL fields.
+
+Parfumo is now the preferred Phase 2 shared catalog seed. See `docs/parfumo-catalog-import.md` for the Supabase `catalog_fragrances` import path. Keep the Kaggle import available as the lightweight local Add-screen lookup and image source until the shared catalog API replaces it.
 
 ## License
 

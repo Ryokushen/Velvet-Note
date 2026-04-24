@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-04-24 - Add Calendar wear counts and delete confirmation
+
+### Summary
+
+Improved Calendar day visibility and made wear deletion safer.
+
+### Shipped
+
+- Added a compact count badge on month cells when a day has multiple wears.
+- Added a confirmation dialog before deleting a wear from the selected-day sheet.
+- Kept the day-sheet edit/delete tests isolated from vector icon loading.
+
+### Verification
+
+- `npm.cmd test -- --runInBand __tests__/calendarWearEntry.test.tsx`
+- `npm.cmd test -- --runInBand`
+- `npm.cmd run lint`
+- `.\node_modules\.bin\tsc.cmd --noEmit`
+
 ## 2026-04-24 - Add Calendar wear edit and delete actions
 
 ### Summary

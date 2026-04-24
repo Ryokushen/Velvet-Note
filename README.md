@@ -48,7 +48,7 @@ Shipped:
 - Add fragrance: local catalog lookup/prefill, brand, name, concentration, curated/free-text accords, rating
 - Detail view with edit + delete
 - Wear logging from fragrance detail and selected Calendar days
-- Calendar tab with month grid, selected-day detail/edit/delete, and by-bottle view
+- Calendar tab with month grid, same-day wear counts, selected-day detail/edit/delete, and by-bottle view
 - Online-only (offline is Phase 3)
 
 Deferred to Phase 4:

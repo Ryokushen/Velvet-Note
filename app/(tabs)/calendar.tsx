@@ -149,6 +149,23 @@ export default function CalendarScreen() {
     }
   }
 
+  function confirmDeleteCalendarWear(wear: Wear) {
+    Alert.alert(
+      'Delete wear?',
+      `Remove this wear from ${formatMonthDay(parseWearDate(wear.worn_on))}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void deleteCalendarWear(wear);
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -226,12 +243,22 @@ export default function CalendarScreen() {
                         {cell.day}
                       </Text>
                       {firstWear ? (
-                        <View
-                          style={[
-                            styles.wearDot,
-                            { backgroundColor: accentFor(firstWear.fragrance_id) },
-                          ]}
-                        />
+                        <View style={styles.wearIndicator}>
+                          <View
+                            style={[
+                              styles.wearDot,
+                              { backgroundColor: accentFor(firstWear.fragrance_id) },
+                            ]}
+                          />
+                          {dayWears.length > 1 ? (
+                            <Text
+                              accessibilityLabel={`${dayWears.length} wears on ${formatMonthDay(parseWearDate(cell.dateKey))}`}
+                              style={styles.wearCount}
+                            >
+                              {dayWears.length}
+                            </Text>
+                          ) : null}
+                        </View>
                       ) : (
                         <View style={styles.wearDotPlaceholder} />
                       )}
@@ -258,7 +285,7 @@ export default function CalendarScreen() {
                   onChangeNotes={setWearNotes}
                   onSave={saveSelectedDayWear}
                   onEditWear={startEditWear}
-                  onDeleteWear={deleteCalendarWear}
+                  onDeleteWear={confirmDeleteCalendarWear}
                   onOpenFragrance={(fragranceId) => router.push(`/fragrance/${fragranceId}` as never)}
                 />
               ) : null}
@@ -807,6 +834,19 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 999,
+  },
+  wearIndicator: {
+    minHeight: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+  },
+  wearCount: {
+    fontSize: 9,
+    lineHeight: 11,
+    color: colors.textMuted,
+    fontWeight: '600',
   },
   wearDotPlaceholder: {
     width: 6,

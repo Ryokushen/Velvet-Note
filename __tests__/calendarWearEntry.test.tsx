@@ -1,4 +1,5 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 import CalendarScreen from '../app/(tabs)/calendar';
 
 const mockMutateAsync = jest.fn();
@@ -14,6 +15,19 @@ jest.mock('expo-router', () => ({
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
+
+jest.mock('../components/ui/Icon', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  const MockIcon = () => React.createElement(Text);
+  return {
+    IconChevronLeft: MockIcon,
+    IconChevronRight: MockIcon,
+    IconEdit: MockIcon,
+    IconPlus: MockIcon,
+    IconTrash: MockIcon,
+  };
+});
 
 jest.mock('../hooks/useWears', () => ({
   useCreateWear: () => ({
@@ -39,6 +53,15 @@ jest.mock('../hooks/useWears', () => ({
         created_at: '2026-04-16T12:00:00Z',
         updated_at: '2026-04-16T12:00:00Z',
       },
+      {
+        id: 'wear-2',
+        user_id: 'user-1',
+        fragrance_id: 'fragrance-2',
+        worn_on: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-16`,
+        notes: 'Rainy commute',
+        created_at: '2026-04-16T10:00:00Z',
+        updated_at: '2026-04-16T10:00:00Z',
+      },
     ],
     isLoading: false,
     error: null,
@@ -59,6 +82,17 @@ jest.mock('../hooks/useFragrances', () => ({
         created_at: '2026-04-01T00:00:00Z',
         updated_at: '2026-04-01T00:00:00Z',
       },
+      {
+        id: 'fragrance-2',
+        user_id: 'user-1',
+        brand: 'Diptyque',
+        name: 'Tam Dao',
+        concentration: 'EDT',
+        accords: ['woody'],
+        rating: 8,
+        created_at: '2026-04-01T00:00:00Z',
+        updated_at: '2026-04-01T00:00:00Z',
+      },
     ],
     isLoading: false,
     error: null,
@@ -66,13 +100,26 @@ jest.mock('../hooks/useFragrances', () => ({
 }));
 
 describe('Calendar wear entry', () => {
+  let alertSpy: jest.SpyInstance;
+
   beforeEach(() => {
+    alertSpy = jest.spyOn(Alert, 'alert').mockImplementation();
     mockMutateAsync.mockReset();
     mockMutateAsync.mockResolvedValue({});
     mockUpdateMutateAsync.mockReset();
     mockUpdateMutateAsync.mockResolvedValue({});
     mockDeleteMutateAsync.mockReset();
     mockDeleteMutateAsync.mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    alertSpy.mockRestore();
+  });
+
+  it('shows a count badge when a day has multiple wears', () => {
+    const { getByLabelText } = render(<CalendarScreen />);
+
+    expect(getByLabelText('2 wears on April 16')).toBeTruthy();
   });
 
   it('logs the selected calendar date for the chosen fragrance', async () => {
@@ -116,11 +163,21 @@ describe('Calendar wear entry', () => {
     });
   });
 
-  it('deletes an existing wear from the selected day sheet', async () => {
+  it('confirms before deleting an existing wear from the selected day sheet', async () => {
     const { getByLabelText, getByText } = render(<CalendarScreen />);
 
     fireEvent.press(getByText('16'));
     fireEvent.press(getByLabelText('Delete wear for Shalimar'));
+
+    expect(mockDeleteMutateAsync).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Delete wear?',
+      'Remove this wear from April 16?',
+      expect.any(Array),
+    );
+
+    const buttons = alertSpy.mock.calls[0][2] as { text: string; onPress?: () => void }[];
+    buttons.find((button) => button.text === 'Delete')?.onPress?.();
 
     await waitFor(() => {
       expect(mockDeleteMutateAsync).toHaveBeenCalledWith('wear-1');

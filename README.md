@@ -45,7 +45,7 @@ npm test
 Shipped:
 - Auth: email/password
 - Collection list with search
-- Add fragrance: brand, name, concentration, curated/free-text accords, rating
+- Add fragrance: local catalog lookup/prefill, brand, name, concentration, curated/free-text accords, rating
 - Detail view with edit + delete
 - Wear logging from fragrance detail and selected Calendar days
 - Calendar tab with month grid, selected-day detail, and by-bottle view

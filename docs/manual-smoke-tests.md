@@ -26,6 +26,8 @@ Run this checklist on a dev build before any demo or release.
 ## Add
 
 - [ ] Brand + name required, blocked with alert if missing
+- [ ] Catalog lookup finds a bottle by name, brand, or note
+- [ ] Selecting a catalog result prefills brand, name, and accords
 - [ ] Submit happy path adds new row to Collection
 - [ ] Concentration picker, accord chips, and rating dots are interactive
 - [ ] Accord chip autocomplete suggests curated descriptors while typing

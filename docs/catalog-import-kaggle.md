@@ -46,6 +46,8 @@ Each row is normalized to:
 }
 ```
 
-## Next App Step
+## App Integration
 
-Keep this catalog separate from the personal `fragrances` table at first. After reviewing the normalized output, add a `catalog_fragrances` table or app-local catalog lookup so a personal bottle can reference a catalog entry without copying every external field into the user's collection row.
+The Add screen reads `data/catalog/perfume-recommendation-catalog.json` locally for catalog lookup. Selecting a result prefills brand, name, and accords while still saving a normal user-owned row in `fragrances`.
+
+Keep this catalog separate from Supabase until the lookup behavior and normalized fields feel right. The next persistence step is a `catalog_fragrances` table so a personal bottle can reference a catalog entry without copying every external field into the user's collection row.

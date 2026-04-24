@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ScrollView,
   View,
+  Text,
   TextInput,
+  Pressable,
   StyleSheet,
   Alert,
   KeyboardAvoidingView,
@@ -11,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCreateFragrance } from '../../hooks/useFragrances';
+import { notesToAccords, searchCatalog, type CatalogFragrance } from '../../lib/catalog';
 import { AccordChips } from '../../components/AccordChips';
 import { ConcentrationPicker } from '../../components/ConcentrationPicker';
 import { RatingDots } from '../../components/ui/RatingDots';
@@ -29,6 +32,15 @@ export default function Add() {
   const [concentration, setConcentration] = useState<Concentration | null>(null);
   const [accords, setAccords] = useState<string[]>([]);
   const [rating, setRating] = useState(0);
+  const [catalogQuery, setCatalogQuery] = useState('');
+  const catalogResults = useMemo(() => searchCatalog(catalogQuery, 5), [catalogQuery]);
+
+  function applyCatalogEntry(entry: CatalogFragrance) {
+    setBrand(entry.brand);
+    setName(entry.name);
+    setAccords(notesToAccords(entry.notes));
+    setCatalogQuery('');
+  }
 
   async function submit() {
     if (!brand.trim() || !name.trim()) {
@@ -71,6 +83,35 @@ export default function Add() {
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
         >
+          <View>
+            <Caption style={{ marginBottom: 8 }}>Catalog lookup</Caption>
+            <TextInput
+              value={catalogQuery}
+              onChangeText={setCatalogQuery}
+              placeholder="Search catalog by bottle, brand, or note"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="words"
+              autoCorrect={false}
+              style={styles.input}
+            />
+            {catalogResults.length > 0 ? (
+              <View style={styles.catalogResults}>
+                {catalogResults.map((entry) => (
+                  <Pressable
+                    key={entry.id}
+                    onPress={() => applyCatalogEntry(entry)}
+                    style={({ pressed }) => [
+                      styles.catalogResult,
+                      pressed && { opacity: 0.75 },
+                    ]}
+                  >
+                    <Caption style={{ marginBottom: 4 }}>{entry.brand}</Caption>
+                    <Text style={styles.catalogResultName}>{entry.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+          </View>
           <Field
             label="Brand"
             value={brand}
@@ -143,6 +184,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
     fontFamily: typography.serif,
+  },
+  catalogResults: {
+    marginTop: 10,
+    gap: 8,
+  },
+  catalogResult: {
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceElevated,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  catalogResultName: {
+    fontFamily: typography.serif,
+    fontSize: 16,
+    color: colors.text,
   },
   footer: {
     padding: 16,

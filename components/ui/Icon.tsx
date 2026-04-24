@@ -19,6 +19,7 @@ export const IconSearch = makeIcon('search');
 export const IconPlus = makeIcon('plus');
 export const IconX = makeIcon('x');
 export const IconChevronLeft = makeIcon('chevron-left');
+export const IconChevronRight = makeIcon('chevron-right');
 export const IconEdit = makeIcon('edit-2');
 export const IconTrash = makeIcon('trash-2');
 export const IconLogOut = makeIcon('log-out');

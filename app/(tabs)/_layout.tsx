@@ -29,19 +29,19 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="calendar"
+        options={{
+          title: 'Calendar',
+          tabBarLabel: ({ color }) => <Text style={[styles.label, { color }]}>Calendar</Text>,
+          tabBarIcon: ({ color }) => <IconCalendar size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="add"
         options={{
           title: 'Add',
           tabBarLabel: ({ color }) => <Text style={[styles.label, { color }]}>Add</Text>,
           tabBarIcon: ({ color }) => <IconPlus size={22} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="wear"
-        options={{
-          title: 'Wear',
-          tabBarLabel: ({ color }) => <Text style={[styles.label, { color }]}>Wear</Text>,
-          tabBarIcon: ({ color }) => <IconCalendar size={22} color={color} />,
         }}
       />
     </Tabs>

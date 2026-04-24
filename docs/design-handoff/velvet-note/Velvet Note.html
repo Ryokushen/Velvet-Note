@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Velvet Note — Design</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: -apple-system, system-ui, sans-serif; }
+  #root { width: 100vw; min-height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="components/tokens.jsx"></script>
+<script type="text/babel" src="components/screens.jsx"></script>
+<script type="text/babel" src="components/ratings.jsx"></script>
+<script type="text/babel" src="components/notes.jsx"></script>
+<script type="text/babel" src="components/detail.jsx"></script>
+<script type="text/babel" src="components/calendar.jsx"></script>
+<script type="text/babel" src="components/motion.jsx"></script>
+
+<script type="text/babel">
+const {
+  VN, PhoneFrame, Caption, Serif, Icon, Chip, ChipLegend, FAMILY,
+  SignInScreen, CollectionScreen, AddScreen, SAMPLE,
+  DetailRead, DetailWithImage, DetailEdit,
+  NotesRows, NotesPyramid, NotesTimeline,
+  RatingNumeral, RatingDots, RatingBar,
+  CalendarMonth, CalendarByFragrance,
+  SignatureMotion,
+} = window;
+
+// ─────────────────────────────────────────────────────────────
+// Tweaks: position / visibility of recommendation notes, plus
+// a couple of quick global toggles.
+// ─────────────────────────────────────────────────────────────
+const TWEAKS = /*EDITMODE-BEGIN*/{
+  "notePlacement": "below",
+  "noteStyle": "card",
+  "showNotes": true,
+  "ratingVariant": "numeral",
+  "notesVariant": "rows",
+  "listWithImages": false
+}/*EDITMODE-END*/;
+
+function useTweaks() {
+  const [t, setT] = React.useState(TWEAKS);
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      if (!e.data || typeof e.data !== 'object') return;
+      if (e.data.type === '__activate_edit_mode') setT(s => ({ ...s, __open: true }));
+      if (e.data.type === '__deactivate_edit_mode') setT(s => ({ ...s, __open: false }));
+    };
+    window.addEventListener('message', onMsg);
+    // Announce availability AFTER listener is live
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+  const set = React.useCallback((patch) => {
+    setT(s => {
+      const next = { ...s, ...patch };
+      window.parent.postMessage({ type: '__edit_mode_set_keys', edits: patch }, '*');
+      return next;
+    });
+  }, []);
+  return [t, set];
+}
+
+const TweakCtx = React.createContext(null);
+
+// RecNote — replaces DCPostIt. Placed BELOW the artboard row (default)
+// so it never sits on top of any phone mockup. Can be styled as a
+// card or a yellow post-it, or hidden entirely.
+function RecNote({ children, width }) {
+  const ctx = React.useContext(TweakCtx) || [TWEAKS];
+  const [t] = ctx;
+  if (!t.showNotes) return null;
+  if (t.notePlacement === 'hidden') return null;
+  const isCard = t.noteStyle === 'card';
+  const below = t.notePlacement === 'below';
+  const style = isCard ? {
+    background: '#fff', border: '1px solid #d9d5cb', borderRadius: 6,
+    padding: '18px 22px',
+    fontFamily: '-apple-system, system-ui, sans-serif',
+    fontSize: 13, lineHeight: 1.55, color: '#2a251f',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+  } : {
+    background: '#fef4a8',
+    padding: '14px 16px',
+    fontFamily: '"Comic Sans MS", "Marker Felt", "Segoe Print", cursive',
+    fontSize: 13, lineHeight: 1.45, color: '#5a4a2a',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)',
+    transform: 'rotate(-1deg)',
+    borderRadius: 2,
+  };
+  return (
+    <div style={{
+      width: width || (below ? 720 : 340),
+      margin: below ? '32px 60px 0' : '0',
+      ...style,
+    }}>
+      <div style={{
+        fontFamily: '-apple-system, system-ui, sans-serif',
+        fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase',
+        color: isCard ? '#8a7d6a' : '#7a6530', marginBottom: 10, fontWeight: 500,
+      }}>— Recommendation</div>
+      {children}
+    </div>
+  );
+}
+
+function TweaksPanel() {
+  const [t, set] = React.useContext(TweakCtx);
+  if (!t.__open) return null;
+  const row = { display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 };
+  const label = { fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', color: '#8a7d6a', fontWeight: 500 };
+  const btn = (active) => ({
+    padding: '7px 12px', fontSize: 12,
+    background: active ? '#1a1612' : '#fff',
+    color: active ? '#ede6da' : '#2a251f',
+    border: '1px solid ' + (active ? '#1a1612' : '#d9d5cb'),
+    borderRadius: 4, cursor: 'pointer',
+    fontFamily: '-apple-system, system-ui, sans-serif',
+  });
+  const grp = (val, opts, key) => (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {opts.map(([v, lbl]) => (
+        <button key={v} style={btn(val === v)} onClick={() => set({ [key]: v })}>{lbl}</button>
+      ))}
+    </div>
+  );
+  return (
+    <div style={{
+      position: 'fixed', bottom: 24, right: 24, width: 280,
+      background: '#fff', border: '1px solid #d9d5cb', borderRadius: 8,
+      boxShadow: '0 10px 30px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.08)',
+      padding: 18, zIndex: 100,
+      fontFamily: '-apple-system, system-ui, sans-serif',
+    }}>
+      <div style={{ fontFamily: 'Georgia, serif', fontSize: 18, color: '#1a1612', marginBottom: 14, letterSpacing: 0.2 }}>Tweaks</div>
+
+      <div style={row}>
+        <div style={label}>Notes</div>
+        {grp(t.notePlacement, [['below','Below row'],['hidden','Hidden']], 'notePlacement')}
+      </div>
+      <div style={row}>
+        <div style={label}>Note style</div>
+        {grp(t.noteStyle, [['card','Card'],['postit','Post-it']], 'noteStyle')}
+      </div>
+      <div style={row}>
+        <div style={label}>Rating variant (global)</div>
+        {grp(t.ratingVariant, [['numeral','Numeral'],['dots','Dots'],['bar','Bar']], 'ratingVariant')}
+      </div>
+      <div style={row}>
+        <div style={label}>Notes variant (global)</div>
+        {grp(t.notesVariant, [['rows','Rows'],['pyramid','Ladder'],['timeline','Timeline']], 'notesVariant')}
+      </div>
+      <div style={row}>
+        <div style={label}>List thumbs</div>
+        {grp(t.listWithImages, [[false,'Off'],[true,'On']], 'listWithImages')}
+      </div>
+    </div>
+  );
+}
+
+// Small helper for panel-style callouts on the canvas
+function Panel({ title, children, w = 440 }) {
+  return (
+    <div style={{
+      width: w, background: '#fff', border: '1px solid #d9d5cb',
+      borderRadius: 6, padding: 24, fontFamily: '-apple-system, system-ui, sans-serif',
+      fontSize: 13, lineHeight: 1.55, color: '#2a251f',
+    }}>
+      <div style={{
+        fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase',
+        color: '#8a7d6a', marginBottom: 14, fontWeight: 500,
+      }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+// The hero item we use for detail variations
+const HERO = SAMPLE[0]; // Vetiver Noir
+
+const FRAME_W = 393;
+const FRAME_H = 852;
+
+function App() {
+  const tweaks = useTweaks();
+  const [t] = tweaks;
+  return (
+    <TweakCtx.Provider value={tweaks}>
+    <TweaksPanel />
+    <DesignCanvas>
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* 00 — Art direction read-out */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <DCSection id="intro" title="Velvet Note" subtitle="Collector's companion · Phase 1 mockups, Phase 1.5 calendar, Detail v2 · April 2026">
+        <Panel title="— Art direction" w={720}>
+          <div style={{ fontFamily: 'Georgia, serif', fontSize: 26, lineHeight: 1.2, color: '#1a1612', marginBottom: 18, letterSpacing: 0.2 }}>
+            A private catalog that behaves like a shelf, not a spreadsheet.
+          </div>
+          <p style={{ margin: '0 0 12px' }}>
+            Editorial restraint, not luxury cliché. Bone text on deep neutrals. Georgia for anything
+            that's a name or a number — system sans reserved for chrome. One accent only, used
+            surgically: the muted oxblood <span style={{display:'inline-block',width:10,height:10,background:'#8B3A3A',borderRadius:999,verticalAlign:'middle',margin:'0 4px'}}/>
+            earns its place by being scarce. No gradients, no elevation for its own sake,
+            no illustration — every flourish is suspect.
+          </p>
+          <p style={{ margin: '0 0 12px' }}>
+            <strong>Icons:</strong> Lucide, hairline 1.5px, 20px default. One family, no fills, no duotone.&nbsp;
+            <strong>Accord chips:</strong> family-tinted within the oxblood hue — woody deepest,
+            oriental warm-mid, fresh coolest-muted, floral lightest, spicy highest-chroma. Still reads
+            as one family.&nbsp;
+            <strong>Signature motion:</strong> the list row expands into detail, with brand/name as
+            the shared element. One motion, done well.
+          </p>
+          <p style={{ margin: 0, color: '#5a4e3e' }}>
+            Each section below is a decision you can make on the canvas. Artboards open fullscreen
+            (↗ in the corner) for close reads.
+          </p>
+        </Panel>
+      </DCSection>
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* 01 — Phase 1 screens at full fidelity */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <DCSection id="phase1" title="01 · Phase 1 screens" subtitle="Sign-in · Collection (empty, populated, searching) · Add · Detail (read, edit)">
+        <DCArtboard id="signin" label="Sign in" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><SignInScreen /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="list-empty" label="Collection · empty" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><CollectionScreen state="empty" items={[]} /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="list-populated" label="Collection · populated" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><CollectionScreen withImages={t.listWithImages} /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="list-searching" label="Collection · searching" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><CollectionScreen state="searching" /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="add-empty" label="Add · empty" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><AddScreen /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="add-filled" label="Add · filled" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><AddScreen filled /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="detail-read" label="Detail · read" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><DetailRead item={HERO} rating={t.ratingVariant} notes={t.notesVariant} /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="detail-edit" label="Detail · edit" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><DetailEdit item={HERO} /></PhoneFrame>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* 02 — Imagery: with vs without */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <DCSection id="imagery" title="02 · Bottle imagery" subtitle="With and without, side by side. My recommendation below.">
+        <DCArtboard id="list-no-image" label="List · no image" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><CollectionScreen /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="list-with-image" label="List · with thumb" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><CollectionScreen withImages /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="detail-no-image" label="Detail · no image (v1)" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><DetailRead item={HERO} /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="detail-with-image" label="Detail v2 · hero image" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><DetailWithImage item={HERO} /></PhoneFrame>
+        </DCArtboard>
+
+        <RecNote>
+          <strong>Recommendation: prioritize the schema change.</strong><br/><br/>
+          The no-image list is fine. It's typeset well and it holds its own. But the detail screen
+          without an image is asking type to do all the work, and detail is where your collection
+          lives emotionally — it should feel like holding the bottle.<br/><br/>
+          Imagery is how you justify "premium, not freemium utility." The hero version reads as a
+          product page from Nilufar. The typeset-only version reads as Notion.<br/><br/>
+          <strong>Ship path:</strong> add the image field in Phase 2 alongside barcode lookup. Until then,
+          use the vessel placeholder shown here — it gives the layout the silhouette it needs without
+          forcing you to fake imagery.
+        </RecNote>
+      </DCSection>
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* 03 — Rating variations */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <DCSection id="rating" title="03 · Rating visualization" subtitle="Three approaches. Recommendation in the note.">
+        <DCArtboard id="rating-numeral" label="A · Oversized numeral" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><DetailRead item={HERO} rating="numeral" /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="rating-dots" label="B · Ten-dot row" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><DetailRead item={HERO} rating="dots" /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="rating-bar" label="C · Editorial bar" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><DetailRead item={HERO} rating="bar" /></PhoneFrame>
+        </DCArtboard>
+
+        <RecNote>
+          <strong>Pick A.</strong><br/><br/>
+          You asked for the most satisfying element on the screen. Typography does that here — a
+          120-point Georgia numeral with the decimal tenths in oxblood is the hero. It doesn't need
+          a bar or dots to prove it's a rating; the "/10" lockup reads instantly.<br/><br/>
+          Keep B (dots) for the <em>input</em> affordance in the Add/Edit forms — dots are satisfying
+          to <em>tap</em>, a numeral isn't. See the Add screen: dots for setting, numeral for
+          displaying.
+        </RecNote>
+      </DCSection>
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* 04 — Note hierarchy */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <DCSection id="notes" title="04 · Note hierarchy" subtitle="Top / heart / base. Three visual directions.">
+        <DCArtboard id="notes-rows" label="A · Labeled rows" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><DetailRead item={HERO} notes="rows" /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="notes-pyramid" label="B · Vertical ladder" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><DetailRead item={HERO} notes="pyramid" /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="notes-timeline" label="C · Dry-down timeline" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><DetailRead item={HERO} notes="timeline" /></PhoneFrame>
+        </DCArtboard>
+
+        <RecNote>
+          <strong>Pick A for launch. Keep C in the drawer.</strong><br/><br/>
+          A (labeled rows) is the quietest and the most Phase 1-honest — if the backend still has a
+          flat array, the UI shouldn't promise more structure than exists. The sub-label ("The first
+          impression" / "After a few minutes" / "What lingers") carries the editorial tone without a
+          graphic metaphor.<br/><br/>
+          B (ladder) is attractive but the dot-column reads decorative; it earns its place only if you
+          add density elsewhere.<br/><br/>
+          C (timeline) is the upgrade path for Phase 2 when the schema splits notes. It becomes
+          genuinely useful once you have wear-logging — "which notes am I in the dry-down for?".
+        </RecNote>
+      </DCSection>
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* 05 — Accord chips */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <DCSection id="chips" title="05 · Accord chips" subtitle="Family-tinted within a single hue family.">
+        <DCArtboard id="chip-taxonomy" label="Taxonomy" width={560} height={360} bg={VN.bg}>
+          <div style={{ padding: 32, fontFamily: VN.sans, color: VN.text }}>
+            <Caption style={{ marginBottom: 18 }}>— Family palette</Caption>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {Object.entries(FAMILY).map(([k, f]) => (
+                <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                  <div style={{ width: 100 }}>
+                    <Chip label={f.label} family={k} />
+                  </div>
+                  <div style={{ fontSize: 11, color: VN.textMuted, fontFamily: 'monospace', letterSpacing: 0.2 }}>
+                    {f.dot}
+                  </div>
+                  <div style={{ fontSize: 12, color: VN.textDim }}>
+                    {k === 'woody'    && 'Vetiver, cedar, oud, sandalwood, leather'}
+                    {k === 'oriental' && 'Amber, labdanum, tonka, vanilla, tobacco'}
+                    {k === 'fresh'    && 'Citrus, aquatic, green, petrichor'}
+                    {k === 'floral'   && 'Rose, jasmine, iris, neroli, orange blossom'}
+                    {k === 'spicy'    && 'Pepper, saffron, cardamom, clove'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DCArtboard>
+
+        <DCArtboard id="chip-demo" label="In context" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><DetailRead item={HERO} notes="rows" /></PhoneFrame>
+        </DCArtboard>
+
+        <RecNote>
+          <strong>Direction: curated taxonomy + family-tinted chips.</strong><br/><br/>
+          Five families, all living inside the oxblood hue family (small chroma + lightness shifts).
+          No rainbow. The dot reads as structure, not decoration.<br/><br/>
+          <strong>Behavior:</strong> autocomplete from a curated vocabulary (~80 canonical notes, each mapped
+          to a family). Unknown free-text falls back to a neutral "unclassified" chip — you keep
+          flexibility, but the UI rewards you for using the vocabulary.
+        </RecNote>
+      </DCSection>
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* 06 — Calendar */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <DCSection id="calendar" title="06 · Wear Calendar (Phase 1.5)" subtitle="Two directions. Recommendation: combine them.">
+        <DCArtboard id="cal-month" label="A · Month grid" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><CalendarMonth withDetail /></PhoneFrame>
+        </DCArtboard>
+
+        <DCArtboard id="cal-fragrance" label="B · By bottle" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><CalendarByFragrance /></PhoneFrame>
+        </DCArtboard>
+
+        <RecNote>
+          <strong>Pick A as the root view. Use B as a segmented toggle.</strong><br/><br/>
+          The month grid matches the mental model of "what did I wear?" — it's the calendar the user
+          came to the Calendar tab for. The selected-day sheet handles the question "what was
+          April 23?" in one tap, and the accent dot per day doubles as a faint usage heatmap.<br/><br/>
+          B (by bottle) answers a different question — "when did I last wear this?" — and the
+          sparkline is satisfying. Make it a segmented control at the top of the Calendar tab,
+          not a separate screen.<br/><br/>
+          <strong>Don't do:</strong> week ribbon. A single week is too narrow for the signal this
+          feature is trying to create (usage patterns over time).
+        </RecNote>
+      </DCSection>
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* 07 — Signature motion (live) */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <DCSection id="motion" title="07 · Signature motion" subtitle="List row → detail, brand/name as the shared element. Tap a row.">
+        <DCArtboard id="motion-live" label="Live · tap a row" width={FRAME_W} height={FRAME_H} bg="transparent">
+          <PhoneFrame><SignatureMotion withImages rating="numeral" notes="rows" /></PhoneFrame>
+        </DCArtboard>
+
+        <RecNote>
+          <strong>One motion. No others.</strong><br/><br/>
+          The row lifts off the list and expands to full screen. The brand caption and the serif
+          name move from their row positions to their detail positions — so the user's eye
+          never loses the object being inspected.<br/><br/>
+          480ms · cubic-bezier(.2,.7,.2,1). Symmetrical on back-swipe. The detail content
+          cross-fades in at 120ms delay so it doesn't compete with the morph.<br/><br/>
+          <strong>Tap any row in the live artboard to see it run.</strong> Resist the urge to add
+          a second signature motion. Rating tick, chip press, tab switch — all of these should
+          be ordinary system-default transitions.
+        </RecNote>
+      </DCSection>
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* 08 — Summary */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <DCSection id="summary" title="08 · Decisions to take back">
+        <Panel title="— Recommendations, packaged" w={720}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <tbody>
+              {[
+                ['Imagery',         'Add image field in Phase 2. Use the vessel placeholder until then — gives detail a silhouette without faking.'],
+                ['Note hierarchy',  'Ship A (labeled rows) with top/heart/base sub-labels. Upgrade to C (dry-down timeline) when schema splits notes.'],
+                ['Accord chips',    'Family-tinted within oxblood. Autocomplete from a ~80-word curated vocab. Free-text falls back to neutral chip.'],
+                ['Rating',          'Display: giant serif numeral with oxblood decimal (A). Input: 10-dot row (B). Different contexts, different tools.'],
+                ['Calendar',        'Month grid as root, by-bottle as segmented toggle. Selected-day sheet handles quick lookup.'],
+                ['Motion',          'Shared-element detail expand. 480ms. No second motion.'],
+                ['Icons',           'Lucide, 1.5px stroke, 20px default. One family only.'],
+                ['Out of scope',    'Light theme, custom font swap, barcode flow, shared catalog — all Phase 4+.'],
+              ].map(([k, v]) => (
+                <tr key={k} style={{ borderBottom: '1px solid #e5e0d4' }}>
+                  <td style={{ padding: '12px 16px 12px 0', width: 140, verticalAlign: 'top', fontWeight: 500, color: '#1a1612' }}>{k}</td>
+                  <td style={{ padding: '12px 0', color: '#4a3f30' }}>{v}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Panel>
+      </DCSection>
+    </DesignCanvas>
+    </TweakCtx.Provider>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>

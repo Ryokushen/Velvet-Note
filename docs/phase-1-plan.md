@@ -10,6 +10,10 @@ date: 2026-04-20
 
 Index: [[Fragrance App Index]]
 
+> **Status override (updated 2026-04-24):** Phase 1 email/password collection MVP is tagged as `phase-1` at commit `8cb9d66`. Tasks 22 (Apple Sign In) and 23 (Google Sign In) remain deferred to Phase 4. Manual email/password smoke passed before tagging; longer personal dogfood remains an ongoing product practice rather than a blocking Phase 1 task.
+>
+> **Phase 1.5 follow-on:** Wear logging and the mockup-driven Calendar tab landed after the Phase 1 tag. See `docs/phase-1.5-status.md` for shipped state and follow-ups.
+
 > **Status (2026-04-23):** Tasks 1–21, 24, 25 shipped. Tasks 22 (Apple Sign In) and 23 (Google Sign In) deferred to Phase 4. Task 26 (manual smoke test + dogfood) pending.
 >
 > **Post-phase-1-core refresh (2026-04-23, commit `e3f8dce`):** The Velvet Note UI was rebuilt from the Claude Design handoff bundle (primitives under `components/ui/`, family-tinted accord chips, 108pt Georgia rating numeral, 10-dot rating input, `NotesRows`, editorial sign-in hero). The following deltas invalidate specific bodies of this plan but **not the task history** — they are listed here so future readers don't recreate the bugs:
@@ -27,7 +31,9 @@ Index: [[Fragrance App Index]]
 
 **Tech Stack:** Expo SDK (latest), Expo Router, React Native, TypeScript, Supabase JS client v2, `@tanstack/react-query`, `@react-native-async-storage/async-storage` (auth persistence), `expo-apple-authentication`, `@react-native-google-signin/google-signin`, Jest + `@testing-library/react-native`.
 
-**Repo location:** `~/Artificial/Obsidian/Fragrance App/`
+**Repo location:** `C:\Users\593528\Documents\Project AI\Velvet-Note`
+
+**Historical note:** The task body below preserves early Mac/vault setup commands and Phase 1 assumptions for traceability.
 
 ---
 
@@ -2460,7 +2466,7 @@ git commit -m "docs: manual smoke test checklist"
 
 Personal fragrance collection tracker. Mobile-first (Expo + React Native), Supabase backend.
 
-Working name in code. Leading public-name candidate: *Velvet Note*.
+Product name in the UI: *Velvet Note*. Some internal names still use Fragrance App.
 
 ## Run locally
 
@@ -2490,7 +2496,7 @@ npm test
 
 ## Phase 1 scope
 
-- Auth: email/password, Apple Sign In, Google Sign In
+- Auth: email/password. Apple Sign In and Google Sign In are deferred to Phase 4.
 - Collection list with search + sort
 - Add fragrance: brand, name, concentration, accords, rating
 - Detail view with edit + delete
@@ -2556,5 +2562,5 @@ Coverage check against the design spec:
 
 Deferred (not in Phase 1):
 - React Query offline persistence (reads cache only via in-memory QueryClient — fine for Phase 1)
-- Local Supabase integration tests — plan covers unit tests only; full local-Supabase RLS tests move to Phase 1.5 when we have wearings to test too
+- Local Supabase integration tests — plan covers unit tests only; full local-Supabase RLS tests move to Phase 1.5 when we have wears to test too
 - Custom fonts (sticking with system serif via `Georgia`)

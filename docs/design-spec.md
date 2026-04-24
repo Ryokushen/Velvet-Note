@@ -20,8 +20,8 @@ I own a fragrance collection and track nothing. Everything is in my head, and th
 
 ## Name & Aesthetic Direction
 
-**Working name:** Fragrance App (file paths, repo, internal references).
-**Leading public-name candidate:** *Velvet Note* — premium, collector-aesthetic, ties "note" to fragrance structure. Not yet locked in; revisit before Phase 4 publish.
+**Product name:** *Velvet Note*.
+**Internal name:** Fragrance App still appears in package/file names and older docs.
 
 **Aesthetic intent:** Build UI/UX toward the higher-end "collector's companion" feel that *Velvet Note* implies — not a spreadsheet for perfumes. Even though Phase 1 is a minimal catalog, design choices from day one should bias toward:
 
@@ -57,8 +57,9 @@ Key decisions made during brainstorming:
 
 ### Repo
 
-- Location: `~/Artificial/Obsidian/Fragrance App/`
-- Project note hub: `Projects/Fragrance App.md` in the vault, with sub-notes in `Projects/Fragrance App/`
+- Windows location: `C:\Users\593528\Documents\Project AI\Velvet-Note`
+- GitHub: `https://github.com/Ryokushen/Velvet-Note`
+- Historical vault note hub: `Projects/Fragrance App.md`
 
 ### Distribution
 
@@ -68,7 +69,7 @@ Key decisions made during brainstorming:
 
 ## Data Model
 
-Phase 1 uses a single user-scoped table. Phase 1.5 adds wearings. Phase 2 adds a shared catalog.
+Phase 1 uses a single user-scoped table. Phase 1.5 adds wears. Phase 2 adds a shared catalog.
 
 ### Phase 1: `fragrances`
 
@@ -97,20 +98,24 @@ create policy "fragrances_owner_delete" on fragrances
   for delete using (auth.uid() = user_id);
 ```
 
-### Phase 1.5: `wearings`
+### Phase 1.5: `wears`
 
 ```sql
-create table wearings (
+create table wears (
   id            uuid primary key default gen_random_uuid(),
   user_id       uuid not null references auth.users(id) on delete cascade,
   fragrance_id  uuid not null references fragrances(id) on delete cascade,
-  worn_on       date not null,
+  worn_on       date not null default current_date,
   notes         text,
-  created_at    timestamptz default now()
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
 );
 
-alter table wearings enable row level security;
--- mirror the four owner-only policies from fragrances
+create index wears_user_worn_on_idx on wears(user_id, worn_on desc, created_at desc);
+create index wears_fragrance_worn_on_idx on wears(fragrance_id, worn_on desc, created_at desc);
+
+alter table wears enable row level security;
+-- owner-only policies mirror fragrances, with insert/update checks that the fragrance belongs to the same user
 ```
 
 Accords stay as `text[]` for simplicity in Phase 1. If the set becomes messy in real use, Phase 2 can normalize into a controlled dimension table plus a join table.
@@ -122,7 +127,7 @@ Accords stay as `text[]` for simplicity in Phase 1. If the set becomes messy in 
 Scope:
 
 - Expo app scaffolded, Supabase project provisioned
-- Auth: email + password, Apple Sign In, Google Sign In (all via Supabase OAuth)
+- Auth: email + password. Apple Sign In and Google Sign In are deferred to Phase 4.
 - Four screens:
   - `app/(auth)/sign-in.tsx`
   - `app/(tabs)/index.tsx` — collection list
@@ -157,10 +162,12 @@ Detail screen:
 
 Scope:
 
-- New table: `wearings`
-- New tab: calendar month view, each day marked with fragrance(s) worn
-- Tap a day → modal to add or edit a wearing
-- Fragrance detail screen gains "worn X times" + last-worn date
+- New table: `wears`
+- Fragrance detail screen logs today's wear with an optional note
+- New Calendar tab between Collection and Add
+- Month grid marks days with wears and shows a selected-day detail sheet
+- By bottle segmented view shows last-worn status and a compact sparkline
+- Future refinement: add/edit wears for arbitrary past dates from the day sheet
 
 ### Phase 2 — Barcode + DB Lookup
 
@@ -217,5 +224,5 @@ CI is optional in Phase 1. GitHub Actions can run typecheck + Jest on PR; EAS CI
 - **LLM fallback prompt design** — Phase 2
 - **Offline sync library choice** (WatermelonDB vs PowerSync vs custom) — Phase 3
 - **App Store compliance checklist** — Phase 4
-- **Photos of bottles** — not in Phase 1 schema; revisit after 1.5 if it surfaces as a real gap
-- **Wearing metadata richness** (occasion, weather, longevity) — Phase 1.5 starts with just date + notes; expand only if used
+- **Photos of bottles** — not in the current schema; revisit with Phase 2 catalog lookup
+- **Wear metadata richness** (occasion, weather, longevity) — Phase 1.5 shipped with date + notes; expand only if used

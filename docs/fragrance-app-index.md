@@ -8,29 +8,34 @@ type: index
 
 Hub: [[Fragrance App]]
 
-Status: `phase-1-core-complete` (as of 2026-04-23 — Tasks 1–21, 24, 25 shipped; 22/23 deferred to Phase 4; 26 pending smoke test + dogfood)
+Status: `phase-1.5-calendar-shipped` (as of 2026-04-24). Phase 1 is tagged at commit `8cb9d66`; Phase 1.5 wear logging landed in `6adf961`; the mockup-driven Calendar tab landed in `6a38a9a`.
 
-**Velvet Note UI refresh (2026-04-23, commit `e3f8dce`):** UI rebuilt from the Claude Design handoff — editorial sign-in hero, giant Georgia rating numeral, 10-dot rating input, family-tinted accord chips, `NotesRows` labeled top/heart/base, Feather iconography. Same fix also resolved an Android sign-in regression where group paths (`/(auth)/sign-in`, `/(tabs)`) didn't match Expo Router's runtime pathnames; redirects now use `/` and `/sign-in`, and `useAuth` is a Provider-backed context. Full trace: `CHANGELOG.md`.
+**Velvet Note UI refresh (2026-04-23, commit `e3f8dce`):** UI rebuilt from the Claude Design handoff: editorial sign-in hero, giant Georgia rating numeral, 10-dot rating input, family-tinted accord chips, `NotesRows` labeled top/heart/base, Feather iconography. Same fix resolved an Android sign-in regression where group paths (`/(auth)/sign-in`, `/(tabs)`) did not match Expo Router runtime pathnames; redirects now use `/` and `/sign-in`, and `useAuth` is a Provider-backed context. Full trace: `CHANGELOG.md`.
 
-Personal fragrance collection tracker. Mobile-first Expo + Supabase, shipped in phases. Core job is a searchable catalog of the bottles I own. Working name is "Fragrance App"; leading public-name candidate is *Velvet Note*. UI/UX biases toward a premium collector aesthetic from day one.
+**Phase 1.5 Calendar (2026-04-24, commit `6a38a9a`):** `wears` data model is live in Supabase, fragrance detail can log today's wear with an optional note, and the Calendar tab now follows the checked-in Velvet Note handoff: Month grid, selected-day detail sheet, and By bottle segmented view. Source handoff is under `docs/design-handoff/velvet-note/`.
+
+Personal fragrance collection tracker. Mobile-first Expo + Supabase, shipped in phases. Core job is a searchable catalog of the bottles I own. Working name in code is "Fragrance App"; public UI name is *Velvet Note*. UI/UX biases toward a premium collector aesthetic from day one.
 
 **Repo location:**
-- Mac: `~/Artificial/Obsidian/Fragrance App/`
+- Windows: `C:\Users\593528\Documents\Project AI\Velvet-Note`
 - GitHub: https://github.com/Ryokushen/Velvet-Note
 
 ## Notes
 
 - [[Fragrance App - Design Spec]]
-Approved design spec: motivation, architecture, data model, phased roadmap (1 → 1.5 → 2 → 3 → 4), error handling, and testing strategy.
+Approved design spec: motivation, architecture, data model, phased roadmap (1 -> 1.5 -> 2 -> 3 -> 4), error handling, and testing strategy.
 
 - [[Fragrance App - Phase 1 Implementation Plan]]
-26 bite-sized tasks to ship Phase 1 (scaffold, Supabase, auth, 4 screens, Velvet Note theme, manual smoke tests).
+Historical 26-task plan for Phase 1. Phase 1 is tagged; Apple/Google auth remain deferred to Phase 4.
+
+- [[Fragrance App - Phase 1.5 Status]]
+Current implementation notes for wear logging and the Calendar tab.
 
 - [[Fragrance App - Design Brief]]
-Paste-into-Figma companion: locked Phase 1 tokens (palette, type, spacing) plus open design questions (imagery, note hierarchy, accords, calendar, motion, iconography).
+Original paste-into-Figma companion. Superseded for Calendar by the checked-in handoff under `docs/design-handoff/velvet-note/`; still useful for tokens and unresolved Phase 2 imagery/note hierarchy decisions.
 
 - [[Fragrance App - Designer Engagement Brief]]
-First-person prompt to send to a hired UI/UX designer. Describes the aesthetic intent, what's locked, what's open, scope for the first Figma deliverable.
+Historical first-person prompt used to request the handoff.
 
 ## Related
 

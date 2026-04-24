@@ -1,8 +1,8 @@
-# Fragrance App
+# Velvet Note
 
 Personal fragrance collection tracker. Mobile-first (Expo + React Native), Supabase backend.
 
-Working name in code. Leading public-name candidate: *Velvet Note*.
+Some internal package/file names still use `fragrance-app`; the product name in the UI is *Velvet Note*.
 
 ## Run locally
 
@@ -11,12 +11,22 @@ Working name in code. Leading public-name candidate: *Velvet Note*.
    npm install
    ```
 2. Copy `.env.example` to `.env.local` and fill in your Supabase URL and anon key.
-3. Apply the database migration in `supabase/migrations/` via the Supabase SQL editor.
+3. Apply database migrations in `supabase/migrations/` via the Supabase SQL editor.
 4. Start the bundler:
    ```bash
    npx expo start
    ```
 5. Scan the QR code with Expo Go.
+
+For web:
+```bash
+npm run web
+```
+
+If the default port is busy:
+```bash
+npm run web -- --port 8082
+```
 
 Apple / Google sign-in are deferred to Phase 4. When they land, they will require a dev build:
 ```bash
@@ -30,17 +40,23 @@ npx expo run:ios   # or run:android
 npm test
 ```
 
-## Phase 1 scope
+## Current scope
 
 Shipped:
 - Auth: email/password
 - Collection list with search
 - Add fragrance: brand, name, concentration, accords, rating
 - Detail view with edit + delete
+- Wear logging from fragrance detail
+- Calendar tab with month grid, selected-day detail, and by-bottle view
 - Online-only (offline is Phase 3)
 
 Deferred to Phase 4:
 - Apple Sign In
 - Google Sign In
 
-See `docs/design-spec.md` and `docs/phase-1-plan.md` for the full design spec and phased roadmap.
+Milestones:
+- `phase-1` tag: Phase 1 email/password collection MVP
+- `main`: Phase 1.5 wear calendar shipped (wear logging + Calendar tab)
+
+See `docs/design-spec.md`, `docs/phase-1-plan.md`, and `docs/phase-1.5-status.md` for the full spec and roadmap.

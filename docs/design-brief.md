@@ -1,13 +1,13 @@
 ---
 tags: [project, design]
 type: brief
-status: draft
+status: superseded-by-handoff
 date: 2026-04-23
 ---
 
 # Velvet Note — Design Brief
 
-Working companion to [design-spec.md](./design-spec.md) and [phase-1-plan.md](./phase-1-plan.md). Paste this into the first frame of a Figma file and build the mockups inside those constraints.
+Working companion to [design-spec.md](./design-spec.md) and [phase-1-plan.md](./phase-1-plan.md). This brief produced the checked-in Velvet Note handoff under `docs/design-handoff/velvet-note/`. Keep this file as the historical brief and token reference; use the handoff files as the current UI source of truth.
 
 ## Product in one line
 
@@ -50,9 +50,9 @@ One accent. Do not introduce a second brand color in Phase 1 without explicit sc
 ### Navigation shape
 
 - Root stack → auth group OR tabs group (auth gate handles the switch).
-- Tabs: Collection | Add. Detail screen `fragrance/[id]` is stack-pushed, not a tab.
+- Tabs: Collection | Calendar | Add. Detail screen `fragrance/[id]` is stack-pushed, not a tab.
 - Header on Collection has sign-out on the right.
-- Phase 1.5 adds a Calendar tab between Collection and Add.
+- Phase 1.5 Calendar is implemented from the handoff.
 
 ### Data shape
 
@@ -60,18 +60,18 @@ A fragrance has: brand, name, concentration (EDT/EDP/Parfum/Cologne/Other), acco
 
 ## What's open (design freely)
 
-These are unresolved and the mockup is the right place to resolve them.
+These are still product/design follow-ups after the first handoff.
 
 - **Bottle imagery.** Biggest gap in the current UI. Design should assume a hero image slot in detail view and a small thumb in the list row; schema can catch up in Phase 2 when we add barcode / catalog lookup. Until then, mockups should show how the list and detail feel *with* and *without* images.
 - **Note hierarchy.** Fragrances have top / heart / base notes. Phase 1 data collapses these into a single accords array. Design should explore showing structure (e.g. three rows, or a visual tree) as a Phase 2 upgrade.
-- **Accord presentation.** Currently plain text chips. Consider: two-tone chips (warm/fresh/woody families), a guided taxonomy, or leaving free-text and styling nicely. Pick a direction.
-- **Rating visualization.** Currently the raw number "8.5". Explore: horizontal bar, 10-dot row, or leave the numeral but make it a hero element on detail.
+- **Accord presentation.** Implemented direction: family-tinted chips inside the oxblood palette. Future work can add a guided taxonomy.
+- **Rating visualization.** Implemented direction: giant Georgia rating numeral on detail and 10-dot row for add/edit input.
 - **Empty & loading states.** Phase 1 has functional empty states — design versions that feel like the product, not the framework default.
-- **Wear Calendar (Phase 1.5).** Entire screen is unbuilt. This is the highest-leverage place to spend design time right now. Monthly grid with a glyph or color per day? A horizontal week ribbon? A fragrance-centric view ("last worn 6d ago") vs. a calendar-centric view?
+- **Wear Calendar (Phase 1.5).** Implemented direction: Month grid as root, selected-day detail sheet, and By bottle segmented view with compact sparkline markers.
 - **Motion.** Current app uses no custom animation. Define one or two signature transitions (detail expand, rating tick, chip press) that feel tactile without being showy.
 - **Iconography.** `@expo/vector-icons` is installed, unused so far. Pick a family (SF Symbols–like via `expo-symbols`, or Feather, or custom). One family, not three.
 
-## Scope for first mockup file
+## Original scope for first mockup file
 
 Don't try to design the whole phased roadmap. Start with:
 
@@ -92,5 +92,5 @@ Skip: barcode flow, shared catalog browsing, settings, paywall. Phase 2+.
 
 ## Deliverables (suggested)
 
-- One Figma file, frames grouped: `Phase 1 Current`, `Phase 1.5 Calendar`, `Detail v2 (w/ imagery)`, `Design Tokens`.
-- Optional: export a short "what changed and why" note back into this doc when the mockups land.
+- Handoff landed in `docs/design-handoff/velvet-note/` with a runnable HTML canvas and JSX component mockups.
+- Calendar implementation follows `docs/design-handoff/velvet-note/components/calendar.jsx`.

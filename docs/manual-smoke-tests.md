@@ -1,42 +1,61 @@
-# Manual Smoke Tests — Phase 1
+# Manual Smoke Tests
 
-Run this entire checklist on a dev build before any demo or release.
+Run this checklist on a dev build before any demo or release.
 
 ## Setup
+
 - [ ] `.env.local` contains valid Supabase URL + anon key
-- [ ] Migration applied — `fragrances` table exists in Supabase
+- [ ] Migrations applied: `fragrances` and `wears` tables exist in Supabase
 
 ## Auth
-- [ ] Fresh install → sign-in screen shown (no stale session)
-- [ ] Create account with new email+password → routed to Collection
-- [ ] Sign out → back to sign-in screen
-- [ ] Sign in with existing credentials → routed to Collection
-- [ ] Wrong password → friendly error shown, no crash
-- [ ] Apple Sign In (iOS dev build only) → routed to Collection *(deferred — Phase 4)*
-- [ ] Google Sign In → routed to Collection *(deferred — Phase 4)*
 
-## Collection list
+- [ ] Fresh install shows sign-in screen with no stale session
+- [ ] Create account with new email/password routes to Collection
+- [ ] Sign out returns to sign-in screen
+- [ ] Sign in with existing credentials routes to Collection
+- [ ] Wrong password shows friendly error, no crash
+- [ ] Apple Sign In is deferred to Phase 4
+- [ ] Google Sign In is deferred to Phase 4
+
+## Collection List
+
 - [ ] Empty state shown when no fragrances
 - [ ] Pull to refresh works
-- [ ] Network off → cached data renders (React Query), error state on hard refresh
+- [ ] Network off renders cached data when available, error state on hard refresh
 
 ## Add
-- [ ] Brand + name required → blocked with alert if missing
-- [ ] Submit happy path → new row appears top of list (if sorted by recent) or by rating
-- [ ] Concentration picker, accord chips, rating slider all interactive
-- [ ] Chip dedup — can't add the same accord twice
+
+- [ ] Brand + name required, blocked with alert if missing
+- [ ] Submit happy path adds new row to Collection
+- [ ] Concentration picker, accord chips, and rating dots are interactive
+- [ ] Chip dedup prevents adding the same accord twice
 
 ## Detail
-- [ ] Tap row → detail renders with correct data
-- [ ] Edit → changes persist
-- [ ] Edit → cancel discards changes
-- [ ] Delete → confirm → row removed from list
 
-## Search + sort
+- [ ] Tap row and detail renders with correct data
+- [ ] Log today with optional wear note and success alert appears
+- [ ] Detail wear history shows the new wear
+- [ ] Edit changes persist
+- [ ] Edit cancel discards changes
+- [ ] Delete confirm removes row from Collection
+
+## Calendar
+
+- [ ] Calendar tab appears between Collection and Add
+- [ ] Month grid renders current month with weekday row
+- [ ] A day with a logged wear shows an accent dot
+- [ ] Tapping a day shows selected-day detail
+- [ ] Logged wear appears in the selected-day detail sheet
+- [ ] By bottle toggle shows last-worn status and sparkline markers
+- [ ] Month previous/next controls navigate without crashing
+
+## Search + Sort
+
 - [ ] Typing a brand substring filters the list
 - [ ] Typing an accord substring filters the list
-- [ ] Clearing the search restores all rows
+- [ ] Clearing search restores all rows
 
-## RLS sanity (requires 2 test accounts)
-- [ ] User A can add a fragrance
-- [ ] User B signs in — does NOT see User A's fragrance
+## RLS Sanity
+
+- [ ] User A can add a fragrance and log a wear
+- [ ] User B signs in and does not see User A's fragrance or wears

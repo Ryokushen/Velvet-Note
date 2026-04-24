@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-04-24 - Implement Phase 1.5 wear calendar from Velvet Note handoff
+
+### Summary
+
+Added the Phase 1.5 wear calendar foundation and replaced the plain wear history tab with the mockup-driven Calendar experience.
+
+### Shipped
+
+- Added `wears` Supabase migration with RLS, ownership checks, indexes, and `updated_at` trigger.
+- Added wear types, Supabase service helpers, React Query hooks, and service tests.
+- Added "Log today" with optional notes from fragrance detail.
+- Added Calendar tab between Collection and Add.
+- Implemented Month view with wear dots and selected-day detail sheet.
+- Implemented By bottle segmented view with last-worn labels and sparkline markers.
+- Checked in the Velvet Note design handoff under `docs/design-handoff/velvet-note/`.
+
+### Verification
+
+- `npm.cmd test -- --runInBand`
+- `npm.cmd run lint`
+- `.\node_modules\.bin\tsc.cmd --noEmit`
+- Browser smoke through Playwright fallback against Expo web: sign up, add bottle, log wear, open Calendar, switch to By bottle.
+
 ## 2026-04-23 - Fix Android sign-in navigation handoff after auth success
 
 ### Summary

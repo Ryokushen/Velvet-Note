@@ -12,7 +12,7 @@ Index: [[Fragrance App Index]]
 
 ## Current State
 
-Phase 1.5 wear logging and the Calendar UI are shipped on `main`. Calendar day-sheet logging for arbitrary selected dates has been added after the initial Phase 1.5 shipment. The remaining items below are follow-on improvements, not blockers for this phase.
+Phase 1.5 wear logging and the Calendar UI are shipped on `main`. Calendar day-sheet logging for arbitrary selected dates, curated accord autocomplete, and local catalog lookup/prefill have been added after the initial Phase 1.5 shipment. The remaining items below are follow-on improvements, not blockers for this phase.
 
 Shipped:
 
@@ -25,12 +25,16 @@ Shipped:
 - Calendar selected-day wear entry: press plus, choose a bottle, save a wear for that date.
 - Calendar By bottle view with last-worn labels and sparkline markers.
 - Curated local accord descriptor vocabulary and autocomplete, still stored in `fragrances.accords`.
+- Local Kaggle catalog import and Add-screen lookup/prefill, still saved as user-owned `fragrances` rows.
 - Velvet Note handoff checked in under `docs/design-handoff/velvet-note/`.
 
 Key commits:
 
 - `6adf961` - wear logging foundation.
 - `6a38a9a` - mockup-driven calendar view.
+- `0fca8be` - accord autocomplete and selected-date Calendar wear entry.
+- `ca4222e` - Kaggle catalog import pipeline and normalized local catalog.
+- `deb5846` - Add-screen catalog lookup and prefill.
 
 Live Supabase project:
 
@@ -39,7 +43,7 @@ Live Supabase project:
 
 ## Verification
 
-Static checks passed after the Calendar implementation:
+Static checks for the latest Calendar, accord, and catalog follow-ups:
 
 ```powershell
 npm.cmd test -- --runInBand

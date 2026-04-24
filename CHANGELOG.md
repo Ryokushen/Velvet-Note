@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-04-24 - Add local catalog lookup and Calendar follow-ups
+
+### Summary
+
+Added local catalog import/search support, improved accord entry, and expanded Calendar logging beyond today's wear.
+
+### Shipped
+
+- Added curated accord vocabulary data and Add/Edit accord autocomplete while keeping `fragrances.accords` as simple text arrays.
+- Added Calendar selected-day wear entry so past or future dates can be logged from the day sheet.
+- Added Kaggle perfume catalog import tooling plus normalized local catalog data.
+- Added Add-screen catalog lookup that prefills brand, name, and accords while saving normal user-owned `fragrances` rows.
+- Documented the Kaggle import flow and license/source boundary in `docs/catalog-import-kaggle.md`.
+
+### Verification
+
+- `npm.cmd test -- --runInBand`
+- `npm.cmd run lint`
+- `.\node_modules\.bin\tsc.cmd --noEmit`
+
 ## 2026-04-24 - Implement Phase 1.5 wear calendar from Velvet Note handoff
 
 ### Summary

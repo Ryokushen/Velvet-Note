@@ -9,7 +9,7 @@ describe('AccordChips', () => {
     );
 
     fireEvent.changeText(getByPlaceholderText('Type a note and press return'), 'spi');
-    fireEvent.press(getByText('warm spicy'));
+    fireEvent.press(getByText('Warm Spicy'));
 
     expect(onChange).toHaveBeenCalledWith(['warm spicy']);
   });

@@ -13,6 +13,7 @@ import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { radius } from '../theme/spacing';
 import { BottleArt } from './BottleArt';
+import { formatAccordList } from '../lib/accordDisplay';
 import {
   COLLECTION_DETAIL_EASING,
   COLLECTION_DETAIL_MORPH_DURATION_MS,
@@ -125,7 +126,7 @@ export function CollectionDetailMorph({
       <Animated.View style={[styles.rowLayer, rowLayerStyle]}>
         <View style={styles.rowMeta}>
           <Text style={styles.subline} numberOfLines={1}>
-            {[fragrance.concentration, fragrance.accords.slice(0, 3).join(', ')]
+            {[fragrance.concentration, formatAccordList(fragrance.accords.slice(0, 3))]
               .filter(Boolean)
               .join(' · ')}
           </Text>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, View, Text, TextInput, StyleSheet } from 'react-native';
 import { normalizeAccord, suggestAccords } from '../lib/accordVocabulary';
+import { formatAccordLabel } from '../lib/accordDisplay';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { radius } from '../theme/spacing';
@@ -59,7 +60,7 @@ export function AccordChips({
               onPress={() => add(suggestion)}
               style={styles.suggestion}
             >
-              <Text style={styles.suggestionText}>{suggestion}</Text>
+              <Text style={styles.suggestionText}>{formatAccordLabel(suggestion)}</Text>
             </Pressable>
           ))}
         </View>

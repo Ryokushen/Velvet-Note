@@ -49,6 +49,7 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { radius } from '../../theme/spacing';
 import { cancelAnimation, useSharedValue } from 'react-native-reanimated';
+import { formatAccordList } from '../../lib/accordDisplay';
 
 export default function Detail() {
   const { id, fromCollection } = useLocalSearchParams<{ id: string; fromCollection?: string }>();
@@ -548,7 +549,7 @@ function CatalogNoteRow({ label, notes }: { label: string; notes: string[] }) {
   return (
     <View style={styles.catalogNoteRow}>
       <Caption tone="muted" style={styles.catalogNoteLabel}>{label}</Caption>
-      <Text style={styles.catalogNoteText}>{notes.join(', ')}</Text>
+      <Text style={styles.catalogNoteText}>{formatAccordList(notes)}</Text>
     </View>
   );
 }

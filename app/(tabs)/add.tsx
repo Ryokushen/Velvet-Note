@@ -31,6 +31,7 @@ import type { Concentration } from '../../types/fragrance';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { radius } from '../../theme/spacing';
+import { formatAccordList } from '../../lib/accordDisplay';
 
 export default function Add() {
   const router = useRouter();
@@ -217,7 +218,7 @@ export default function Add() {
                       <CatalogMetaLine entry={entry} />
                       {entry.notes.length > 0 ? (
                         <Text style={styles.catalogResultNotes} numberOfLines={1}>
-                          {entry.notes.slice(0, 4).join(', ')}
+                          {formatAccordList(entry.notes.slice(0, 4))}
                         </Text>
                       ) : null}
                     </View>

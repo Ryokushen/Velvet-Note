@@ -3,6 +3,7 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { FAMILY, familyFor, type Family } from '../../theme/families';
 import { IconX } from './Icon';
+import { formatAccordLabel } from '../../lib/accordDisplay';
 
 type ChipProps = {
   label: string;
@@ -16,6 +17,7 @@ export function Chip({ label, family, size = 'md', onRemove }: ChipProps) {
   const fam = family ?? familyFor(label);
   const f = FAMILY[fam];
   const Wrapper: any = onRemove ? Pressable : View;
+  const displayLabel = formatAccordLabel(label);
   return (
     <Wrapper
       onPress={onRemove}
@@ -26,7 +28,7 @@ export function Chip({ label, family, size = 'md', onRemove }: ChipProps) {
       ]}
     >
       <View style={[styles.dot, { backgroundColor: f.dot }]} />
-      <Text style={[styles.label, size === 'sm' ? styles.labelSm : styles.labelMd]}>{label}</Text>
+      <Text style={[styles.label, size === 'sm' ? styles.labelSm : styles.labelMd]}>{displayLabel}</Text>
       {onRemove && <IconX size={size === 'sm' ? 12 : 14} color={colors.textDim} />}
     </Wrapper>
   );

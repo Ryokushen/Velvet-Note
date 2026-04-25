@@ -10,6 +10,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "import:kaggle": "node scripts/import-kaggle-perfumes.js",
+    "import:barcodes": "node scripts/import-catalog-barcodes.js",
     "test": "jest",
     "test:watch": "jest --watch"
   },

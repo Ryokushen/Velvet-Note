@@ -45,11 +45,12 @@ npm test
 Shipped:
 - Auth: email/password
 - Collection list with search
-- Four-tab personal journal shell: Collection, Wears, Insights, Add
+- Five-tab personal journal shell: Collection, Wears, Today, Insights, Add
 - Add fragrance: Supabase catalog lookup/prefill, brand, name, concentration, curated/free-text accords, personal rating, optional bottle metadata, and ideal wear profile
 - Detail view with catalog/personal bottle art, notes, Bottle section, Wear Profile section, edit, and delete
 - Wear logging from fragrance detail and selected Wears days, including optional season, day/night, occasion, compliment count, and compliment note
 - Wears tab with month grid, same-day wear counts, selected-day detail/edit/delete, and by-bottle view
+- Today tab for the active current-day wear, compliment stepper, journal note, and same-day wear stack
 - Insights tab with client-derived most worn, neglected bottles, compliment leaders, seasonal/day-night tendencies, and taste profile
 - Shared Parfumo catalog in Supabase with brand/name/accord/note search ranking
 - Catalog image fallback and self-attached personal bottle photos

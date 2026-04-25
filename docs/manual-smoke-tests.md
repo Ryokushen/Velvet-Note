@@ -14,8 +14,10 @@ Run this checklist on a dev build before any demo or release.
 - [ ] `user-fragrance-photos` Storage bucket exists, is public-read, and authenticated users can write only under their own user-id folder
 - [ ] `list_fragrances_with_catalog_images()` RPC exists for shelf image fallback
 - [ ] Personal journal migration `20260425020000_personal_journal_fields.sql` is applied
+- [ ] Active-wear migration `20260425030000_today_active_wear.sql` is applied
 - [ ] `fragrances` has bottle metadata and preferred-use columns
 - [ ] `wears` has season, time_of_day, occasion, compliment_count, and compliment_note columns
+- [ ] `wears` has `is_active` and `set_active_wear(wear_id)` exists
 
 ## Auth
 
@@ -71,7 +73,7 @@ Run this checklist on a dev build before any demo or release.
 
 ## Wears
 
-- [ ] Wears tab appears between Collection and Insights
+- [ ] Wears tab appears between Collection and Today
 - [ ] Month grid renders current month with weekday row
 - [ ] A day with a logged wear shows an accent dot
 - [ ] Tapping a day shows selected-day detail
@@ -84,9 +86,20 @@ Run this checklist on a dev build before any demo or release.
 - [ ] By bottle toggle shows last-worn status and sparkline markers
 - [ ] Month previous/next controls navigate without crashing
 
+## Today
+
+- [ ] Today tab appears between Wears and Insights
+- [ ] Empty state renders when no wear exists today
+- [ ] Logging a wear for today makes it active in Today
+- [ ] Logging a second wear for today switches active to the newest wear and keeps the earlier wear in Today's stack
+- [ ] Plus increments compliments for the active wear
+- [ ] Minus decrements compliments and is disabled at zero
+- [ ] Save journal updates the active wear note
+- [ ] Tapping a stack row makes that wear current
+
 ## Insights
 
-- [ ] Insights tab appears between Wears and Add
+- [ ] Insights tab appears between Today and Add
 - [ ] Empty state renders when no fragrance/wear data exists
 - [ ] Most worn section ranks bottles with logged wears
 - [ ] Neglected bottles includes unworn or oldest-worn bottles

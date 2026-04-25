@@ -12,7 +12,7 @@ Index: [[Fragrance App Index]]
 
 ## Current State
 
-Phase 1.5 wear logging and the Wears UI are shipped on `main`. The route is still `app/(tabs)/calendar.tsx` to avoid route churn, but the product label is now Wears. Day-sheet logging for arbitrary selected dates and curated accord autocomplete were added after the initial Phase 1.5 shipment. Catalog lookup has moved beyond this phase: the local Kaggle lookup was superseded by the Phase 2 shared Supabase catalog search path, catalog image infrastructure is ready for scraper backfill, and self-attached personal photo upload is implemented locally. The personal journal roadmap slice is implemented locally and extends this phase with richer wear context plus a new Insights tab.
+Phase 1.5 wear logging and the Wears UI are shipped on `main`. The route is still `app/(tabs)/calendar.tsx` to avoid route churn, but the product label is now Wears. Day-sheet logging for arbitrary selected dates and curated accord autocomplete were added after the initial Phase 1.5 shipment. Catalog lookup has moved beyond this phase: the local Kaggle lookup was superseded by the Phase 2 shared Supabase catalog search path, catalog image infrastructure is ready for scraper backfill, and self-attached personal photo upload is implemented locally. The personal journal roadmap slice is implemented locally and extends this phase with richer wear context, a new Today tab for the active current-day wear, plus a new Insights tab.
 
 Shipped:
 
@@ -20,7 +20,8 @@ Shipped:
 - Wear data layer: `types/wear.ts`, `lib/wears.ts`, `hooks/useWears.ts`.
 - Service tests in `__tests__/wears.test.ts`.
 - Fragrance detail "Log today" flow with optional note, season, day/night, occasion, compliment count, and compliment note.
-- Wears tab between Collection and Insights.
+- Wears tab between Collection and Today.
+- Today tab between Wears and Insights for the active current-day wear, compliment stepper, journal note, and same-day wear stack.
 - Wears Month view with day dots and selected-day detail sheet.
 - Wears day cells show a count badge when multiple wears land on the same date.
 - Wears selected-day wear entry: press plus, choose a bottle, save a wear for that date.
@@ -30,6 +31,7 @@ Shipped:
 - Optional bottle metadata on shelf rows: status, size, purchase date, purchase source, purchase price, and currency.
 - Optional ideal wear profile on shelf rows: preferred seasons and preferred time of day.
 - Insights tab derives most worn, neglected bottles, compliment leaders, seasonal favorites, day/night distribution, and taste profile from client query data.
+- Active wear support uses `wears.is_active` plus `set_active_wear(wear_id)` so one wear per user/day can be current.
 - Curated local accord descriptor vocabulary and autocomplete, still stored in `fragrances.accords`.
 - Local Kaggle catalog import, retained as a lightweight image/source dataset.
 - Shared Supabase `catalog_fragrances` lookup and Add-screen prefill, still saved as user-owned `fragrances` rows with optional catalog metadata.
@@ -69,6 +71,7 @@ Live Supabase project:
 - `npm run import:barcodes -- path/to/barcode-linkages.csv` imports external barcode mapping data into `catalog_barcodes` with service-role credentials.
 - Barcode live smoke checklist: `docs/barcode-live-smoke-test.md`.
 - Local migration `supabase/migrations/20260425020000_personal_journal_fields.sql` adds the personal journal fields and updates `list_fragrances_with_catalog_images()` to return them. Apply it before live-testing Bottle, Wear Profile, richer wear context, or Insights with Supabase data.
+- Local migration `supabase/migrations/20260425030000_today_active_wear.sql` adds `wears.is_active` and `set_active_wear(wear_id)` for the Today tab. Apply it after the personal journal metadata migration.
 
 ## Verification
 
@@ -100,4 +103,4 @@ Temporary test users were removed from Supabase after verification.
 
 ## Next Good Slice
 
-Apply the personal journal metadata migration and smoke Bottle/Wear Profile/Wears/Insights against live Supabase data, then run the live barcode scan/review smoke loop. After that, the next good product slice is either a dedicated E2E smoke suite, barcode data population from a vetted source, or LLM fallback for unknown catalog entries.
+Apply the personal journal metadata and active-wear migrations, then smoke Bottle/Wear Profile/Wears/Today/Insights against live Supabase data. After that, run the live barcode scan/review smoke loop. The next good product slice is either a dedicated E2E smoke suite, barcode data population from a vetted source, or LLM fallback for unknown catalog entries.

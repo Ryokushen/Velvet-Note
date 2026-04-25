@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-04-25 - Add Today wear tab
+
+### Summary
+
+Added a focused Today tab for the active current-day wear, so compliments and journal notes can be updated quickly throughout the day.
+
+### Shipped
+
+- Added `wears.is_active` and `set_active_wear(wear_id)` for one active wear per user/day.
+- Added active-wear helpers and tests for same-day stack selection.
+- Marked newly logged wears for today as current while preserving historical wear behavior.
+- Added the Today tab between Wears and Insights.
+- Added active fragrance photo/name, compliment `- / +` controls, journal save, and same-day wear stack switching.
+- Serialized compliment writes so rapid taps and active-wear switches do not regress the persisted count.
+- Updated docs and smoke tests for the five-tab journal shell.
+
+### Verification
+
+- `/opt/homebrew/bin/node ./node_modules/.bin/jest --runInBand __tests__/todayWear.test.ts __tests__/TodayTab.test.tsx`
+
 ## 2026-04-25 - Document personal journal roadmap slice
 
 ### Summary

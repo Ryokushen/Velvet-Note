@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-04-25 - Add barcode review UI
+
+### Summary
+
+Added a compact hidden admin route for reviewing pending barcode submissions from the scanner flow.
+
+### Shipped
+
+- Added `/barcode-review` as a non-tab admin surface.
+- Lists pending barcode submissions through the review helper.
+- Shows barcode, source, proposed catalog brand/name, and an optional review note.
+- Approve promotes the submission through the admin RPC; reject closes it through the reject RPC.
+- Added screen coverage for loading, approve, reject, and authorization errors.
+
+### Verification
+
+- `npm test -- __tests__/BarcodeReview.test.tsx --runInBand --watchman=false`
+
 ## 2026-04-25 - Add barcode submission review RPCs
 
 ### Summary

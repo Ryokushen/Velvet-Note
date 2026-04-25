@@ -12,7 +12,7 @@ Index: [[Fragrance App Index]]
 
 ## Overview
 
-Status note, 2026-04-25: Phase 1.5 includes wear logging, Calendar month/by-bottle views, same-day wear counts, selected-date wear entry/edit/confirmed delete, and curated accord autocomplete. Phase 2 catalog foundation is also live: the shared Supabase catalog seed is loaded and searchable by brand, bottle name, accords, and notes, with release year, perfumer, and top/heart/base note metadata surfaced in the app. Community ratings stay out of the personal UI so the user's own rating remains primary. Barcode scanning now has a dedicated route, exact barcode lookup, pending user submissions for unknown barcode links, and admin-gated RPCs to approve or reject submitted links. A review UI and LLM fallback remain Phase 2 follow-ups.
+Status note, 2026-04-25: Phase 1.5 includes wear logging, Calendar month/by-bottle views, same-day wear counts, selected-date wear entry/edit/confirmed delete, and curated accord autocomplete. Phase 2 catalog foundation is also live: the shared Supabase catalog seed is loaded and searchable by brand, bottle name, accords, and notes, with release year, perfumer, and top/heart/base note metadata surfaced in the app. Community ratings stay out of the personal UI so the user's own rating remains primary. Barcode scanning now has a dedicated route, exact barcode lookup, pending user submissions for unknown barcode links, admin-gated RPCs to approve or reject submitted links, and a hidden `/barcode-review` route for review. LLM fallback remains a Phase 2 follow-up.
 
 A personal fragrance collection tracker. Mobile-first (Expo / React Native, iOS + Android), backed by Supabase. Core job: remember what I own — a searchable catalog of my bottles with brand, name, concentration, accords, and a personal rating. Shipped in phases so real usage drives what gets built next.
 
@@ -247,7 +247,8 @@ Scope:
 - Shipped: dedicated `/scan` camera route wired to barcode lookup and Add prefill.
 - Shipped: unknown barcode linking creates pending user submissions through `catalog_barcode_submissions`.
 - Shipped: admin-gated review RPCs can approve submitted barcode links into `catalog_barcodes` or reject them.
-- Next: a compact review UI for pending barcode submissions.
+- Shipped: hidden `/barcode-review` route lists pending submissions and calls the approve/reject helpers.
+- Next: apply pending barcode migrations to live Supabase and smoke-test the scanner/review loop.
 - Later: LLM fallback for unknown entries, generating accord/note suggestions that the user confirms before saving.
 
 ### Phase 3 — Offline-First

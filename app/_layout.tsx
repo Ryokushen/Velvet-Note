@@ -51,6 +51,7 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="fragrance/[id]" options={{ headerShown: false }} />
               <Stack.Screen name="scan" options={{ headerShown: false }} />
+              <Stack.Screen name="barcode-review" options={{ headerShown: false }} />
             </Stack>
           </AuthGate>
         </SafeAreaProvider>

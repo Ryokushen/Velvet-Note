@@ -80,6 +80,7 @@ Run this checklist on a dev build before any demo or release.
 
 ## Barcode Review
 
+- [ ] `/barcode-review` renders the hidden review screen for an authenticated admin
 - [ ] Non-admin authenticated users cannot list, approve, or reject pending barcode submissions
 - [ ] An `app_admins` user can list pending barcode submissions
 - [ ] Approving a pending submission writes or updates the matching `catalog_barcodes` row

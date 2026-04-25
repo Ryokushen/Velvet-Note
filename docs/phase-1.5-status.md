@@ -42,7 +42,7 @@ Key commits:
 - `785737c` - persisted catalog metadata on shelf entries.
 - `ba9ba7c` - Add search moved to Supabase RPC.
 - `5c820df` - catalog search ranking and scrollable results.
-- Current working slice - richer catalog metadata, delete/back fixes, editable photo URLs, scraper-ready catalog image infrastructure, self-attached personal photo uploads, barcode mapping, a dedicated scanner route, pending links for unknown barcodes, and admin-gated review RPCs.
+- Current working slice - richer catalog metadata, delete/back fixes, editable photo URLs, scraper-ready catalog image infrastructure, self-attached personal photo uploads, barcode mapping, a dedicated scanner route, pending links for unknown barcodes, admin-gated review RPCs, and a compact hidden barcode review UI.
 
 Live Supabase project:
 
@@ -58,6 +58,7 @@ Live Supabase project:
 - `catalog_barcodes` and `find_catalog_fragrance_by_barcode(barcode_text)` are live for exact barcode lookup.
 - `catalog_barcode_submissions` stages authenticated user barcode links for review when scans do not have an exact match.
 - `app_admins`, `list_pending_catalog_barcode_submissions`, `approve_catalog_barcode_submission`, and `reject_catalog_barcode_submission` define the trusted review path for pending barcode links.
+- `/barcode-review` is the hidden admin review route for listing, approving, and rejecting pending barcode links.
 
 ## Verification
 
@@ -84,8 +85,8 @@ Temporary test users were removed from Supabase after verification.
 
 - Detail/list do not yet surface "last worn" summary outside the detail wear history section.
 - No dedicated E2E test suite yet; Playwright was used as an ad hoc smoke check.
-- Submitted barcode links have backend review RPCs, but no compact in-app/admin UI yet.
+- Barcode review has a hidden route but no normal Settings/Admin navigation entry yet.
 
 ## Next Good Slice
 
-Implement a compact barcode review UI for allowlisted admins, backed by the pending-submission list/approve/reject helpers.
+Apply the pending barcode migrations to live Supabase, seed the first `app_admins` row, then smoke-test scanner submission and `/barcode-review` against the cloud project.

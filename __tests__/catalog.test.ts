@@ -4,6 +4,7 @@ import {
   normalizeBarcode,
   searchCatalog,
   searchSupabaseCatalog,
+  submitCatalogBarcodeSubmission,
 } from '../lib/catalog';
 
 jest.mock('../lib/supabase', () => {
@@ -149,5 +150,28 @@ describe('catalog', () => {
     await expect(findSupabaseCatalogByBarcode('abc')).resolves.toBeNull();
 
     expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it('submits a pending barcode-to-catalog link with normalized digits', async () => {
+    const insert = jest.fn().mockResolvedValue({ error: null });
+    supabase.from.mockReturnValueOnce({
+      insert,
+    });
+
+    await submitCatalogBarcodeSubmission('EAN 3348901321129', 'catalog-1');
+
+    expect(supabase.from).toHaveBeenCalledWith('catalog_barcode_submissions');
+    expect(insert).toHaveBeenCalledWith({
+      barcode: '3348901321129',
+      catalog_fragrance_id: 'catalog-1',
+    });
+  });
+
+  it('does not submit invalid barcode links', async () => {
+    await expect(
+      submitCatalogBarcodeSubmission('not a barcode', 'catalog-1'),
+    ).rejects.toThrow('Valid barcode required');
+
+    expect(supabase.from).not.toHaveBeenCalled();
   });
 });

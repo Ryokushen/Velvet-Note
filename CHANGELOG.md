@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-04-25 - Add unknown barcode linking queue
+
+### Summary
+
+Added the next scanner slice so an unknown barcode can be linked to a catalog row as a pending user submission instead of dead-ending at the no-match state.
+
+### Shipped
+
+- Added `catalog_barcode_submissions` for authenticated, user-owned pending barcode links.
+- Added `submitCatalogBarcodeSubmission()` to normalize and submit scanned barcode mappings.
+- Expanded the `/scan` no-match state with inline catalog search, catalog-row selection, and pending-link submission.
+- Added tests for normalized barcode submission and the unknown-barcode linking flow.
+
+### Verification
+
+- `npm test -- __tests__/catalog.test.ts __tests__/ScanBarcode.test.tsx --runInBand --watchman=false`
+
 ## 2026-04-25 - Add dedicated barcode scanner screen
 
 ### Summary

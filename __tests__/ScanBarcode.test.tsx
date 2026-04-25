@@ -1,6 +1,10 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import Scan from '../app/scan';
-import { findSupabaseCatalogByBarcode } from '../lib/catalog';
+import {
+  findSupabaseCatalogByBarcode,
+  searchSupabaseCatalog,
+  submitCatalogBarcodeSubmission,
+} from '../lib/catalog';
 
 const mockBack = jest.fn();
 const mockCanGoBack = jest.fn();
@@ -40,6 +44,8 @@ jest.mock('expo-camera', () => {
 jest.mock('../lib/catalog', () => ({
   findSupabaseCatalogByBarcode: jest.fn(),
   normalizeBarcode: (value: string) => (value.split(/[:=]/).pop() ?? value).replace(/\D/g, ''),
+  searchSupabaseCatalog: jest.fn(),
+  submitCatalogBarcodeSubmission: jest.fn(),
 }));
 
 describe('Scan barcode screen', () => {
@@ -51,6 +57,10 @@ describe('Scan barcode screen', () => {
     mockRequestPermission.mockReset();
     mockCameraPermissionGranted = true;
     jest.mocked(findSupabaseCatalogByBarcode).mockReset();
+    jest.mocked(searchSupabaseCatalog).mockReset();
+    jest.mocked(searchSupabaseCatalog).mockResolvedValue([]);
+    jest.mocked(submitCatalogBarcodeSubmission).mockReset();
+    jest.mocked(submitCatalogBarcodeSubmission).mockResolvedValue(undefined);
   });
 
   it('falls back to Add when back is pressed without navigation history', () => {
@@ -111,6 +121,58 @@ describe('Scan barcode screen', () => {
     await waitFor(() => {
       expect(getByText('No catalog match yet')).toBeTruthy();
       expect(getByText('3348901321129')).toBeTruthy();
+    });
+  });
+
+  it('submits a pending catalog link for an unknown scanned barcode', async () => {
+    jest.mocked(findSupabaseCatalogByBarcode).mockResolvedValue(null);
+    jest.mocked(searchSupabaseCatalog).mockResolvedValue([
+      {
+        id: 'catalog-sauvage',
+        brand: 'Dior',
+        name: 'Sauvage',
+        concentration: 'EDT',
+        description: '',
+        notes: ['Fresh Spicy'],
+        notesTop: [],
+        notesMiddle: [],
+        notesBase: [],
+        releaseYear: 2015,
+        perfumers: [],
+        ratingValue: null,
+        ratingCount: null,
+        imageUrl: null,
+        source: 'parfumo_tidytuesday_2024_12_10',
+      },
+    ]);
+
+    const { getByLabelText, getByPlaceholderText, getByText } = render(<Scan />);
+
+    fireEvent.press(getByLabelText('Mock camera scanner'));
+
+    await waitFor(() => {
+      expect(getByText('No catalog match yet')).toBeTruthy();
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText('Search catalog to link this barcode'),
+      'sauvage',
+    );
+
+    await waitFor(() => {
+      expect(searchSupabaseCatalog).toHaveBeenCalledWith('sauvage', 6);
+      expect(getByText('Sauvage')).toBeTruthy();
+    });
+
+    fireEvent.press(getByText('Sauvage'));
+    fireEvent.press(getByText('Submit barcode link'));
+
+    await waitFor(() => {
+      expect(submitCatalogBarcodeSubmission).toHaveBeenCalledWith(
+        '3348901321129',
+        'catalog-sauvage',
+      );
+      expect(getByText('Barcode link submitted')).toBeTruthy();
     });
   });
 });

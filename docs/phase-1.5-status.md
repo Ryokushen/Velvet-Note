@@ -42,7 +42,7 @@ Key commits:
 - `785737c` - persisted catalog metadata on shelf entries.
 - `ba9ba7c` - Add search moved to Supabase RPC.
 - `5c820df` - catalog search ranking and scrollable results.
-- Current working slice - richer catalog metadata, delete/back fixes, editable photo URLs, scraper-ready catalog image infrastructure, self-attached personal photo uploads, barcode mapping, and a dedicated scanner route.
+- Current working slice - richer catalog metadata, delete/back fixes, editable photo URLs, scraper-ready catalog image infrastructure, self-attached personal photo uploads, barcode mapping, a dedicated scanner route, and pending links for unknown barcodes.
 
 Live Supabase project:
 
@@ -56,6 +56,7 @@ Live Supabase project:
 - Scraper handoff contract: `docs/catalog-image-scraper-contract.md`.
 - `user-fragrance-photos` is live for user-attached bottle photos.
 - `catalog_barcodes` and `find_catalog_fragrance_by_barcode(barcode_text)` are live for exact barcode lookup.
+- `catalog_barcode_submissions` stages authenticated user barcode links for review when scans do not have an exact match.
 
 ## Verification
 
@@ -82,8 +83,8 @@ Temporary test users were removed from Supabase after verification.
 
 - Detail/list do not yet surface "last worn" summary outside the detail wear history section.
 - No dedicated E2E test suite yet; Playwright was used as an ad hoc smoke check.
-- Unknown barcode contribution/linking flow is not implemented yet.
+- Submitted barcode links still need an admin/review promotion path into trusted `catalog_barcodes`.
 
 ## Next Good Slice
 
-Implement an unknown-barcode linking flow: after a no-match scan, let the user search the catalog and create a reviewed `catalog_barcodes` mapping instead of losing the scanned code.
+Implement a lightweight review/promote path for `catalog_barcode_submissions`, so trusted pending links can become shared `catalog_barcodes` matches.

@@ -139,6 +139,28 @@ export async function findSupabaseCatalogByBarcode(
   return rows[0] ? mapCatalogRow(rows[0]) : null;
 }
 
+export async function submitCatalogBarcodeSubmission(
+  barcode: string,
+  catalogFragranceId: string,
+): Promise<void> {
+  const normalized = normalizeBarcode(barcode);
+  if (!normalized) {
+    throw new Error('Valid barcode required');
+  }
+  if (!catalogFragranceId.trim()) {
+    throw new Error('Catalog fragrance required');
+  }
+
+  const { error } = await supabase.from('catalog_barcode_submissions').insert({
+    barcode: normalized,
+    catalog_fragrance_id: catalogFragranceId,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 function mapCatalogRow(row: CatalogRow): CatalogFragrance {
   const notesTop = uniqueText(row.notes_top ?? []);
   const notesMiddle = uniqueText(row.notes_middle ?? []);

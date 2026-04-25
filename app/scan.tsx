@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { CameraView, type BarcodeScanningResult } from 'expo-camera';
@@ -13,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   findSupabaseCatalogByBarcode,
   normalizeBarcode,
+  searchSupabaseCatalog,
+  submitCatalogBarcodeSubmission,
   type CatalogFragrance,
 } from '../lib/catalog';
 import { BottleArt } from '../components/BottleArt';
@@ -32,6 +36,37 @@ export default function Scan() {
   const [scannedBarcode, setScannedBarcode] = useState('');
   const [match, setMatch] = useState<CatalogFragrance | null>(null);
   const [message, setMessage] = useState('');
+  const [linkQuery, setLinkQuery] = useState('');
+  const [linkResults, setLinkResults] = useState<CatalogFragrance[]>([]);
+  const [selectedLink, setSelectedLink] = useState<CatalogFragrance | null>(null);
+  const [linkSubmitting, setLinkSubmitting] = useState(false);
+  const [linkSubmitted, setLinkSubmitted] = useState(false);
+  const [linkError, setLinkError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const query = linkQuery.trim();
+    if (status !== 'not-found' || linkSubmitted || query.length < 2) {
+      setLinkResults([]);
+      return undefined;
+    }
+
+    searchSupabaseCatalog(query, 6)
+      .then((results) => {
+        if (!cancelled) {
+          setLinkResults(results);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLinkResults([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [linkQuery, linkSubmitted, status]);
 
   async function handleBarcodeScanned(result: BarcodeScanningResult) {
     if (status === 'looking' || status === 'matched') {
@@ -50,6 +85,7 @@ export default function Scan() {
     setScannedBarcode(barcode);
     setMatch(null);
     setMessage('');
+    resetLinking();
     setStatus('looking');
 
     try {
@@ -67,6 +103,16 @@ export default function Scan() {
     setScannedBarcode('');
     setMatch(null);
     setMessage('');
+    resetLinking();
+  }
+
+  function resetLinking() {
+    setLinkQuery('');
+    setLinkResults([]);
+    setSelectedLink(null);
+    setLinkSubmitting(false);
+    setLinkSubmitted(false);
+    setLinkError('');
   }
 
   function useMatch() {
@@ -83,6 +129,24 @@ export default function Scan() {
       return;
     }
     router.replace('/add' as never);
+  }
+
+  async function submitBarcodeLink() {
+    if (!selectedLink || !scannedBarcode) {
+      return;
+    }
+
+    setLinkSubmitting(true);
+    setLinkError('');
+    try {
+      await submitCatalogBarcodeSubmission(scannedBarcode, selectedLink.id);
+      setLinkSubmitted(true);
+      setLinkResults([]);
+    } catch (error: any) {
+      setLinkError(error.message ?? 'Unknown error');
+    } finally {
+      setLinkSubmitting(false);
+    }
   }
 
   if (!permission) {
@@ -126,7 +190,11 @@ export default function Scan() {
         </CameraView>
       </View>
 
-      <View style={styles.resultPanel}>
+      <ScrollView
+        style={styles.resultPanel}
+        contentContainerStyle={styles.resultPanelContent}
+        keyboardShouldPersistTaps="handled"
+      >
         {status === 'idle' ? (
           <>
             <Caption style={{ marginBottom: 8 }}>Ready</Caption>
@@ -161,20 +229,89 @@ export default function Scan() {
 
         {status === 'not-found' ? (
           <>
-            <Serif size={22} style={{ marginBottom: 8 }}>No catalog match yet</Serif>
+            <Serif size={22} style={{ marginBottom: 8 }}>
+              {linkSubmitted ? 'Barcode link submitted' : 'No catalog match yet'}
+            </Serif>
             <Text style={styles.barcodeText}>{scannedBarcode}</Text>
-            <Text style={styles.bodyText}>
-              Search the catalog manually for now. Later this can become a barcode-linking flow.
-            </Text>
-            <View style={styles.actions}>
-              <GhostButton onPress={resetScan} style={styles.actionButton}>Scan again</GhostButton>
-              <PrimaryButton
-                onPress={() => router.replace('/add' as never)}
-                style={styles.actionButton}
-              >
-                Search catalog
-              </PrimaryButton>
-            </View>
+            {linkSubmitted ? (
+              <>
+                <Text style={styles.bodyText}>
+                  This code is queued for review before it becomes a shared scanner match.
+                </Text>
+                <View style={styles.actions}>
+                  <GhostButton onPress={resetScan} style={styles.actionButton}>Scan again</GhostButton>
+                  <PrimaryButton
+                    onPress={() => router.replace('/add' as never)}
+                    style={styles.actionButton}
+                  >
+                    Add manually
+                  </PrimaryButton>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.bodyText}>
+                  Pick the catalog row this barcode belongs to.
+                </Text>
+                <TextInput
+                  value={linkQuery}
+                  onChangeText={(value) => {
+                    setLinkQuery(value);
+                    setSelectedLink(null);
+                    setLinkError('');
+                  }}
+                  placeholder="Search catalog to link this barcode"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  style={styles.linkInput}
+                />
+                {linkResults.length > 0 ? (
+                  <View style={styles.linkResults}>
+                    {linkResults.map((entry) => {
+                      const selected = selectedLink?.id === entry.id;
+                      return (
+                        <Pressable
+                          key={entry.id}
+                          onPress={() => {
+                            setSelectedLink(entry);
+                            setLinkError('');
+                          }}
+                          style={({ pressed }) => [
+                            styles.linkResult,
+                            selected && styles.linkResultSelected,
+                            pressed && { opacity: 0.75 },
+                          ]}
+                        >
+                          <BottleArt imageUrl={entry.imageUrl} width={38} height={50} />
+                          <View style={styles.matchText}>
+                            <Caption style={{ marginBottom: 3 }}>{entry.brand}</Caption>
+                            <Text style={styles.linkResultName}>{entry.name}</Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                ) : null}
+                {selectedLink ? (
+                  <Text style={styles.linkSelectedText}>
+                    Selected: {selectedLink.brand} {selectedLink.name}
+                  </Text>
+                ) : null}
+                {linkError ? <Text style={styles.errorText}>{linkError}</Text> : null}
+                <View style={styles.actions}>
+                  <GhostButton onPress={resetScan} style={styles.actionButton}>Scan again</GhostButton>
+                  <PrimaryButton
+                    onPress={submitBarcodeLink}
+                    disabled={!selectedLink}
+                    loading={linkSubmitting}
+                    style={styles.actionButton}
+                  >
+                    Submit barcode link
+                  </PrimaryButton>
+                </View>
+              </>
+            )}
           </>
         ) : null}
 
@@ -187,7 +324,7 @@ export default function Scan() {
             </View>
           </>
         ) : null}
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -266,8 +403,11 @@ const styles = StyleSheet.create({
   resultPanel: {
     borderTopWidth: 1,
     borderTopColor: colors.borderSoft,
-    padding: 20,
     backgroundColor: colors.background,
+    maxHeight: 360,
+  },
+  resultPanelContent: {
+    padding: 20,
     minHeight: 190,
   },
   bodyText: {
@@ -294,6 +434,54 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: 6,
     marginBottom: 8,
+  },
+  linkInput: {
+    height: 46,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    color: colors.text,
+    fontFamily: typography.serif,
+    marginTop: 12,
+  },
+  linkResults: {
+    gap: 8,
+    marginTop: 10,
+    maxHeight: 180,
+  },
+  linkResult: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surfaceElevated,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  linkResultSelected: {
+    borderColor: colors.accent,
+  },
+  linkResultName: {
+    fontFamily: typography.serif,
+    fontSize: 15,
+    color: colors.text,
+  },
+  linkSelectedText: {
+    ...typography.bodyDim,
+    color: colors.textDim,
+    fontSize: 12,
+    marginTop: 10,
+  },
+  errorText: {
+    ...typography.bodyDim,
+    color: colors.error,
+    fontSize: 12,
+    marginTop: 10,
   },
   actions: {
     flexDirection: 'row',

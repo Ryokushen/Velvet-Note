@@ -39,6 +39,7 @@ supabase/.temp/
 *.tsbuildinfo
 
 app-example
+.superpowers/
 
 # generated native folders
 /ios

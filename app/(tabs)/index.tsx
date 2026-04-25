@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View,
   FlatList,
@@ -15,18 +15,40 @@ import { FragranceRow } from '../../components/FragranceRow';
 import { EmptyState } from '../../components/EmptyState';
 import { filterFragrances, sortFragrances, type SortMode } from '../../lib/filters';
 import { formatLastWornShort, latestWearForFragrance } from '../../lib/lastWorn';
+import { isAppAdmin } from '../../lib/admin';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { Caption, Serif } from '../../components/ui/text';
-import { IconSearch, IconX, IconLogOut } from '../../components/ui/Icon';
+import { IconSearch, IconX, IconLogOut, IconBook } from '../../components/ui/Icon';
 
 export default function Collection() {
   const { data, isLoading, error, refetch, isRefetching } = useFragrancesQuery();
   const wears = useWearsQuery();
   const [query, setQuery] = useState('');
   const [sortMode] = useState<SortMode>('rating');
+  const [showBarcodeReview, setShowBarcodeReview] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    let mounted = true;
+
+    isAppAdmin()
+      .then((isAdmin) => {
+        if (mounted) {
+          setShowBarcodeReview(isAdmin);
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setShowBarcodeReview(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const visible = useMemo(() => {
     if (!data) return [];
@@ -40,7 +62,19 @@ export default function Collection() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <View style={styles.headerSide} />
+        <View style={[styles.headerSide, styles.headerStart]}>
+          {showBarcodeReview && (
+            <Pressable
+              onPress={() => router.push('/barcode-review' as never)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Review barcode submissions"
+              style={styles.iconButton}
+            >
+              <IconBook size={20} color={colors.textMuted} />
+            </Pressable>
+          )}
+        </View>
         <Serif size={18} style={{ letterSpacing: 0.4 }}>
           Collection
         </Serif>
@@ -170,6 +204,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderSoft,
   },
   headerSide: { width: 44, alignItems: 'flex-end' },
+  headerStart: { alignItems: 'flex-start' },
   iconButton: { padding: 6 },
   titleBlock: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 },
   titleRow: {

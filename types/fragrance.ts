@@ -1,4 +1,7 @@
 export type Concentration = 'EDT' | 'EDP' | 'Parfum' | 'Cologne' | 'Other';
+export type BottleStatus = 'full' | 'partial' | 'sample' | 'decant' | 'empty' | 'wishlist' | 'sold' | 'gifted';
+export type Season = 'spring' | 'summer' | 'fall' | 'winter';
+export type PreferredTimeOfDay = 'day' | 'night' | 'either';
 
 export const CONCENTRATIONS: Concentration[] = [
   'EDT',
@@ -7,6 +10,20 @@ export const CONCENTRATIONS: Concentration[] = [
   'Cologne',
   'Other',
 ];
+
+export const BOTTLE_STATUSES: BottleStatus[] = [
+  'full',
+  'partial',
+  'sample',
+  'decant',
+  'empty',
+  'wishlist',
+  'sold',
+  'gifted',
+];
+
+export const SEASONS: Season[] = ['spring', 'summer', 'fall', 'winter'];
+export const PREFERRED_TIMES_OF_DAY: PreferredTimeOfDay[] = ['day', 'night', 'either'];
 
 export interface Fragrance {
   id: string;
@@ -27,6 +44,14 @@ export interface Fragrance {
   catalog_notes_middle: string[] | null;
   catalog_notes_base: string[] | null;
   catalog_perfumers: string[] | null;
+  bottle_status?: BottleStatus | null;
+  bottle_size_ml?: number | null;
+  purchase_date?: string | null;
+  purchase_source?: string | null;
+  purchase_price?: number | null;
+  purchase_currency?: string | null;
+  preferred_seasons?: Season[] | null;
+  preferred_time_of_day?: PreferredTimeOfDay | null;
   created_at: string;
   updated_at: string;
 }
@@ -46,6 +71,14 @@ export type NewFragrance = {
   catalog_notes_middle?: string[] | null;
   catalog_notes_base?: string[] | null;
   catalog_perfumers?: string[] | null;
+  bottle_status?: BottleStatus | null;
+  bottle_size_ml?: number | null;
+  purchase_date?: string | null;
+  purchase_source?: string | null;
+  purchase_price?: number | null;
+  purchase_currency?: string | null;
+  preferred_seasons?: Season[] | null;
+  preferred_time_of_day?: PreferredTimeOfDay | null;
 };
 
 export type FragranceUpdate = Partial<NewFragrance>;

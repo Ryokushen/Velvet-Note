@@ -5,6 +5,7 @@ import { typography } from '../theme/typography';
 import { Caption, Serif } from './ui/text';
 import { BottleArt } from './BottleArt';
 import { formatAccordList } from '../lib/accordDisplay';
+import { BOTTLE_STATUS_LABELS, formatMl } from '../lib/journal';
 
 type FragranceRowProps = {
   fragrance: Fragrance;
@@ -25,7 +26,11 @@ export function FragranceRow({
 }: FragranceRowProps) {
   const rating = fragrance.rating != null ? fragrance.rating.toFixed(1) : '—';
   const accordPreview = formatAccordList(fragrance.accords.slice(0, 3));
-  const subline = [fragrance.concentration, accordPreview].filter(Boolean).join(' · ');
+  const bottleMeta = [
+    fragrance.bottle_status ? BOTTLE_STATUS_LABELS[fragrance.bottle_status] : null,
+    formatMl(fragrance.bottle_size_ml),
+  ].filter(Boolean).join(' · ');
+  const subline = [fragrance.concentration, bottleMeta, accordPreview].filter(Boolean).join(' · ');
   return (
     <Pressable
       onPress={onPress}

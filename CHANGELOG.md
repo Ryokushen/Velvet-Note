@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-04-25 - Document personal journal roadmap slice
+
+### Summary
+
+Audited project docs after implementing the personal journal foundation and updated the roadmap/status language to match the current four-tab product direction.
+
+### Shipped
+
+- Updated README current scope for Collection, Wears, Insights, Add.
+- Documented optional bottle metadata, preferred wear profile, richer wear context, compliments, and client-derived Insights.
+- Marked the personal journal Supabase migration as the next live apply/smoke item.
+- Expanded manual smoke tests for Bottle, Wear Profile, Wears, and Insights.
+
+### Verification
+
+- `rg -n "Calendar|Wears|Insights|bottle|compliment|season|migration" README.md docs CHANGELOG.md`
+
 ## 2026-04-25 - Audit Phase 2 barcode docs
 
 ### Summary

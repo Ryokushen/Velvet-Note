@@ -28,7 +28,9 @@ import {
   useWearsQuery,
 } from '../../hooks/useWears';
 import type { Fragrance } from '../../types/fragrance';
-import type { Wear } from '../../types/wear';
+import { SEASONS, type Season } from '../../types/fragrance';
+import type { Wear, WearTimeOfDay } from '../../types/wear';
+import { SEASON_LABELS, WEAR_TIME_LABELS, seasonForDate } from '../../lib/journal';
 import { colors } from '../../theme/colors';
 import { FAMILY, type Family } from '../../theme/families';
 import { radius } from '../../theme/spacing';
@@ -55,6 +57,11 @@ export default function CalendarScreen() {
   const [pendingDeleteWearId, setPendingDeleteWearId] = useState<string | null>(null);
   const [selectedFragranceId, setSelectedFragranceId] = useState('');
   const [wearNotes, setWearNotes] = useState('');
+  const [wearSeason, setWearSeason] = useState<Season | null>(() => seasonForDate(todayLocalDate()));
+  const [wearTimeOfDay, setWearTimeOfDay] = useState<WearTimeOfDay | null>(null);
+  const [wearOccasion, setWearOccasion] = useState('');
+  const [complimentCount, setComplimentCount] = useState(0);
+  const [complimentNote, setComplimentNote] = useState('');
 
   const fragranceById = useMemo(() => {
     const map = new Map<string, Fragrance>();
@@ -99,6 +106,11 @@ export default function CalendarScreen() {
     setPendingDeleteWearId(null);
     setSelectedFragranceId('');
     setWearNotes('');
+    setWearSeason(selectedDate ? seasonForDate(selectedDate) : null);
+    setWearTimeOfDay(null);
+    setWearOccasion('');
+    setComplimentCount(0);
+    setComplimentNote('');
   }
 
   function startAddWear() {
@@ -106,6 +118,11 @@ export default function CalendarScreen() {
     setPendingDeleteWearId(null);
     setSelectedFragranceId('');
     setWearNotes('');
+    setWearSeason(selectedDate ? seasonForDate(selectedDate) : null);
+    setWearTimeOfDay(null);
+    setWearOccasion('');
+    setComplimentCount(0);
+    setComplimentNote('');
     setLoggingDay(true);
   }
 
@@ -114,6 +131,11 @@ export default function CalendarScreen() {
     setEditingWearId(wear.id);
     setSelectedFragranceId(wear.fragrance_id);
     setWearNotes(wear.notes ?? '');
+    setWearSeason(wear.season ?? null);
+    setWearTimeOfDay(wear.time_of_day ?? null);
+    setWearOccasion(wear.occasion ?? '');
+    setComplimentCount(wear.compliment_count ?? 0);
+    setComplimentNote(wear.compliment_note ?? '');
     setLoggingDay(true);
   }
 
@@ -126,6 +148,11 @@ export default function CalendarScreen() {
       fragrance_id: selectedFragranceId,
       worn_on: selectedDate,
       notes: wearNotes.trim() ? wearNotes.trim() : null,
+      season: wearSeason,
+      time_of_day: wearTimeOfDay,
+      occasion: wearOccasion.trim() ? wearOccasion.trim() : null,
+      compliment_count: complimentCount,
+      compliment_note: complimentNote.trim() ? complimentNote.trim() : null,
     };
     try {
       if (editingWearId) {
@@ -164,7 +191,7 @@ export default function CalendarScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Serif size={18} style={{ letterSpacing: 0.4 }}>
-          Calendar
+          Wears
         </Serif>
       </View>
 
@@ -271,6 +298,11 @@ export default function CalendarScreen() {
                   editing={Boolean(editingWearId)}
                   selectedFragranceId={selectedFragranceId}
                   notes={wearNotes}
+                  season={wearSeason}
+                  timeOfDay={wearTimeOfDay}
+                  occasion={wearOccasion}
+                  complimentCount={complimentCount}
+                  complimentNote={complimentNote}
                   saving={createWear.isPending || updateWear.isPending}
                   deleting={deleteWear.isPending}
                   pendingDeleteWearId={pendingDeleteWearId}
@@ -279,6 +311,11 @@ export default function CalendarScreen() {
                   onCancelDelete={() => setPendingDeleteWearId(null)}
                   onSelectFragrance={setSelectedFragranceId}
                   onChangeNotes={setWearNotes}
+                  onChangeSeason={setWearSeason}
+                  onChangeTimeOfDay={setWearTimeOfDay}
+                  onChangeOccasion={setWearOccasion}
+                  onChangeComplimentCount={setComplimentCount}
+                  onChangeComplimentNote={setComplimentNote}
                   onSave={saveSelectedDayWear}
                   onEditWear={startEditWear}
                   onDeleteWear={confirmDeleteCalendarWear}
@@ -337,6 +374,11 @@ function DayDetail({
   editing,
   selectedFragranceId,
   notes,
+  season,
+  timeOfDay,
+  occasion,
+  complimentCount,
+  complimentNote,
   saving,
   deleting,
   pendingDeleteWearId,
@@ -345,6 +387,11 @@ function DayDetail({
   onCancelDelete,
   onSelectFragrance,
   onChangeNotes,
+  onChangeSeason,
+  onChangeTimeOfDay,
+  onChangeOccasion,
+  onChangeComplimentCount,
+  onChangeComplimentNote,
   onSave,
   onEditWear,
   onDeleteWear,
@@ -359,6 +406,11 @@ function DayDetail({
   editing: boolean;
   selectedFragranceId: string;
   notes: string;
+  season: Season | null;
+  timeOfDay: WearTimeOfDay | null;
+  occasion: string;
+  complimentCount: number;
+  complimentNote: string;
   saving: boolean;
   deleting: boolean;
   pendingDeleteWearId: string | null;
@@ -367,6 +419,11 @@ function DayDetail({
   onCancelDelete: () => void;
   onSelectFragrance: (fragranceId: string) => void;
   onChangeNotes: (notes: string) => void;
+  onChangeSeason: (season: Season | null) => void;
+  onChangeTimeOfDay: (timeOfDay: WearTimeOfDay | null) => void;
+  onChangeOccasion: (occasion: string) => void;
+  onChangeComplimentCount: (count: number) => void;
+  onChangeComplimentNote: (note: string) => void;
   onSave: () => void;
   onEditWear: (wear: Wear) => void;
   onDeleteWear: (wear: Wear) => void;
@@ -420,6 +477,9 @@ function DayDetail({
                       {wear.notes}
                     </Text>
                   ) : null}
+                  <Text style={styles.dayWearContext} numberOfLines={1}>
+                    {formatWearContext(wear)}
+                  </Text>
                 </Pressable>
                 {fragrance?.concentration ? (
                   <Caption tone="dim">{fragrance.concentration}</Caption>
@@ -500,6 +560,55 @@ function DayDetail({
             value={notes}
             onChangeText={onChangeNotes}
             placeholder="Optional note"
+            placeholderTextColor={colors.textMuted}
+            multiline
+            style={styles.dayEntryNotes}
+          />
+          <Caption style={{ marginTop: 14, marginBottom: 10 }}>Season</Caption>
+          <OptionPills
+            values={SEASONS}
+            labels={SEASON_LABELS}
+            selected={season}
+            onSelect={(value) => onChangeSeason(value === season ? null : value)}
+          />
+          <Caption style={{ marginTop: 14, marginBottom: 10 }}>Time</Caption>
+          <OptionPills
+            values={['day', 'night'] as WearTimeOfDay[]}
+            labels={WEAR_TIME_LABELS}
+            selected={timeOfDay}
+            onSelect={(value) => onChangeTimeOfDay(value === timeOfDay ? null : value)}
+          />
+          <TextInput
+            value={occasion}
+            onChangeText={onChangeOccasion}
+            placeholder="Occasion"
+            placeholderTextColor={colors.textMuted}
+            style={styles.dayEntrySingleLine}
+          />
+          <View style={styles.dayEntryCompliments}>
+            <Caption>Compliments</Caption>
+            <View style={styles.stepper}>
+              <Pressable
+                onPress={() => onChangeComplimentCount(Math.max(0, complimentCount - 1))}
+                accessibilityLabel="Decrease compliment count"
+                style={styles.stepperButton}
+              >
+                <Text style={styles.stepperText}>-</Text>
+              </Pressable>
+              <Text style={styles.stepperValue}>{complimentCount}</Text>
+              <Pressable
+                onPress={() => onChangeComplimentCount(complimentCount + 1)}
+                accessibilityLabel="Increase compliment count"
+                style={styles.stepperButton}
+              >
+                <Text style={styles.stepperText}>+</Text>
+              </Pressable>
+            </View>
+          </View>
+          <TextInput
+            value={complimentNote}
+            onChangeText={onChangeComplimentNote}
+            placeholder="Compliment note"
             placeholderTextColor={colors.textMuted}
             multiline
             style={styles.dayEntryNotes}
@@ -593,6 +702,47 @@ function ByBottleView({
       ))}
     </View>
   );
+}
+
+function OptionPills<T extends string>({
+  values,
+  labels,
+  selected,
+  onSelect,
+}: {
+  values: readonly T[];
+  labels: Record<T, string>;
+  selected: T | null;
+  onSelect: (value: T) => void;
+}) {
+  return (
+    <View style={styles.optionPillWrap}>
+      {values.map((value) => {
+        const active = selected === value;
+        return (
+          <Pressable
+            key={value}
+            onPress={() => onSelect(value)}
+            style={[styles.optionPill, active && styles.optionPillActive]}
+          >
+            <Text style={[styles.optionPillText, active && styles.optionPillTextActive]}>
+              {labels[value]}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function formatWearContext(wear: Wear): string {
+  const parts = [
+    wear.season ? SEASON_LABELS[wear.season] : null,
+    wear.time_of_day ? WEAR_TIME_LABELS[wear.time_of_day] : null,
+    wear.occasion,
+    wear.compliment_count ? `${wear.compliment_count} compliment${wear.compliment_count === 1 ? '' : 's'}` : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' / ') : 'No context';
 }
 
 function buildMonthCells(month: Date) {
@@ -928,6 +1078,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
+  dayWearContext: {
+    ...typography.bodyDim,
+    color: colors.textMuted,
+    fontSize: 11,
+    marginTop: 4,
+  },
   dayWearActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1029,6 +1185,75 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: colors.text,
     textAlignVertical: 'top',
+  },
+  dayEntrySingleLine: {
+    height: 44,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    color: colors.text,
+  },
+  dayEntryCompliments: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  optionPillWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionPill: {
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.sm,
+    paddingVertical: 8,
+    paddingHorizontal: 11,
+  },
+  optionPillActive: {
+    borderColor: colors.accent,
+  },
+  optionPillText: {
+    fontSize: 11,
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
+  optionPillTextActive: {
+    color: colors.text,
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceElevated,
+  },
+  stepperButton: {
+    width: 38,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperText: {
+    color: colors.text,
+    fontSize: 18,
+  },
+  stepperValue: {
+    minWidth: 32,
+    textAlign: 'center',
+    color: colors.text,
+    fontFamily: typography.serif,
+    fontSize: 18,
   },
   dayEntryActions: {
     flexDirection: 'row',

@@ -45,16 +45,19 @@ npm test
 Shipped:
 - Auth: email/password
 - Collection list with search
-- Add fragrance: Supabase catalog lookup/prefill, brand, name, concentration, curated/free-text accords, rating
-- Detail view with catalog bottle art, notes, edit, and delete
-- Wear logging from fragrance detail and selected Calendar days
-- Calendar tab with month grid, same-day wear counts, selected-day detail/edit/delete, and by-bottle view
+- Four-tab personal journal shell: Collection, Wears, Insights, Add
+- Add fragrance: Supabase catalog lookup/prefill, brand, name, concentration, curated/free-text accords, personal rating, optional bottle metadata, and ideal wear profile
+- Detail view with catalog/personal bottle art, notes, Bottle section, Wear Profile section, edit, and delete
+- Wear logging from fragrance detail and selected Wears days, including optional season, day/night, occasion, compliment count, and compliment note
+- Wears tab with month grid, same-day wear counts, selected-day detail/edit/delete, and by-bottle view
+- Insights tab with client-derived most worn, neglected bottles, compliment leaders, seasonal/day-night tendencies, and taste profile
 - Shared Parfumo catalog in Supabase with brand/name/accord/note search ranking
 - Catalog image fallback and self-attached personal bottle photos
 - Barcode scanner flow with exact lookup, unknown-link submissions, admin review, and barcode import tooling
 - Online-only (offline is Phase 3)
 
 Deferred to Phase 2:
+- Apply and live-smoke the personal journal metadata migration on Supabase
 - Live barcode scan/review smoke pass
 - Dedicated E2E test suite
 - LLM fallback for unknown entries
@@ -72,6 +75,6 @@ npm run import:barcodes -- path/to/barcode-linkages.csv
 
 Milestones:
 - `phase-1` tag: Phase 1 email/password collection MVP
-- `main`: Phase 1.5 wear calendar plus Phase 2 shared catalog, imagery, barcode lookup, and barcode review foundation
+- `main`: Phase 1.5 Wears foundation plus Phase 2 shared catalog, imagery, barcode lookup, barcode review, and personal journal foundation
 
 See `docs/design-spec.md`, `docs/phase-1-plan.md`, `docs/phase-1.5-status.md`, `docs/parfumo-catalog-import.md`, `docs/catalog-barcode-import.md`, and `docs/barcode-live-smoke-test.md` for the full spec, roadmap, and catalog/barcode notes.

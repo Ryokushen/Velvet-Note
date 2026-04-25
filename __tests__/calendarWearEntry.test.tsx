@@ -125,11 +125,15 @@ describe('Calendar wear entry', () => {
   it('logs the selected calendar date for the chosen fragrance', async () => {
     const now = new Date();
     const selectedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-15`;
-    const { getByLabelText, getByText } = render(<CalendarScreen />);
+    const { getByLabelText, getByPlaceholderText, getByText } = render(<CalendarScreen />);
 
     fireEvent.press(getByText('15'));
     fireEvent.press(getByLabelText('Log wear for selected day'));
     fireEvent.press(getByText('Shalimar'));
+    fireEvent.press(getByText('Night'));
+    fireEvent.changeText(getByPlaceholderText('Occasion'), 'Office');
+    fireEvent.changeText(getByPlaceholderText('Compliment note'), 'Asked what it was');
+    fireEvent.press(getByText('+'));
     fireEvent.press(getByText('Save wear'));
 
     await waitFor(() => {
@@ -137,6 +141,11 @@ describe('Calendar wear entry', () => {
         fragrance_id: 'fragrance-1',
         worn_on: selectedDate,
         notes: null,
+        season: expect.any(String),
+        time_of_day: 'night',
+        occasion: 'Office',
+        compliment_count: 1,
+        compliment_note: 'Asked what it was',
       });
     });
   });
@@ -158,6 +167,11 @@ describe('Calendar wear entry', () => {
           fragrance_id: 'fragrance-1',
           worn_on: selectedDate,
           notes: 'Dinner wear',
+          season: null,
+          time_of_day: null,
+          occasion: null,
+          compliment_count: 0,
+          compliment_note: null,
         },
       });
     });

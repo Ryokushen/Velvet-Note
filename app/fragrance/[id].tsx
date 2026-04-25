@@ -50,6 +50,24 @@ import { typography } from '../../theme/typography';
 import { radius } from '../../theme/spacing';
 import { cancelAnimation, useSharedValue } from 'react-native-reanimated';
 import { formatAccordList } from '../../lib/accordDisplay';
+import {
+  BOTTLE_STATUSES,
+  PREFERRED_TIMES_OF_DAY,
+  SEASONS,
+  type BottleStatus,
+  type PreferredTimeOfDay,
+  type Season,
+} from '../../types/fragrance';
+import type { WearTimeOfDay } from '../../types/wear';
+import {
+  BOTTLE_STATUS_LABELS,
+  PREFERRED_TIME_LABELS,
+  SEASON_LABELS,
+  WEAR_TIME_LABELS,
+  formatCurrency,
+  formatMl,
+  seasonForDate,
+} from '../../lib/journal';
 
 export default function Detail() {
   const { id, fromCollection } = useLocalSearchParams<{ id: string; fromCollection?: string }>();
@@ -79,8 +97,21 @@ export default function Detail() {
   const [accords, setAccords] = useState<string[]>([]);
   const [rating, setRating] = useState(0);
   const [imageUrl, setImageUrl] = useState('');
+  const [bottleStatus, setBottleStatus] = useState<BottleStatus | null>(null);
+  const [bottleSizeMl, setBottleSizeMl] = useState('');
+  const [purchaseDate, setPurchaseDate] = useState('');
+  const [purchaseSource, setPurchaseSource] = useState('');
+  const [purchasePrice, setPurchasePrice] = useState('');
+  const [purchaseCurrency, setPurchaseCurrency] = useState('USD');
+  const [preferredSeasons, setPreferredSeasons] = useState<Season[]>([]);
+  const [preferredTimeOfDay, setPreferredTimeOfDay] = useState<PreferredTimeOfDay | null>(null);
   const [photoUploadPending, setPhotoUploadPending] = useState(false);
   const [wearNotes, setWearNotes] = useState('');
+  const [wearSeason, setWearSeason] = useState<Season | null>(() => seasonForDate(todayLocalDate()));
+  const [wearTimeOfDay, setWearTimeOfDay] = useState<WearTimeOfDay | null>(null);
+  const [wearOccasion, setWearOccasion] = useState('');
+  const [complimentCount, setComplimentCount] = useState(0);
+  const [complimentNote, setComplimentNote] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [closingToCollection, setClosingToCollection] = useState(false);
   const cameFromCollection = fromCollection === '1';
@@ -112,6 +143,14 @@ export default function Detail() {
     setAccords(fragranceAccords ?? []);
     setRating(fragranceRating ?? 0);
     setImageUrl(fragrancePersonalImageUrl ?? '');
+    setBottleStatus(fragrance.bottle_status ?? null);
+    setBottleSizeMl(fragrance.bottle_size_ml != null ? String(fragrance.bottle_size_ml) : '');
+    setPurchaseDate(fragrance.purchase_date ?? '');
+    setPurchaseSource(fragrance.purchase_source ?? '');
+    setPurchasePrice(fragrance.purchase_price != null ? String(fragrance.purchase_price) : '');
+    setPurchaseCurrency(fragrance.purchase_currency ?? 'USD');
+    setPreferredSeasons(fragrance.preferred_seasons ?? []);
+    setPreferredTimeOfDay(fragrance.preferred_time_of_day ?? null);
   }, [
     fragranceId,
     fragranceBrand,
@@ -120,6 +159,7 @@ export default function Detail() {
     fragranceAccords,
     fragranceRating,
     fragrancePersonalImageUrl,
+    fragrance,
   ]);
 
   useEffect(() => {
@@ -175,6 +215,12 @@ export default function Detail() {
       Alert.alert('Missing fields', 'Brand and name are required.');
       return;
     }
+    const parsedBottleSize = parseOptionalNumber(bottleSizeMl);
+    const parsedPurchasePrice = parseOptionalNumber(purchasePrice);
+    if (parsedBottleSize === undefined || parsedPurchasePrice === undefined) {
+      Alert.alert('Check numbers', 'Bottle size and purchase price must be valid numbers.');
+      return;
+    }
     try {
       await update.mutateAsync({
         id: fragrance!.id,
@@ -185,6 +231,14 @@ export default function Detail() {
           accords,
           rating: rating > 0 ? rating : null,
           image_url: imageUrl.trim() ? imageUrl.trim() : null,
+          bottle_status: bottleStatus,
+          bottle_size_ml: parsedBottleSize,
+          purchase_date: purchaseDate.trim() ? purchaseDate.trim() : null,
+          purchase_source: purchaseSource.trim() ? purchaseSource.trim() : null,
+          purchase_price: parsedPurchasePrice,
+          purchase_currency: purchaseCurrency.trim() || 'USD',
+          preferred_seasons: preferredSeasons.length > 0 ? preferredSeasons : null,
+          preferred_time_of_day: preferredTimeOfDay,
         },
       });
       setEditing(false);
@@ -250,8 +304,18 @@ export default function Detail() {
         fragrance_id: fragranceId,
         worn_on: todayLocalDate(),
         notes: wearNotes.trim() ? wearNotes.trim() : null,
+        season: wearSeason,
+        time_of_day: wearTimeOfDay,
+        occasion: wearOccasion.trim() ? wearOccasion.trim() : null,
+        compliment_count: complimentCount,
+        compliment_note: complimentNote.trim() ? complimentNote.trim() : null,
       });
       setWearNotes('');
+      setWearSeason(seasonForDate(todayLocalDate()));
+      setWearTimeOfDay(null);
+      setWearOccasion('');
+      setComplimentCount(0);
+      setComplimentNote('');
       Alert.alert('Wear logged', `${fragrance!.brand} ${fragrance!.name} was added to today's wear history.`);
     } catch (e: any) {
       Alert.alert('Could not log wear', e.message ?? 'Unknown error');
@@ -310,6 +374,78 @@ export default function Detail() {
             <View>
               <Caption style={{ marginBottom: 10 }}>Rating</Caption>
               <RatingDots value={rating} onChange={setRating} />
+            </View>
+            <View style={styles.editGroup}>
+              <Caption style={{ marginBottom: 10 }}>Bottle</Caption>
+              <OptionPills
+                values={BOTTLE_STATUSES}
+                labels={BOTTLE_STATUS_LABELS}
+                selected={bottleStatus}
+                onSelect={(value) => setBottleStatus(value === bottleStatus ? null : value)}
+              />
+              <EditField
+                label="Bottle size (ml)"
+                value={bottleSizeMl}
+                onChangeText={setBottleSizeMl}
+                keyboardType="decimal-pad"
+                placeholder="100"
+              />
+              <EditField
+                label="Purchase date"
+                value={purchaseDate}
+                onChangeText={setPurchaseDate}
+                placeholder="YYYY-MM-DD"
+                keyboardType="numbers-and-punctuation"
+              />
+              <EditField
+                label="Purchase source"
+                value={purchaseSource}
+                onChangeText={setPurchaseSource}
+                placeholder="Store, seller, or gift"
+              />
+              <View style={styles.priceRow}>
+                <View style={{ flex: 1 }}>
+                  <EditField
+                    label="Purchase price"
+                    value={purchasePrice}
+                    onChangeText={setPurchasePrice}
+                    keyboardType="decimal-pad"
+                    placeholder="125"
+                  />
+                </View>
+                <View style={styles.currencyField}>
+                  <EditField
+                    label="Currency"
+                    value={purchaseCurrency}
+                    onChangeText={setPurchaseCurrency}
+                    autoCapitalize="characters"
+                    maxLength={3}
+                  />
+                </View>
+              </View>
+            </View>
+            <View style={styles.editGroup}>
+              <Caption style={{ marginBottom: 10 }}>Wear profile</Caption>
+              <MultiOptionPills
+                values={SEASONS}
+                labels={SEASON_LABELS}
+                selected={preferredSeasons}
+                onToggle={(value) => {
+                  setPreferredSeasons((current) =>
+                    current.includes(value)
+                      ? current.filter((season) => season !== value)
+                      : [...current, value],
+                  );
+                }}
+              />
+              <OptionPills
+                values={PREFERRED_TIMES_OF_DAY}
+                labels={PREFERRED_TIME_LABELS}
+                selected={preferredTimeOfDay}
+                onSelect={(value) =>
+                  setPreferredTimeOfDay(value === preferredTimeOfDay ? null : value)
+                }
+              />
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -418,6 +554,26 @@ export default function Detail() {
 
           <SectionDivider />
 
+          {hasBottleMetadata(fragrance) ? (
+            <>
+              <JournalMetadataSection
+                title="Bottle"
+                rows={buildBottleRows(fragrance)}
+              />
+              <SectionDivider marginVertical={24} />
+            </>
+          ) : null}
+
+          {hasWearProfile(fragrance) ? (
+            <>
+              <JournalMetadataSection
+                title="Wear profile"
+                rows={buildWearProfileRows(fragrance)}
+              />
+              <SectionDivider marginVertical={24} />
+            </>
+          ) : null}
+
           <Caption style={{ marginBottom: 20 }}>Notes</Caption>
           <View style={{ marginBottom: 40 }}>
             <NotesRows accords={fragrance.accords} />
@@ -457,6 +613,55 @@ export default function Detail() {
             value={wearNotes}
             onChangeText={setWearNotes}
             placeholder="Optional note for today's wear"
+            placeholderTextColor={colors.textMuted}
+            multiline
+            style={styles.notesInput}
+          />
+          <Caption style={{ marginBottom: 10 }}>Season</Caption>
+          <OptionPills
+            values={SEASONS}
+            labels={SEASON_LABELS}
+            selected={wearSeason}
+            onSelect={(value) => setWearSeason(value === wearSeason ? null : value)}
+          />
+          <Caption style={{ marginBottom: 10, marginTop: 14 }}>Time</Caption>
+          <OptionPills
+            values={['day', 'night'] as WearTimeOfDay[]}
+            labels={WEAR_TIME_LABELS}
+            selected={wearTimeOfDay}
+            onSelect={(value) => setWearTimeOfDay(value === wearTimeOfDay ? null : value)}
+          />
+          <TextInput
+            value={wearOccasion}
+            onChangeText={setWearOccasion}
+            placeholder="Occasion"
+            placeholderTextColor={colors.textMuted}
+            style={styles.singleLineInput}
+          />
+          <View style={styles.complimentRow}>
+            <Caption>Compliments</Caption>
+            <View style={styles.stepper}>
+              <Pressable
+                onPress={() => setComplimentCount((value) => Math.max(0, value - 1))}
+                style={styles.stepperButton}
+                accessibilityLabel="Decrease compliment count"
+              >
+                <Text style={styles.stepperText}>-</Text>
+              </Pressable>
+              <Text style={styles.stepperValue}>{complimentCount}</Text>
+              <Pressable
+                onPress={() => setComplimentCount((value) => value + 1)}
+                style={styles.stepperButton}
+                accessibilityLabel="Increase compliment count"
+              >
+                <Text style={styles.stepperText}>+</Text>
+              </Pressable>
+            </View>
+          </View>
+          <TextInput
+            value={complimentNote}
+            onChangeText={setComplimentNote}
+            placeholder="Compliment note"
             placeholderTextColor={colors.textMuted}
             multiline
             style={styles.notesInput}
@@ -570,6 +775,106 @@ function hasCatalogMetadata(fragrance: {
   );
 }
 
+function hasBottleMetadata(fragrance: {
+  bottle_status?: BottleStatus | null;
+  bottle_size_ml?: number | null;
+  purchase_date?: string | null;
+  purchase_source?: string | null;
+  purchase_price?: number | null;
+}): boolean {
+  return Boolean(
+    fragrance.bottle_status ||
+    fragrance.bottle_size_ml ||
+    fragrance.purchase_date ||
+    fragrance.purchase_source ||
+    fragrance.purchase_price != null,
+  );
+}
+
+function hasWearProfile(fragrance: {
+  preferred_seasons?: Season[] | null;
+  preferred_time_of_day?: PreferredTimeOfDay | null;
+}): boolean {
+  return Boolean(
+    (fragrance.preferred_seasons?.length ?? 0) > 0 ||
+    fragrance.preferred_time_of_day,
+  );
+}
+
+function buildBottleRows(fragrance: {
+  bottle_status?: BottleStatus | null;
+  bottle_size_ml?: number | null;
+  purchase_date?: string | null;
+  purchase_source?: string | null;
+  purchase_price?: number | null;
+  purchase_currency?: string | null;
+}) {
+  const price = formatCurrency(fragrance.purchase_price, fragrance.purchase_currency ?? 'USD');
+  return [
+    fragrance.bottle_status
+      ? { label: 'Status', value: BOTTLE_STATUS_LABELS[fragrance.bottle_status] }
+      : null,
+    fragrance.bottle_size_ml
+      ? { label: 'Size', value: formatMl(fragrance.bottle_size_ml)! }
+      : null,
+    fragrance.purchase_date
+      ? { label: 'Purchased', value: formatReadableDate(fragrance.purchase_date) }
+      : null,
+    fragrance.purchase_source
+      ? { label: 'Source', value: fragrance.purchase_source }
+      : null,
+    price ? { label: 'Price', value: price } : null,
+  ].filter((row): row is { label: string; value: string } => Boolean(row));
+}
+
+function buildWearProfileRows(fragrance: {
+  preferred_seasons?: Season[] | null;
+  preferred_time_of_day?: PreferredTimeOfDay | null;
+}) {
+  return [
+    fragrance.preferred_seasons?.length
+      ? {
+          label: 'Seasons',
+          value: fragrance.preferred_seasons.map((season) => SEASON_LABELS[season]).join(', '),
+        }
+      : null,
+    fragrance.preferred_time_of_day
+      ? {
+          label: 'Best time',
+          value: PREFERRED_TIME_LABELS[fragrance.preferred_time_of_day],
+        }
+      : null,
+  ].filter((row): row is { label: string; value: string } => Boolean(row));
+}
+
+function parseOptionalNumber(value: string): number | null | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function formatReadableDate(value: string): string {
+  const d = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatWearContext(wear: {
+  season?: Season | null;
+  time_of_day?: WearTimeOfDay | null;
+  occasion?: string | null;
+  compliment_count?: number | null;
+}): string {
+  const parts = [
+    wear.season ? SEASON_LABELS[wear.season] : null,
+    wear.time_of_day ? WEAR_TIME_LABELS[wear.time_of_day] : null,
+    wear.occasion,
+    wear.compliment_count ? `${wear.compliment_count} compliment${wear.compliment_count === 1 ? '' : 's'}` : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(' / ') : 'No context';
+}
+
 function WearHistory({
   loading,
   error,
@@ -577,7 +882,15 @@ function WearHistory({
 }: {
   loading: boolean;
   error: unknown;
-  wears: { id: string; worn_on: string; notes: string | null }[];
+  wears: {
+    id: string;
+    worn_on: string;
+    notes: string | null;
+    season?: Season | null;
+    time_of_day?: WearTimeOfDay | null;
+    occasion?: string | null;
+    compliment_count?: number | null;
+  }[];
 }) {
   if (loading) {
     return (
@@ -601,10 +914,98 @@ function WearHistory({
         <View key={wear.id} style={styles.wearRow}>
           <View>
             <Text style={styles.wearDate}>{formatWearDate(wear.worn_on)}</Text>
+            <Text style={styles.wearContext}>
+              {formatWearContext(wear)}
+            </Text>
             {wear.notes ? <Text style={styles.wearNote}>{wear.notes}</Text> : null}
           </View>
         </View>
       ))}
+    </View>
+  );
+}
+
+function JournalMetadataSection({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: { label: string; value: string }[];
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <View style={styles.journalSection}>
+      <Caption style={{ marginBottom: 14 }}>{title}</Caption>
+      <View style={styles.journalGrid}>
+        {rows.map((row) => (
+          <View key={row.label} style={styles.journalCell}>
+            <Caption tone="muted">{row.label}</Caption>
+            <Text style={styles.journalValue}>{row.value}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function OptionPills<T extends string>({
+  values,
+  labels,
+  selected,
+  onSelect,
+}: {
+  values: readonly T[];
+  labels: Record<T, string>;
+  selected: T | null;
+  onSelect: (value: T) => void;
+}) {
+  return (
+    <View style={styles.pillWrap}>
+      {values.map((value) => {
+        const active = selected === value;
+        return (
+          <Pressable
+            key={value}
+            onPress={() => onSelect(value)}
+            style={[styles.optionPill, active && styles.optionPillActive]}
+          >
+            <Text style={[styles.optionPillText, active && styles.optionPillTextActive]}>
+              {labels[value]}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function MultiOptionPills<T extends string>({
+  values,
+  labels,
+  selected,
+  onToggle,
+}: {
+  values: readonly T[];
+  labels: Record<T, string>;
+  selected: T[];
+  onToggle: (value: T) => void;
+}) {
+  return (
+    <View style={styles.pillWrap}>
+      {values.map((value) => {
+        const active = selected.includes(value);
+        return (
+          <Pressable
+            key={value}
+            onPress={() => onToggle(value)}
+            style={[styles.optionPill, active && styles.optionPillActive]}
+          >
+            <Text style={[styles.optionPillText, active && styles.optionPillTextActive]}>
+              {labels[value]}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -758,6 +1159,30 @@ const styles = StyleSheet.create({
     color: colors.textDim,
     lineHeight: 22,
   },
+  journalSection: {
+    marginBottom: 4,
+  },
+  journalGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  journalCell: {
+    minWidth: '46%',
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  journalValue: {
+    fontFamily: typography.serif,
+    fontSize: 16,
+    color: colors.text,
+    marginTop: 4,
+  },
   catalogStats: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -850,6 +1275,12 @@ const styles = StyleSheet.create({
     ...typography.bodyDim,
     color: colors.textDim,
   },
+  wearContext: {
+    ...typography.bodyDim,
+    color: colors.textMuted,
+    fontSize: 12,
+    marginBottom: 4,
+  },
   sinceValue: {
     fontFamily: typography.serif,
     fontSize: 20,
@@ -865,5 +1296,88 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: colors.text,
+  },
+  singleLineInput: {
+    height: 46,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: 14,
+    fontSize: 14,
+    color: colors.text,
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  editGroup: {
+    gap: 12,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  currencyField: {
+    width: 92,
+  },
+  pillWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionPill: {
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingVertical: 8,
+    paddingHorizontal: 11,
+  },
+  optionPillActive: {
+    borderColor: colors.accent,
+    backgroundColor: colors.surfaceElevated,
+  },
+  optionPillText: {
+    fontSize: 11,
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
+  optionPillTextActive: {
+    color: colors.text,
+  },
+  complimentRow: {
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+  },
+  stepperButton: {
+    width: 38,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperText: {
+    color: colors.text,
+    fontSize: 18,
+  },
+  stepperValue: {
+    minWidth: 32,
+    textAlign: 'center',
+    color: colors.text,
+    fontFamily: typography.serif,
+    fontSize: 18,
   },
 });

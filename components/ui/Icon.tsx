@@ -26,3 +26,4 @@ export const IconLogOut = makeIcon('log-out');
 export const IconBook = makeIcon('book-open');
 export const IconCalendar = makeIcon('calendar');
 export const IconCamera = makeIcon('camera');
+export const IconBarChart = makeIcon('bar-chart-2');

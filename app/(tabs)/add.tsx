@@ -27,7 +27,20 @@ import { Caption, Serif } from '../../components/ui/text';
 import { BottleArt } from '../../components/BottleArt';
 import { pickPersonalFragrancePhoto, uploadPersonalFragrancePhoto } from '../../lib/fragrancePhotos';
 import { IconCamera } from '../../components/ui/Icon';
-import type { Concentration } from '../../types/fragrance';
+import {
+  BOTTLE_STATUSES,
+  PREFERRED_TIMES_OF_DAY,
+  SEASONS,
+  type BottleStatus,
+  type Concentration,
+  type PreferredTimeOfDay,
+  type Season,
+} from '../../types/fragrance';
+import {
+  BOTTLE_STATUS_LABELS,
+  PREFERRED_TIME_LABELS,
+  SEASON_LABELS,
+} from '../../lib/journal';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { radius } from '../../theme/spacing';
@@ -43,6 +56,14 @@ export default function Add() {
   const [accords, setAccords] = useState<string[]>([]);
   const [rating, setRating] = useState(0);
   const [photoUrl, setPhotoUrl] = useState('');
+  const [bottleStatus, setBottleStatus] = useState<BottleStatus | null>(null);
+  const [bottleSizeMl, setBottleSizeMl] = useState('');
+  const [purchaseDate, setPurchaseDate] = useState('');
+  const [purchaseSource, setPurchaseSource] = useState('');
+  const [purchasePrice, setPurchasePrice] = useState('');
+  const [purchaseCurrency, setPurchaseCurrency] = useState('USD');
+  const [preferredSeasons, setPreferredSeasons] = useState<Season[]>([]);
+  const [preferredTimeOfDay, setPreferredTimeOfDay] = useState<PreferredTimeOfDay | null>(null);
   const [photoUploadPending, setPhotoUploadPending] = useState(false);
   const [catalogQuery, setCatalogQuery] = useState('');
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogFragrance | null>(null);
@@ -126,6 +147,12 @@ export default function Add() {
       Alert.alert('Missing fields', 'Brand and name are required.');
       return;
     }
+    const parsedBottleSize = parseOptionalNumber(bottleSizeMl);
+    const parsedPurchasePrice = parseOptionalNumber(purchasePrice);
+    if (parsedBottleSize === undefined || parsedPurchasePrice === undefined) {
+      Alert.alert('Check numbers', 'Bottle size and purchase price must be valid numbers.');
+      return;
+    }
     try {
       await create.mutateAsync({
         brand: brand.trim(),
@@ -142,6 +169,14 @@ export default function Add() {
         catalog_notes_middle: selectedCatalog?.notesMiddle ?? null,
         catalog_notes_base: selectedCatalog?.notesBase ?? null,
         catalog_perfumers: selectedCatalog?.perfumers ?? null,
+        bottle_status: bottleStatus,
+        bottle_size_ml: parsedBottleSize,
+        purchase_date: purchaseDate.trim() ? purchaseDate.trim() : null,
+        purchase_source: purchaseSource.trim() ? purchaseSource.trim() : null,
+        purchase_price: parsedPurchasePrice,
+        purchase_currency: purchaseCurrency.trim() || 'USD',
+        preferred_seasons: preferredSeasons.length > 0 ? preferredSeasons : null,
+        preferred_time_of_day: preferredTimeOfDay,
       });
       // Reset in case user comes back to this screen.
       setBrand('');
@@ -151,6 +186,14 @@ export default function Add() {
       setRating(0);
       setPhotoUrl('');
       setSelectedCatalog(null);
+      setBottleStatus(null);
+      setBottleSizeMl('');
+      setPurchaseDate('');
+      setPurchaseSource('');
+      setPurchasePrice('');
+      setPurchaseCurrency('USD');
+      setPreferredSeasons([]);
+      setPreferredTimeOfDay(null);
       router.replace('/' as never);
     } catch (e: any) {
       Alert.alert('Could not save', e.message ?? 'Unknown error');
@@ -281,6 +324,78 @@ export default function Add() {
             <Caption style={{ marginBottom: 10 }}>Rating</Caption>
             <RatingDots value={rating} onChange={setRating} />
           </View>
+          <View style={styles.fieldGroup}>
+            <Caption style={{ marginBottom: 10 }}>Bottle</Caption>
+            <OptionPills
+              values={BOTTLE_STATUSES}
+              labels={BOTTLE_STATUS_LABELS}
+              selected={bottleStatus}
+              onSelect={(value) => setBottleStatus(value === bottleStatus ? null : value)}
+            />
+            <Field
+              label="Bottle size (ml)"
+              value={bottleSizeMl}
+              onChangeText={setBottleSizeMl}
+              placeholder="100"
+              keyboardType="decimal-pad"
+            />
+            <Field
+              label="Purchase date"
+              value={purchaseDate}
+              onChangeText={setPurchaseDate}
+              placeholder="YYYY-MM-DD"
+              keyboardType="numbers-and-punctuation"
+            />
+            <Field
+              label="Purchase source"
+              value={purchaseSource}
+              onChangeText={setPurchaseSource}
+              placeholder="Store, seller, or gift"
+            />
+            <View style={styles.priceRow}>
+              <View style={{ flex: 1 }}>
+                <Field
+                  label="Purchase price"
+                  value={purchasePrice}
+                  onChangeText={setPurchasePrice}
+                  placeholder="125"
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <View style={styles.currencyField}>
+                <Field
+                  label="Currency"
+                  value={purchaseCurrency}
+                  onChangeText={setPurchaseCurrency}
+                  autoCapitalize="characters"
+                  maxLength={3}
+                />
+              </View>
+            </View>
+          </View>
+          <View style={styles.fieldGroup}>
+            <Caption style={{ marginBottom: 10 }}>Wear profile</Caption>
+            <MultiOptionPills
+              values={SEASONS}
+              labels={SEASON_LABELS}
+              selected={preferredSeasons}
+              onToggle={(value) => {
+                setPreferredSeasons((current) =>
+                  current.includes(value)
+                    ? current.filter((season) => season !== value)
+                    : [...current, value],
+                );
+              }}
+            />
+            <OptionPills
+              values={PREFERRED_TIMES_OF_DAY}
+              labels={PREFERRED_TIME_LABELS}
+              selected={preferredTimeOfDay}
+              onSelect={(value) =>
+                setPreferredTimeOfDay(value === preferredTimeOfDay ? null : value)
+              }
+            />
+          </View>
         </ScrollView>
         <View style={styles.footer}>
           <PrimaryButton loading={create.isPending} disabled={photoUploadPending} onPress={submit}>
@@ -324,6 +439,75 @@ function Field({
       />
     </View>
   );
+}
+
+function OptionPills<T extends string>({
+  values,
+  labels,
+  selected,
+  onSelect,
+}: {
+  values: readonly T[];
+  labels: Record<T, string>;
+  selected: T | null;
+  onSelect: (value: T) => void;
+}) {
+  return (
+    <View style={styles.pillWrap}>
+      {values.map((value) => {
+        const active = selected === value;
+        return (
+          <Pressable
+            key={value}
+            onPress={() => onSelect(value)}
+            style={[styles.optionPill, active && styles.optionPillActive]}
+          >
+            <Text style={[styles.optionPillText, active && styles.optionPillTextActive]}>
+              {labels[value]}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function MultiOptionPills<T extends string>({
+  values,
+  labels,
+  selected,
+  onToggle,
+}: {
+  values: readonly T[];
+  labels: Record<T, string>;
+  selected: T[];
+  onToggle: (value: T) => void;
+}) {
+  return (
+    <View style={styles.pillWrap}>
+      {values.map((value) => {
+        const active = selected.includes(value);
+        return (
+          <Pressable
+            key={value}
+            onPress={() => onToggle(value)}
+            style={[styles.optionPill, active && styles.optionPillActive]}
+          >
+            <Text style={[styles.optionPillText, active && styles.optionPillTextActive]}>
+              {labels[value]}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function parseOptionalNumber(value: string): number | null | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 const styles = StyleSheet.create({
@@ -432,6 +616,44 @@ const styles = StyleSheet.create({
   photoAttachButton: {
     height: 44,
     marginBottom: 10,
+  },
+  fieldGroup: {
+    gap: 12,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  currencyField: {
+    width: 92,
+  },
+  pillWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionPill: {
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingVertical: 8,
+    paddingHorizontal: 11,
+  },
+  optionPillActive: {
+    borderColor: colors.accent,
+    backgroundColor: colors.surfaceElevated,
+  },
+  optionPillText: {
+    fontSize: 11,
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
+  optionPillTextActive: {
+    color: colors.text,
   },
   footer: {
     padding: 16,

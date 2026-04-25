@@ -12,7 +12,7 @@ Index: [[Fragrance App Index]]
 
 ## Overview
 
-Status note, 2026-04-25: Phase 1.5 includes wear logging, Calendar month/by-bottle views, same-day wear counts, selected-date wear entry/edit/confirmed delete, and curated accord autocomplete. Phase 2 catalog foundation is also live: the shared Supabase catalog seed is loaded and searchable by brand, bottle name, accords, and notes, with release year, perfumer, and top/heart/base note metadata surfaced in the app. Community ratings stay out of the personal UI so the user's own rating remains primary. Barcode scanning now has a dedicated route, exact barcode lookup, pending user submissions for unknown barcode links, admin-gated RPCs to approve or reject submitted links, a Collection-header admin entry for `/barcode-review`, barcode linkage import tooling, and a repeatable live barcode smoke-test checklist. LLM fallback remains a Phase 2 follow-up.
+Status note, 2026-04-25: Phase 1.5 includes wear logging, Wears month/by-bottle views, same-day wear counts, selected-date wear entry/edit/confirmed delete, and curated accord autocomplete. Phase 2 catalog foundation is also live: the shared Supabase catalog seed is loaded and searchable by brand, bottle name, accords, and notes, with release year, perfumer, and top/heart/base note metadata surfaced in the app. Community ratings stay out of the personal UI so the user's own rating remains primary. Barcode scanning now has a dedicated route, exact barcode lookup, pending user submissions for unknown barcode links, admin-gated RPCs to approve or reject submitted links, a Collection-header admin entry for `/barcode-review`, barcode linkage import tooling, and a repeatable live barcode smoke-test checklist. The personal journal slice is implemented locally: Collection, Wears, Insights, and Add tabs; optional bottle metadata; preferred season/time profile; richer wear context; compliment tracking; and client-derived wear intelligence/taste profile. Apply `20260425020000_personal_journal_fields.sql` before live Supabase validation. LLM fallback remains a Phase 2 follow-up.
 
 A personal fragrance collection tracker. Mobile-first (Expo / React Native, iOS + Android), backed by Supabase. Core job: remember what I own — a searchable catalog of my bottles with brand, name, concentration, accords, and a personal rating. Shipped in phases so real usage drives what gets built next.
 
@@ -46,7 +46,7 @@ Key decisions made during brainstorming:
 - **Barcode entry** - shipped through the dedicated scanner route, exact shared lookup, and reviewed unknown-link submissions.
 - **Curated-seed fragrance DB + LLM fallback** - Parfumo seed is live; LLM fallback remains a Phase 2 follow-up.
 - **Offline-first** - eventually (Phase 3). Not day one.
-- **Lean schema** - only the fields I'd actually search by: brand, name, concentration, accords, rating.
+- **Personal journal schema** - keep amount tracking out, but store optional bottle status/size/purchase facts and structured wear context so Insights can be derived without inventing data.
 
 ## Architecture
 
@@ -85,6 +85,14 @@ create table fragrances (
   concentration text check (concentration in ('EDT','EDP','Parfum','Cologne','Other')),
   accords       text[] default '{}',
   rating        numeric check (rating >= 0 and rating <= 10),
+  bottle_status text check (bottle_status in ('full','partial','sample','decant','empty','wishlist','sold','gifted')),
+  bottle_size_ml numeric check (bottle_size_ml is null or bottle_size_ml > 0),
+  purchase_date date,
+  purchase_source text,
+  purchase_price numeric check (purchase_price is null or purchase_price >= 0),
+  purchase_currency text default 'USD',
+  preferred_seasons text[],
+  preferred_time_of_day text check (preferred_time_of_day in ('day','night','either')),
   created_at    timestamptz default now(),
   updated_at    timestamptz default now()
 );
@@ -110,6 +118,11 @@ create table wears (
   fragrance_id  uuid not null references fragrances(id) on delete cascade,
   worn_on       date not null default current_date,
   notes         text,
+  season        text check (season in ('spring','summer','fall','winter')),
+  time_of_day   text check (time_of_day in ('day','night')),
+  occasion      text,
+  compliment_count int default 0 check (compliment_count >= 0),
+  compliment_note text,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
@@ -222,16 +235,17 @@ Detail screen:
 - Read-only by default; tap Edit to convert to editable form
 - Delete with confirm modal
 
-### Phase 1.5 — Wear Calendar
+### Phase 1.5 — Wears
 
 Scope:
 
 - New table: `wears`
-- Fragrance detail screen logs today's wear with an optional note
-- New Calendar tab between Collection and Add
+- Fragrance detail screen logs today's wear with an optional note and optional context
+- Wears tab keeps the original `/calendar` route initially to avoid route churn
 - Month grid marks days with wears, counts multiple same-day wears, and shows a selected-day detail sheet
 - By bottle segmented view shows last-worn status and a compact sparkline
 - Selected-date day-sheet wear logging, editing, and deletion are implemented
+- Actual-use fields on wears: season, day/night, occasion, compliment count, and compliment note
 
 ### Phase 2 — Barcode + DB Lookup
 
@@ -249,8 +263,22 @@ Scope:
 - Shipped: admin-gated review RPCs can approve submitted barcode links into `catalog_barcodes` or reject them.
 - Shipped: `/barcode-review` lists pending submissions and calls the approve/reject helpers, with a Collection-header entry visible to admins.
 - Shipped: CSV barcode linkage import tooling for external mapping data.
+- Shipped locally: personal journal foundation with optional bottle metadata, preferred seasons/day-night profile, Wears context fields, and a new Insights tab.
 - Next: smoke-test the scanner/review loop using `docs/barcode-live-smoke-test.md`.
+- Next: apply and smoke-test `20260425020000_personal_journal_fields.sql` on live Supabase.
 - Later: LLM fallback for unknown entries, generating accord/note suggestions that the user confirms before saving.
+
+### Personal Journal / Insights
+
+Scope:
+
+- Four visible tabs: Collection, Wears, Insights, Add.
+- Bottle metadata is optional and never inferred for existing rows: status, bottle size, purchase date, purchase source, purchase price, and currency.
+- Wear profile is optional ideal-use metadata: preferred seasons and preferred day/night/either.
+- Wear logging captures actual use: season, day/night, occasion, compliment count, and compliment note.
+- Insights v1 is client-derived from existing fragrance and wear query data. It calculates most worn, neglected bottles, compliment leaders, seasonal favorites, day/night tendencies, and taste profile.
+- Taste profile weights both personal rating and wear count so "what I like" and "what I actually wear" both matter.
+- Bottle amount tracking is intentionally out of scope.
 
 ### Phase 3 — Offline-First
 
@@ -293,9 +321,10 @@ CI is optional in Phase 1. GitHub Actions can run typecheck + Jest on PR; EAS CI
 ## Open Items / Deferred
 
 - **Barcode live smoke testing** — use `docs/barcode-live-smoke-test.md` before relying on the full unknown-scan -> review -> matched-scan loop
+- **Personal journal migration live smoke** — apply `20260425020000_personal_journal_fields.sql`, then verify Add/Edit/Detail/Wears/Insights against real Supabase data
 - **Dedicated E2E suite** — still deferred; current coverage is Jest plus manual/browser smoke checks
 - **LLM fallback prompt design** — Phase 2 follow-up
 - **Offline sync library choice** (WatermelonDB vs PowerSync vs custom) — Phase 3
 - **App Store compliance checklist** — Phase 4
 - **Catalog bottle image backfill** — app/database contract is ready; external scraper will populate `catalog_fragrances.image_url`
-- **Wear metadata richness** (occasion, weather, longevity) — Phase 1.5 shipped with date + notes; expand only if used
+- **Weather/longevity tracking** — not included in the current wear model; revisit only if the simpler season/time/occasion fields are useful

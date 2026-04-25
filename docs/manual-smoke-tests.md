@@ -13,6 +13,9 @@ Run this checklist on a dev build before any demo or release.
 - [ ] `fragrance-images` Storage bucket exists and is public-read
 - [ ] `user-fragrance-photos` Storage bucket exists, is public-read, and authenticated users can write only under their own user-id folder
 - [ ] `list_fragrances_with_catalog_images()` RPC exists for shelf image fallback
+- [ ] Personal journal migration `20260425020000_personal_journal_fields.sql` is applied
+- [ ] `fragrances` has bottle metadata and preferred-use columns
+- [ ] `wears` has season, time_of_day, occasion, compliment_count, and compliment_note columns
 
 ## Auth
 
@@ -30,6 +33,7 @@ Run this checklist on a dev build before any demo or release.
 - [ ] Pull to refresh works
 - [ ] Network off renders cached data when available, error state on hard refresh
 - [ ] Bottles with wear history show a compact last-worn label in the row
+- [ ] Bottles with saved status/size show that metadata lightly in the row
 
 ## Add
 
@@ -45,6 +49,9 @@ Run this checklist on a dev build before any demo or release.
 - [ ] Selecting a catalog result with an image does not copy the catalog image into `fragrances.image_url`; catalog imagery remains fallback-only
 - [ ] Submit happy path adds new row to Collection
 - [ ] Concentration picker, accord chips, and rating dots are interactive
+- [ ] Bottle status, bottle size, purchase date, source, price, and currency can be saved when supplied
+- [ ] Preferred seasons and day/night/either profile can be saved when supplied
+- [ ] Leaving bottle/profile fields blank does not block save or create false defaults
 - [ ] Accord chip autocomplete suggests curated descriptors while typing
 - [ ] Chip dedup prevents adding the same accord twice
 
@@ -52,7 +59,9 @@ Run this checklist on a dev build before any demo or release.
 
 - [ ] Tap row and detail renders with correct data
 - [ ] Detail shows the bottle's last-worn date near the top when wear history exists
-- [ ] Log today with optional wear note and success alert appears
+- [ ] Detail shows Bottle and Wear Profile sections only when metadata exists
+- [ ] Detail edit can update bottle metadata and wear profile
+- [ ] Log today with optional wear note, season, day/night, occasion, compliment count, and compliment note, then success alert appears
 - [ ] Detail wear history shows the new wear
 - [ ] Edit changes persist
 - [ ] Edit Photo URL updates or removes the bottle image
@@ -60,17 +69,30 @@ Run this checklist on a dev build before any demo or release.
 - [ ] Edit cancel discards changes
 - [ ] Delete confirm removes row from Collection
 
-## Calendar
+## Wears
 
-- [ ] Calendar tab appears between Collection and Add
+- [ ] Wears tab appears between Collection and Insights
 - [ ] Month grid renders current month with weekday row
 - [ ] A day with a logged wear shows an accent dot
 - [ ] Tapping a day shows selected-day detail
 - [ ] Pressing the selected-day plus opens bottle choices
 - [ ] Choosing a bottle and saving creates a wear for the selected date
+- [ ] Season defaults from the selected date and can be cleared or overridden
+- [ ] Day/night, occasion, compliment count, and compliment note save for selected-day wears
+- [ ] Editing an existing wear preserves/updates its context fields
 - [ ] Logged wear appears in the selected-day detail sheet
 - [ ] By bottle toggle shows last-worn status and sparkline markers
 - [ ] Month previous/next controls navigate without crashing
+
+## Insights
+
+- [ ] Insights tab appears between Wears and Add
+- [ ] Empty state renders when no fragrance/wear data exists
+- [ ] Most worn section ranks bottles with logged wears
+- [ ] Neglected bottles includes unworn or oldest-worn bottles
+- [ ] Compliment leaders ranks bottles by total compliment count
+- [ ] Seasonal favorites and Day / night sections aggregate wear context
+- [ ] Taste profile shows top accord families from ratings and wear counts
 
 ## Barcode Scan
 

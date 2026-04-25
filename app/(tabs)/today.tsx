@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -80,20 +81,12 @@ export default function Today() {
             row={todayState.active}
             journal={journal}
             onJournalChange={setJournal}
-            onDecrease={() => {
-              const next = clampComplimentCount((todayState.active?.wear.compliment_count ?? 0) - 1);
-              return updateWear.mutateAsync({
+            onComplimentChange={(next) =>
+              updateWear.mutateAsync({
                 id: todayState.active!.wear.id,
                 input: { compliment_count: next },
-              });
-            }}
-            onIncrease={() => {
-              const next = clampComplimentCount((todayState.active?.wear.compliment_count ?? 0) + 1);
-              return updateWear.mutateAsync({
-                id: todayState.active!.wear.id,
-                input: { compliment_count: next },
-              });
-            }}
+              })
+            }
             onSaveJournal={() => {
               const notes = journal.trim();
               return updateWear.mutateAsync({
@@ -127,22 +120,44 @@ function ActiveWearCard({
   row,
   journal,
   onJournalChange,
-  onDecrease,
-  onIncrease,
+  onComplimentChange,
   onSaveJournal,
   saving,
 }: {
   row: TodayWearRow;
   journal: string;
   onJournalChange: (value: string) => void;
-  onDecrease: () => Promise<unknown>;
-  onIncrease: () => Promise<unknown>;
+  onComplimentChange: (next: number) => Promise<unknown>;
   onSaveJournal: () => Promise<unknown>;
   saving?: boolean;
 }) {
-  const complimentCount = clampComplimentCount(row.wear.compliment_count ?? 0);
+  const initialComplimentCount = clampComplimentCount(row.wear.compliment_count ?? 0);
+  const [complimentCount, setComplimentCount] = useState(initialComplimentCount);
+  const complimentCountRef = useRef(initialComplimentCount);
   const label = fragranceLabel(row);
   const context = formatContext(row);
+
+  useEffect(() => {
+    const next = clampComplimentCount(row.wear.compliment_count ?? 0);
+    complimentCountRef.current = next;
+    setComplimentCount(next);
+  }, [row.wear.id, row.wear.compliment_count]);
+
+  const updateComplimentCount = (delta: number) => {
+    const previous = complimentCountRef.current;
+    const next = clampComplimentCount(previous + delta);
+    if (next === previous) {
+      return;
+    }
+
+    complimentCountRef.current = next;
+    setComplimentCount(next);
+    onComplimentChange(next).catch(() => {
+      complimentCountRef.current = previous;
+      setComplimentCount(previous);
+      Alert.alert('Could not update compliments', 'Please try again.');
+    });
+  };
 
   return (
     <View style={styles.activeCard}>
@@ -163,7 +178,7 @@ function ActiveWearCard({
             accessibilityRole="button"
             accessibilityLabel="Decrease compliment count"
             disabled={complimentCount === 0}
-            onPress={onDecrease}
+            onPress={() => updateComplimentCount(-1)}
             style={({ pressed }) => [
               styles.counterButton,
               complimentCount === 0 && styles.disabled,
@@ -176,7 +191,7 @@ function ActiveWearCard({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Increase compliment count"
-            onPress={onIncrease}
+            onPress={() => updateComplimentCount(1)}
             style={({ pressed }) => [styles.counterButton, pressed && styles.pressed]}
           >
             <Text style={styles.counterButtonText}>+</Text>

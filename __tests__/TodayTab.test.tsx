@@ -119,7 +119,25 @@ describe('Today tab', () => {
     await waitFor(() => {
       expect(mockUpdateMutateAsync).toHaveBeenLastCalledWith({
         id: 'wear-active',
-        input: { compliment_count: 1 },
+        input: { compliment_count: 2 },
+      });
+    });
+  });
+
+  it('uses local compliment state for rapid consecutive plus taps', async () => {
+    const { getByLabelText } = render(<Today />);
+
+    fireEvent.press(getByLabelText('Increase compliment count'));
+    fireEvent.press(getByLabelText('Increase compliment count'));
+
+    await waitFor(() => {
+      expect(mockUpdateMutateAsync).toHaveBeenNthCalledWith(1, {
+        id: 'wear-active',
+        input: { compliment_count: 3 },
+      });
+      expect(mockUpdateMutateAsync).toHaveBeenNthCalledWith(2, {
+        id: 'wear-active',
+        input: { compliment_count: 4 },
       });
     });
   });

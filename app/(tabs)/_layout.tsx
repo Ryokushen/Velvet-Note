@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Text, StyleSheet } from 'react-native';
 import { colors } from '../../theme/colors';
-import { IconBarChart, IconBook, IconCalendar, IconPlus } from '../../components/ui/Icon';
+import { IconBarChart, IconBook, IconCalendar, IconPlus, IconZap } from '../../components/ui/Icon';
 
 export default function TabsLayout() {
   return (
@@ -34,6 +34,14 @@ export default function TabsLayout() {
           title: 'Wears',
           tabBarLabel: ({ color }) => <Text style={[styles.label, { color }]}>Wears</Text>,
           tabBarIcon: ({ color }) => <IconCalendar size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="today"
+        options={{
+          title: 'Today',
+          tabBarLabel: ({ color }) => <Text style={[styles.label, { color }]}>Today</Text>,
+          tabBarIcon: ({ color }) => <IconZap size={22} color={color} />,
         }}
       />
       <Tabs.Screen

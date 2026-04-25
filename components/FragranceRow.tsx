@@ -9,10 +9,12 @@ export function FragranceRow({
   fragrance,
   onPress,
   withImage = false,
+  lastWornLabel,
 }: {
   fragrance: Fragrance;
   onPress: () => void;
   withImage?: boolean;
+  lastWornLabel?: string | null;
 }) {
   const rating = fragrance.rating != null ? fragrance.rating.toFixed(1) : '—';
   const accordPreview = fragrance.accords.slice(0, 3).join(', ');
@@ -30,6 +32,11 @@ export function FragranceRow({
         {subline ? (
           <Text style={styles.subline} numberOfLines={1}>
             {subline}
+          </Text>
+        ) : null}
+        {lastWornLabel ? (
+          <Text style={styles.lastWorn} numberOfLines={1}>
+            Last worn {lastWornLabel}
           </Text>
         ) : null}
       </View>
@@ -57,6 +64,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textDim,
     letterSpacing: 0.3,
+  },
+  lastWorn: {
+    ...typography.bodyDim,
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 4,
   },
   meta: { alignItems: 'flex-end' },
   rating: {

@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-04-25 - Surface last-worn summaries
+
+### Summary
+
+Added concise last-worn context outside the wear-history list so recently used bottles are easier to scan.
+
+### Shipped
+
+- Added collection-row last-worn labels derived from wear history.
+- Added a top-level Detail last-worn panel above the rating and notes sections.
+- Added shared last-worn date helpers.
+- Added tests for collection and detail last-worn display.
+
+### Verification
+
+- `npm test -- __tests__/LastWornSummary.test.tsx --runInBand --watchman=false`
+
 ## 2026-04-25 - Add barcode review UI
 
 ### Summary

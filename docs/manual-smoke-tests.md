@@ -29,6 +29,7 @@ Run this checklist on a dev build before any demo or release.
 - [ ] Empty state shown when no fragrances
 - [ ] Pull to refresh works
 - [ ] Network off renders cached data when available, error state on hard refresh
+- [ ] Bottles with wear history show a compact last-worn label in the row
 
 ## Add
 
@@ -50,6 +51,7 @@ Run this checklist on a dev build before any demo or release.
 ## Detail
 
 - [ ] Tap row and detail renders with correct data
+- [ ] Detail shows the bottle's last-worn date near the top when wear history exists
 - [ ] Log today with optional wear note and success alert appears
 - [ ] Detail wear history shows the new wear
 - [ ] Edit changes persist
@@ -81,6 +83,7 @@ Run this checklist on a dev build before any demo or release.
 ## Barcode Review
 
 - [ ] `/barcode-review` renders the hidden review screen for an authenticated admin
+- [ ] End-to-end barcode loop: unknown scan submission -> review approval -> repeat scan resolves as a catalog match
 - [ ] Non-admin authenticated users cannot list, approve, or reject pending barcode submissions
 - [ ] An `app_admins` user can list pending barcode submissions
 - [ ] Approving a pending submission writes or updates the matching `catalog_barcodes` row

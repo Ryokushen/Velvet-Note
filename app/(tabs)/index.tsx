@@ -10,9 +10,11 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFragrancesQuery } from '../../hooks/useFragrances';
+import { useWearsQuery } from '../../hooks/useWears';
 import { FragranceRow } from '../../components/FragranceRow';
 import { EmptyState } from '../../components/EmptyState';
 import { filterFragrances, sortFragrances, type SortMode } from '../../lib/filters';
+import { formatLastWornShort, latestWearForFragrance } from '../../lib/lastWorn';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -21,6 +23,7 @@ import { IconSearch, IconX, IconLogOut } from '../../components/ui/Icon';
 
 export default function Collection() {
   const { data, isLoading, error, refetch, isRefetching } = useFragrancesQuery();
+  const wears = useWearsQuery();
   const [query, setQuery] = useState('');
   const [sortMode] = useState<SortMode>('rating');
   const router = useRouter();
@@ -100,6 +103,7 @@ export default function Collection() {
                   fragrance={item}
                   onPress={() => router.push(`/fragrance/${item.id}` as never)}
                   withImage
+                  lastWornLabel={lastWornLabel(wears.data, item.id)}
                 />
               )}
               refreshing={isRefetching}
@@ -118,6 +122,14 @@ export default function Collection() {
       )}
     </SafeAreaView>
   );
+}
+
+function lastWornLabel(
+  wears: ReturnType<typeof useWearsQuery>['data'],
+  fragranceId: string,
+): string | null {
+  const latest = latestWearForFragrance(wears, fragranceId);
+  return latest ? formatLastWornShort(latest.worn_on) : null;
 }
 
 function SearchField({ value, onChange }: { value: string; onChange: (v: string) => void }) {

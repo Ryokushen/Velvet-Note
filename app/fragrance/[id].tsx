@@ -30,6 +30,7 @@ import { SectionDivider } from '../../components/ui/SectionDivider';
 import { IconChevronLeft, IconTrash } from '../../components/ui/Icon';
 import { BottleArt } from '../../components/BottleArt';
 import { pickPersonalFragrancePhoto, uploadPersonalFragrancePhoto } from '../../lib/fragrancePhotos';
+import { formatLastWornLong, latestWearForFragrance } from '../../lib/lastWorn';
 import type { Concentration } from '../../types/fragrance';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -229,6 +230,7 @@ export default function Detail() {
   }
 
   const since = fragrance.created_at ? formatMonthYear(fragrance.created_at) : null;
+  const lastWear = latestWearForFragrance(wears.data, fragrance.id);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -303,6 +305,13 @@ export default function Detail() {
           {fragrance.concentration ? (
             <View style={styles.metaRow}>
               <Caption>{fragrance.concentration}</Caption>
+            </View>
+          ) : null}
+
+          {lastWear ? (
+            <View style={styles.lastWornPanel}>
+              <Caption style={{ marginBottom: 6 }}>Last worn</Caption>
+              <Text style={styles.lastWornValue}>{formatLastWornLong(lastWear.worn_on)}</Text>
             </View>
           ) : null}
 
@@ -619,6 +628,20 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   metaRow: { flexDirection: 'row', alignItems: 'baseline', gap: 16, marginBottom: 32 },
+  lastWornPanel: {
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 30,
+  },
+  lastWornValue: {
+    fontFamily: typography.serif,
+    fontSize: 20,
+    color: colors.text,
+  },
   catalogDescription: {
     ...typography.body,
     color: colors.textDim,

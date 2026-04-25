@@ -142,6 +142,33 @@ describe('Today tab', () => {
     });
   });
 
+  it('serializes rapid compliment updates in tap order', async () => {
+    const firstUpdate = deferred();
+    mockUpdateMutateAsync.mockImplementationOnce(() => firstUpdate.promise);
+    const { getByLabelText } = render(<Today />);
+
+    fireEvent.press(getByLabelText('Increase compliment count'));
+    fireEvent.press(getByLabelText('Increase compliment count'));
+
+    await waitFor(() => {
+      expect(mockUpdateMutateAsync).toHaveBeenCalledTimes(1);
+      expect(mockUpdateMutateAsync).toHaveBeenNthCalledWith(1, {
+        id: 'wear-active',
+        input: { compliment_count: 3 },
+      });
+    });
+
+    firstUpdate.resolve({});
+
+    await waitFor(() => {
+      expect(mockUpdateMutateAsync).toHaveBeenCalledTimes(2);
+      expect(mockUpdateMutateAsync).toHaveBeenNthCalledWith(2, {
+        id: 'wear-active',
+        input: { compliment_count: 4 },
+      });
+    });
+  });
+
   it('saves trimmed journal notes', async () => {
     const { getByDisplayValue, getByText } = render(<Today />);
 
@@ -166,6 +193,17 @@ describe('Today tab', () => {
     });
   });
 });
+
+function deferred() {
+  let resolve!: (value: unknown) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+
+  return { promise, resolve, reject };
+}
 
 function todayLocalDateForTest(): string {
   const now = new Date();

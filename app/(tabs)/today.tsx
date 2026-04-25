@@ -134,12 +134,16 @@ function ActiveWearCard({
   const initialComplimentCount = clampComplimentCount(row.wear.compliment_count ?? 0);
   const [complimentCount, setComplimentCount] = useState(initialComplimentCount);
   const complimentCountRef = useRef(initialComplimentCount);
+  const lastServerComplimentCountRef = useRef(initialComplimentCount);
+  const complimentUpdateQueueRef = useRef(Promise.resolve());
   const label = fragranceLabel(row);
   const context = formatContext(row);
 
   useEffect(() => {
     const next = clampComplimentCount(row.wear.compliment_count ?? 0);
     complimentCountRef.current = next;
+    lastServerComplimentCountRef.current = next;
+    complimentUpdateQueueRef.current = Promise.resolve();
     setComplimentCount(next);
   }, [row.wear.id, row.wear.compliment_count]);
 
@@ -152,9 +156,18 @@ function ActiveWearCard({
 
     complimentCountRef.current = next;
     setComplimentCount(next);
-    onComplimentChange(next).catch(() => {
-      complimentCountRef.current = previous;
-      setComplimentCount(previous);
+    const queuedUpdate = complimentUpdateQueueRef.current.then(() =>
+      onComplimentChange(next).then(() => {
+        lastServerComplimentCountRef.current = next;
+      }),
+    );
+
+    complimentUpdateQueueRef.current = queuedUpdate.catch(() => undefined);
+
+    queuedUpdate.catch(() => {
+      const restored = lastServerComplimentCountRef.current;
+      complimentCountRef.current = restored;
+      setComplimentCount(restored);
       Alert.alert('Could not update compliments', 'Please try again.');
     });
   };

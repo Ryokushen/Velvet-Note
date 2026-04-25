@@ -89,6 +89,15 @@ export function searchCatalog(query: string, limit = 8): CatalogFragrance[] {
     .slice(0, limit);
 }
 
+export function normalizeBarcode(value: string): string {
+  const payload = value.split(/[:=]/).pop() ?? value;
+  const digits = payload.replace(/\D/g, '');
+  if (digits.length < 8 || digits.length > 14) {
+    return '';
+  }
+  return digits;
+}
+
 export async function searchSupabaseCatalog(
   query: string,
   limit = 8,
@@ -108,6 +117,26 @@ export async function searchSupabaseCatalog(
   }
 
   return ((data ?? []) as CatalogRow[]).map(mapCatalogRow);
+}
+
+export async function findSupabaseCatalogByBarcode(
+  barcode: string,
+): Promise<CatalogFragrance | null> {
+  const normalized = normalizeBarcode(barcode);
+  if (!normalized) {
+    return null;
+  }
+
+  const { data, error } = await supabase.rpc('find_catalog_fragrance_by_barcode', {
+    barcode_text: normalized,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as CatalogRow[];
+  return rows[0] ? mapCatalogRow(rows[0]) : null;
 }
 
 function mapCatalogRow(row: CatalogRow): CatalogFragrance {

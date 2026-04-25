@@ -151,7 +151,22 @@ create table catalog_fragrances (
 );
 ```
 
-`catalog_fragrances` is public-read through RLS and searched through `search_catalog_fragrances(search_text, match_limit)`, which ranks exact brand/name matches, exact accord/note matches, note position, then rating popularity. Catalog image URLs are nullable and intended for scraper/backfilled enrichment through the `fragrance-images` Supabase Storage bucket. User-owned `fragrances` rows can store optional catalog metadata (`catalog_id`, `image_url`, `catalog_description`, `catalog_source`) without making catalog rows user-owned. App shelf reads use `list_fragrances_with_catalog_images()`, which returns a user photo first and falls back to the linked catalog image.
+Barcode scan linkage is intentionally separate from `catalog_fragrances`:
+
+```sql
+create table catalog_barcodes (
+  barcode text primary key,
+  barcode_type text not null,
+  catalog_fragrance_id uuid not null references catalog_fragrances(id),
+  product_label text,
+  size_text text,
+  source text not null,
+  confidence numeric not null default 0.5,
+  verified boolean not null default false
+);
+```
+
+`catalog_fragrances` is public-read through RLS and searched through `search_catalog_fragrances(search_text, match_limit)`, which ranks exact brand/name matches, exact accord/note matches, note position, then rating popularity. `catalog_barcodes` is also public-read and resolves scans through `find_catalog_fragrance_by_barcode(barcode_text)`. Catalog image URLs are nullable and intended for scraper/backfilled enrichment through the `fragrance-images` Supabase Storage bucket. User-owned `fragrances` rows can store optional catalog metadata (`catalog_id`, `image_url`, `catalog_description`, `catalog_source`) without making catalog rows user-owned. App shelf reads use `list_fragrances_with_catalog_images()`, which returns a user photo first and falls back to the linked catalog image.
 
 ## Phased Roadmap
 
@@ -212,7 +227,8 @@ Scope:
 - Shipped: richer catalog fields surface in the app, including top/middle/base notes, year, and perfumers. Community ratings remain catalog-only and are not shown next to personal ratings.
 - Shipped: catalog image infrastructure is live for scraper backfill, including `catalog_fragrances.image_url`, scrape status fields, the `fragrance-images` Storage bucket, and shelf fallback from user photo to catalog image.
 - Ready: personal photo upload from device media for user-owned shelf rows using the `user-fragrance-photos` Storage bucket; live migration still needs explicit apply.
-- Next: Expo Camera barcode scanning.
+- Ready: barcode DB contract through `catalog_barcodes` and `find_catalog_fragrance_by_barcode(barcode_text)`; live migration still needs explicit apply.
+- Next: Expo Camera barcode scanning wired to the lookup RPC.
 - Next: contribution/moderation queue for unknown or corrected catalog rows.
 - Later: LLM fallback for unknown entries, generating accord/note suggestions that the user confirms before saving.
 

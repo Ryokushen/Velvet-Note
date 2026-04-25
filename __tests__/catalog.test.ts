@@ -1,4 +1,10 @@
-import { notesToAccords, searchCatalog, searchSupabaseCatalog } from '../lib/catalog';
+import {
+  findSupabaseCatalogByBarcode,
+  notesToAccords,
+  normalizeBarcode,
+  searchCatalog,
+  searchSupabaseCatalog,
+} from '../lib/catalog';
 
 jest.mock('../lib/supabase', () => {
   const builder: any = {
@@ -38,6 +44,12 @@ describe('catalog', () => {
       'vanilla bean',
       'musks',
     ]);
+  });
+
+  it('normalizes scanner barcode payloads to digits only', () => {
+    expect(normalizeBarcode(' UPC-A: 0 12345-67890 5 ')).toBe('012345678905');
+    expect(normalizeBarcode('ean_13=3348901321129')).toBe('3348901321129');
+    expect(normalizeBarcode('abc')).toBe('');
   });
 
   it('searches the shared Supabase catalog and normalizes notes', async () => {
@@ -94,6 +106,48 @@ describe('catalog', () => {
     await expect(searchSupabaseCatalog('c')).resolves.toEqual([]);
 
     expect(supabase.from).not.toHaveBeenCalled();
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it('looks up a shared catalog fragrance by barcode', async () => {
+    supabase.rpc.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'catalog-1',
+          brand: 'Dior',
+          name: 'Sauvage',
+          concentration: 'EDT',
+          accords: ['Fresh Spicy'],
+          notes_top: ['Bergamot'],
+          notes_middle: ['Pepper'],
+          notes_base: ['Ambroxan'],
+          release_year: 2015,
+          perfumers: ['François Demachy'],
+          rating_value: 7.7,
+          rating_count: 3050,
+          image_url: 'https://images.example/sauvage.jpg',
+          source: 'barcode_api',
+        },
+      ],
+      error: null,
+    });
+
+    const result = await findSupabaseCatalogByBarcode('EAN 3348901321129');
+
+    expect(supabase.rpc).toHaveBeenCalledWith('find_catalog_fragrance_by_barcode', {
+      barcode_text: '3348901321129',
+    });
+    expect(result).toMatchObject({
+      id: 'catalog-1',
+      brand: 'Dior',
+      name: 'Sauvage',
+      imageUrl: 'https://images.example/sauvage.jpg',
+    });
+  });
+
+  it('does not query Supabase for invalid barcode payloads', async () => {
+    await expect(findSupabaseCatalogByBarcode('abc')).resolves.toBeNull();
+
     expect(supabase.rpc).not.toHaveBeenCalled();
   });
 });

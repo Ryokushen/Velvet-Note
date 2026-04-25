@@ -7,6 +7,7 @@ Run this checklist on a dev build before any demo or release.
 - [ ] `.env.local` contains valid Supabase URL + anon key
 - [ ] Migrations applied: `fragrances`, `wears`, and `catalog_fragrances` tables exist in Supabase
 - [ ] `search_catalog_fragrances(search_text, match_limit)` RPC exists and is granted to anon/authenticated users
+- [ ] `catalog_barcodes` table and `find_catalog_fragrance_by_barcode(barcode_text)` RPC exist for exact barcode lookup
 - [ ] `fragrance-images` Storage bucket exists and is public-read
 - [ ] `user-fragrance-photos` Storage bucket exists, is public-read, and authenticated users can write only under their own user-id folder
 - [ ] `list_fragrances_with_catalog_images()` RPC exists for shelf image fallback

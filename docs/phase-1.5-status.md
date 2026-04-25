@@ -42,7 +42,7 @@ Key commits:
 - `785737c` - persisted catalog metadata on shelf entries.
 - `ba9ba7c` - Add search moved to Supabase RPC.
 - `5c820df` - catalog search ranking and scrollable results.
-- Current working slice - richer catalog metadata, delete/back fixes, editable photo URLs, scraper-ready catalog image infrastructure, and self-attached personal photo uploads.
+- Current working slice - richer catalog metadata, delete/back fixes, editable photo URLs, scraper-ready catalog image infrastructure, self-attached personal photo uploads, and a local barcode mapping contract.
 
 Live Supabase project:
 
@@ -54,7 +54,8 @@ Live Supabase project:
 - Storage bucket `fragrance-images` is live, public-read, and configured for JPEG/PNG/WebP up to 10 MB.
 - `list_fragrances_with_catalog_images()` is live for app shelf reads; user-owned `fragrances.image_url` takes priority, then linked catalog image fallback.
 - Scraper handoff contract: `docs/catalog-image-scraper-contract.md`.
-- Pending live apply: `supabase/migrations/20260424060000_personal_fragrance_photos.sql` creates `user-fragrance-photos` for user-attached bottle photos. The app code and tests are ready, but the live Storage migration still needs explicit approval before applying.
+- `user-fragrance-photos` is live for user-attached bottle photos.
+- Pending live apply: `supabase/migrations/20260424070000_catalog_barcodes.sql` creates `catalog_barcodes` and `find_catalog_fragrance_by_barcode(barcode_text)`.
 
 ## Verification
 
@@ -81,8 +82,9 @@ Temporary test users were removed from Supabase after verification.
 
 - Detail/list do not yet surface "last worn" summary outside the detail wear history section.
 - No dedicated E2E test suite yet; Playwright was used as an ad hoc smoke check.
-- Live Supabase still needs the personal photo Storage migration applied before media-library uploads work outside local/test code.
+- Camera scanning UI is not implemented yet.
+- Live Supabase still needs the barcode contract migration applied before barcode lookup can work outside local/test code.
 
 ## Next Good Slice
 
-Apply the personal photo Storage migration to live Supabase, then smoke-test Add and Detail media-library uploads in the app browser/native simulator. After that, move on to barcode scanning or scraper backfill integration.
+Apply the barcode contract migration to live Supabase, then implement the Expo camera scanner flow that calls `find_catalog_fragrance_by_barcode(barcode_text)` and prefills Add when a match exists.

@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-04-24 - Add barcode catalog contract
+
+### Summary
+
+Added the first barcode foundation: a shared barcode mapping table that links UPC/EAN/GTIN values to catalog fragrance rows, plus an app helper for exact barcode lookup.
+
+### Shipped
+
+- Added `catalog_barcodes` with barcode, type, catalog row, product label, size text, source, confidence, and verification fields.
+- Added public-read RLS for barcode mappings so clients can resolve scans without exposing write access.
+- Added `find_catalog_fragrance_by_barcode(barcode_text)` for exact normalized lookup.
+- Added `normalizeBarcode()` and `findSupabaseCatalogByBarcode()` in the catalog helper.
+- Added unit coverage for scanner payload normalization and barcode RPC lookup.
+
+### Verification
+
+- `npm test -- __tests__/catalog.test.ts --runInBand --watchman=false`
+
 ## 2026-04-24 - Fix Calendar wear delete confirmation
 
 ### Summary

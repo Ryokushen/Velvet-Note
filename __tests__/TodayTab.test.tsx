@@ -169,6 +169,55 @@ describe('Today tab', () => {
     });
   });
 
+  it('preserves pending compliment target across intermediate refetches', async () => {
+    const firstUpdate = deferred();
+    const secondUpdate = deferred();
+    mockUpdateMutateAsync
+      .mockImplementationOnce(() => firstUpdate.promise)
+      .mockImplementationOnce(() => secondUpdate.promise)
+      .mockResolvedValue({});
+    const { getByLabelText, rerender } = render(<Today />);
+
+    fireEvent.press(getByLabelText('Increase compliment count'));
+    fireEvent.press(getByLabelText('Increase compliment count'));
+
+    await waitFor(() => {
+      expect(mockUpdateMutateAsync).toHaveBeenCalledTimes(1);
+      expect(mockUpdateMutateAsync).toHaveBeenNthCalledWith(1, {
+        id: 'wear-active',
+        input: { compliment_count: 3 },
+      });
+    });
+
+    firstUpdate.resolve({});
+
+    await waitFor(() => {
+      expect(mockUpdateMutateAsync).toHaveBeenCalledTimes(2);
+      expect(mockUpdateMutateAsync).toHaveBeenNthCalledWith(2, {
+        id: 'wear-active',
+        input: { compliment_count: 4 },
+      });
+    });
+
+    mockWearsData = mockWearsData.map((row) =>
+      row.id === 'wear-active' ? { ...row, compliment_count: 3 } : row,
+    );
+    rerender(<Today />);
+
+    fireEvent.press(getByLabelText('Increase compliment count'));
+    expect(mockUpdateMutateAsync).toHaveBeenCalledTimes(2);
+
+    secondUpdate.resolve({});
+
+    await waitFor(() => {
+      expect(mockUpdateMutateAsync).toHaveBeenCalledTimes(3);
+      expect(mockUpdateMutateAsync).toHaveBeenNthCalledWith(3, {
+        id: 'wear-active',
+        input: { compliment_count: 5 },
+      });
+    });
+  });
+
   it('saves trimmed journal notes', async () => {
     const { getByDisplayValue, getByText } = render(<Today />);
 

@@ -136,14 +136,29 @@ function ActiveWearCard({
   const complimentCountRef = useRef(initialComplimentCount);
   const lastServerComplimentCountRef = useRef(initialComplimentCount);
   const complimentUpdateQueueRef = useRef(Promise.resolve());
+  const pendingComplimentWritesRef = useRef(0);
+  const activeWearIdRef = useRef(row.wear.id);
   const label = fragranceLabel(row);
   const context = formatContext(row);
 
   useEffect(() => {
     const next = clampComplimentCount(row.wear.compliment_count ?? 0);
+    if (activeWearIdRef.current !== row.wear.id) {
+      activeWearIdRef.current = row.wear.id;
+      pendingComplimentWritesRef.current = 0;
+      complimentUpdateQueueRef.current = Promise.resolve();
+      complimentCountRef.current = next;
+      lastServerComplimentCountRef.current = next;
+      setComplimentCount(next);
+      return;
+    }
+
+    if (pendingComplimentWritesRef.current > 0) {
+      return;
+    }
+
     complimentCountRef.current = next;
     lastServerComplimentCountRef.current = next;
-    complimentUpdateQueueRef.current = Promise.resolve();
     setComplimentCount(next);
   }, [row.wear.id, row.wear.compliment_count]);
 
@@ -156,15 +171,20 @@ function ActiveWearCard({
 
     complimentCountRef.current = next;
     setComplimentCount(next);
+    pendingComplimentWritesRef.current += 1;
     const queuedUpdate = complimentUpdateQueueRef.current.then(() =>
       onComplimentChange(next).then(() => {
         lastServerComplimentCountRef.current = next;
       }),
     );
 
-    complimentUpdateQueueRef.current = queuedUpdate.catch(() => undefined);
+    const settledUpdate = queuedUpdate.finally(() => {
+      pendingComplimentWritesRef.current = Math.max(0, pendingComplimentWritesRef.current - 1);
+    });
 
-    queuedUpdate.catch(() => {
+    complimentUpdateQueueRef.current = settledUpdate.catch(() => undefined);
+
+    settledUpdate.catch(() => {
       const restored = lastServerComplimentCountRef.current;
       complimentCountRef.current = restored;
       setComplimentCount(restored);

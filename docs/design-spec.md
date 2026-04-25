@@ -12,7 +12,7 @@ Index: [[Fragrance App Index]]
 
 ## Overview
 
-Status note, 2026-04-25: Phase 1.5 includes wear logging, Calendar month/by-bottle views, same-day wear counts, selected-date wear entry/edit/confirmed delete, and curated accord autocomplete. Phase 2 catalog foundation is also live: the shared Supabase catalog seed is loaded and searchable by brand, bottle name, accords, and notes, with release year, perfumer, and top/heart/base note metadata surfaced in the app. Community ratings stay out of the personal UI so the user's own rating remains primary. Barcode scanning now has a dedicated route, exact barcode lookup, pending user submissions for unknown barcode links, admin-gated RPCs to approve or reject submitted links, and a hidden `/barcode-review` route for review. LLM fallback remains a Phase 2 follow-up.
+Status note, 2026-04-25: Phase 1.5 includes wear logging, Calendar month/by-bottle views, same-day wear counts, selected-date wear entry/edit/confirmed delete, and curated accord autocomplete. Phase 2 catalog foundation is also live: the shared Supabase catalog seed is loaded and searchable by brand, bottle name, accords, and notes, with release year, perfumer, and top/heart/base note metadata surfaced in the app. Community ratings stay out of the personal UI so the user's own rating remains primary. Barcode scanning now has a dedicated route, exact barcode lookup, pending user submissions for unknown barcode links, admin-gated RPCs to approve or reject submitted links, a Collection-header admin entry for `/barcode-review`, barcode linkage import tooling, and a repeatable live barcode smoke-test checklist. LLM fallback remains a Phase 2 follow-up.
 
 A personal fragrance collection tracker. Mobile-first (Expo / React Native, iOS + Android), backed by Supabase. Core job: remember what I own — a searchable catalog of my bottles with brand, name, concentration, accords, and a personal rating. Shipped in phases so real usage drives what gets built next.
 
@@ -43,7 +43,7 @@ Key decisions made during brainstorming:
 - **Mobile-first** - Expo / React Native, not a vault-native or web-first app
 - **Publishable someday** - architecture must support multi-user from day one (Supabase RLS), even though I'm the only user initially
 - **Text-search entry** - shipped through the shared Supabase catalog RPC.
-- **Barcode entry** - still planned for Phase 2. Not manual-only long-term.
+- **Barcode entry** - shipped through the dedicated scanner route, exact shared lookup, and reviewed unknown-link submissions.
 - **Curated-seed fragrance DB + LLM fallback** - Parfumo seed is live; LLM fallback remains a Phase 2 follow-up.
 - **Offline-first** - eventually (Phase 3). Not day one.
 - **Lean schema** - only the fields I'd actually search by: brand, name, concentration, accords, rating.
@@ -56,7 +56,7 @@ Key decisions made during brainstorming:
 - **Backend:** Supabase - Postgres, Auth, Row-Level Security.
 - **Data layer:** Supabase JS client directly. React Query for caching and mutations.
 - **Offline sync (Phase 3):** WatermelonDB or PowerSync on top of local SQLite.
-- **Barcode (Phase 2):** `expo-barcode-scanner` + Expo Camera.
+- **Barcode (Phase 2):** Expo Camera.
 
 ### Repo
 
@@ -182,7 +182,7 @@ create table catalog_barcode_submissions (
 );
 ```
 
-`catalog_fragrances` is public-read through RLS and searched through `search_catalog_fragrances(search_text, match_limit)`, which ranks exact brand/name matches, exact accord/note matches, note position, then rating popularity. `catalog_barcodes` is also public-read and resolves scans through `find_catalog_fragrance_by_barcode(barcode_text)`. Unknown barcode scans create authenticated, user-owned rows in `catalog_barcode_submissions`. Trusted users are allowlisted in `app_admins`; admin-gated RPCs list pending submissions, approve them into `catalog_barcodes`, or reject them with a reviewer note. Catalog image URLs are nullable and intended for scraper/backfilled enrichment through the `fragrance-images` Supabase Storage bucket. User-owned `fragrances` rows can store optional catalog metadata (`catalog_id`, `image_url`, `catalog_description`, `catalog_source`) without making catalog rows user-owned. App shelf reads use `list_fragrances_with_catalog_images()`, which returns a user photo first and falls back to the linked catalog image.
+`catalog_fragrances` is public-read through RLS and searched through `search_catalog_fragrances(search_text, match_limit)`, which ranks exact brand/name matches, exact accord/note matches, note position, then rating popularity. `catalog_barcodes` is also public-read and resolves scans through `find_catalog_fragrance_by_barcode(barcode_text)`. Unknown barcode scans create authenticated, user-owned rows in `catalog_barcode_submissions`. Trusted users are allowlisted in `app_admins`; admin-gated RPCs list pending submissions, approve them into `catalog_barcodes`, or reject them with a reviewer note. The Collection header shows the review entry only when `is_app_admin()` returns true. Barcode linkage data from external sources can be imported with `npm run import:barcodes -- path/to/file.csv`; the importer requires service-role Supabase credentials because barcode writes are not public. Catalog image URLs are nullable and intended for scraper/backfilled enrichment through the `fragrance-images` Supabase Storage bucket. User-owned `fragrances` rows can store optional catalog metadata (`catalog_id`, `image_url`, `catalog_description`, `catalog_source`) without making catalog rows user-owned. App shelf reads use `list_fragrances_with_catalog_images()`, which returns a user photo first and falls back to the linked catalog image.
 
 ## Phased Roadmap
 
@@ -247,8 +247,9 @@ Scope:
 - Shipped: dedicated `/scan` camera route wired to barcode lookup and Add prefill.
 - Shipped: unknown barcode linking creates pending user submissions through `catalog_barcode_submissions`.
 - Shipped: admin-gated review RPCs can approve submitted barcode links into `catalog_barcodes` or reject them.
-- Shipped: hidden `/barcode-review` route lists pending submissions and calls the approve/reject helpers.
-- Next: apply pending barcode migrations to live Supabase and smoke-test the scanner/review loop.
+- Shipped: `/barcode-review` lists pending submissions and calls the approve/reject helpers, with a Collection-header entry visible to admins.
+- Shipped: CSV barcode linkage import tooling for external mapping data.
+- Next: smoke-test the scanner/review loop using `docs/barcode-live-smoke-test.md`.
 - Later: LLM fallback for unknown entries, generating accord/note suggestions that the user confirms before saving.
 
 ### Phase 3 — Offline-First
@@ -291,11 +292,10 @@ CI is optional in Phase 1. GitHub Actions can run typecheck + Jest on PR; EAS CI
 
 ## Open Items / Deferred
 
-- **Barcode scanning** — Phase 2 follow-up
-- **Contribution/moderation flow** — Phase 2 follow-up
+- **Barcode live smoke testing** — use `docs/barcode-live-smoke-test.md` before relying on the full unknown-scan -> review -> matched-scan loop
+- **Dedicated E2E suite** — still deferred; current coverage is Jest plus manual/browser smoke checks
 - **LLM fallback prompt design** — Phase 2 follow-up
 - **Offline sync library choice** (WatermelonDB vs PowerSync vs custom) — Phase 3
 - **App Store compliance checklist** — Phase 4
 - **Catalog bottle image backfill** — app/database contract is ready; external scraper will populate `catalog_fragrances.image_url`
-- **Personal photo upload** — app implementation and migration are ready; apply `20260424060000_personal_fragrance_photos.sql` live, then smoke-test media-library uploads
 - **Wear metadata richness** (occasion, weather, longevity) — Phase 1.5 shipped with date + notes; expand only if used

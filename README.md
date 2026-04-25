@@ -50,19 +50,28 @@ Shipped:
 - Wear logging from fragrance detail and selected Calendar days
 - Calendar tab with month grid, same-day wear counts, selected-day detail/edit/delete, and by-bottle view
 - Shared Parfumo catalog in Supabase with brand/name/accord/note search ranking
+- Catalog image fallback and self-attached personal bottle photos
+- Barcode scanner flow with exact lookup, unknown-link submissions, admin review, and barcode import tooling
 - Online-only (offline is Phase 3)
 
 Deferred to Phase 2:
-- Barcode scanning
-- Contribution/moderation flow for unknown catalog rows
+- Live barcode scan/review smoke pass
+- Dedicated E2E test suite
 - LLM fallback for unknown entries
 
 Deferred to Phase 4:
 - Apple Sign In
 - Google Sign In
 
+Useful import commands:
+
+```bash
+npm run import:kaggle
+npm run import:barcodes -- path/to/barcode-linkages.csv
+```
+
 Milestones:
 - `phase-1` tag: Phase 1 email/password collection MVP
-- `main`: Phase 1.5 wear calendar plus Phase 2 shared catalog lookup/prefill foundation
+- `main`: Phase 1.5 wear calendar plus Phase 2 shared catalog, imagery, barcode lookup, and barcode review foundation
 
-See `docs/design-spec.md`, `docs/phase-1-plan.md`, `docs/phase-1.5-status.md`, and `docs/parfumo-catalog-import.md` for the full spec, roadmap, and catalog import notes.
+See `docs/design-spec.md`, `docs/phase-1-plan.md`, `docs/phase-1.5-status.md`, `docs/parfumo-catalog-import.md`, `docs/catalog-barcode-import.md`, and `docs/barcode-live-smoke-test.md` for the full spec, roadmap, and catalog/barcode notes.

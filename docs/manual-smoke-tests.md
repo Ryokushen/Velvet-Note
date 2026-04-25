@@ -82,12 +82,14 @@ Run this checklist on a dev build before any demo or release.
 
 ## Barcode Review
 
-- [ ] `/barcode-review` renders the hidden review screen for an authenticated admin
+- [ ] Admin user sees the Collection-header review entry and it opens `/barcode-review`
+- [ ] `/barcode-review` renders the review screen for an authenticated admin
 - [ ] End-to-end barcode loop: unknown scan submission -> review approval -> repeat scan resolves as a catalog match
 - [ ] Non-admin authenticated users cannot list, approve, or reject pending barcode submissions
 - [ ] An `app_admins` user can list pending barcode submissions
 - [ ] Approving a pending submission writes or updates the matching `catalog_barcodes` row
 - [ ] Rejecting a pending submission marks it rejected without creating a shared barcode match
+- [ ] Full loop follows `docs/barcode-live-smoke-test.md` and records the synthetic barcode used
 
 ## Search + Sort
 

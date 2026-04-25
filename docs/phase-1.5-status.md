@@ -43,7 +43,10 @@ Key commits:
 - `785737c` - persisted catalog metadata on shelf entries.
 - `ba9ba7c` - Add search moved to Supabase RPC.
 - `5c820df` - catalog search ranking and scrollable results.
-- Current working slice - richer catalog metadata, delete/back fixes, editable photo URLs, scraper-ready catalog image infrastructure, self-attached personal photo uploads, barcode mapping, a dedicated scanner route, pending links for unknown barcodes, admin-gated review RPCs, and a compact hidden barcode review UI.
+- Current Phase 2 state - richer catalog metadata, delete/back fixes, editable photo URLs, scraper-ready catalog image infrastructure, self-attached personal photo uploads, barcode mapping, a dedicated scanner route, pending links for unknown barcodes, admin-gated review RPCs, an admin-visible barcode review entry, barcode import tooling, and last-worn summaries.
+- `eb1e752` - admin-only Collection entry for barcode review.
+- `49a5864` - CSV barcode linkage import tooling.
+- `b1c091c` - repeatable barcode live smoke-test checklist.
 
 Live Supabase project:
 
@@ -59,7 +62,9 @@ Live Supabase project:
 - `catalog_barcodes` and `find_catalog_fragrance_by_barcode(barcode_text)` are live for exact barcode lookup.
 - `catalog_barcode_submissions` stages authenticated user barcode links for review when scans do not have an exact match.
 - `app_admins`, `list_pending_catalog_barcode_submissions`, `approve_catalog_barcode_submission`, and `reject_catalog_barcode_submission` define the trusted review path for pending barcode links.
-- `/barcode-review` is the hidden admin review route for listing, approving, and rejecting pending barcode links.
+- `/barcode-review` lists, approves, and rejects pending barcode links; admins can reach it from the Collection header after `is_app_admin()` succeeds.
+- `npm run import:barcodes -- path/to/barcode-linkages.csv` imports external barcode mapping data into `catalog_barcodes` with service-role credentials.
+- Barcode live smoke checklist: `docs/barcode-live-smoke-test.md`.
 
 ## Verification
 
@@ -84,10 +89,10 @@ Temporary test users were removed from Supabase after verification.
 
 ## Intentional Gaps
 
-- Barcode scan/review needs an end-to-end live Supabase smoke test: unknown scan submission -> review approval -> repeat scan resolves as a catalog match.
+- Barcode scan/review still needs a recorded end-to-end live Supabase smoke pass: unknown scan submission -> review approval -> repeat scan resolves as a catalog match. The checklist is documented in `docs/barcode-live-smoke-test.md`.
 - No dedicated E2E test suite yet; Playwright was used as an ad hoc smoke check.
-- Barcode review has a hidden route but no normal Settings/Admin navigation entry yet.
+- Barcode mapping data still depends on external source/import feeds; the repo now has importer plumbing but not a populated barcode dataset.
 
 ## Next Good Slice
 
-Run the live barcode scan/review smoke loop, then decide whether to add a normal Settings/Admin navigation entry for `/barcode-review`.
+Run the live barcode scan/review smoke loop, then start the next product slice: either a dedicated E2E smoke suite, barcode data population from a vetted source, or LLM fallback for unknown catalog entries.

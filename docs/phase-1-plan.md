@@ -14,7 +14,7 @@ Index: [[Fragrance App Index]]
 >
 > **Phase 1.5 follow-on:** Wear logging and the mockup-driven Calendar tab landed after the Phase 1 tag. See `docs/phase-1.5-status.md` for shipped state and follow-ups.
 >
-> **Phase 2 catalog follow-on:** Shared Supabase catalog search is now live via `catalog_fragrances` and `search_catalog_fragrances(search_text, match_limit)`. Barcode scanning, contribution/moderation, and LLM fallback remain Phase 2 follow-ups.
+> **Phase 2 catalog follow-on:** Shared Supabase catalog search is now live via `catalog_fragrances` and `search_catalog_fragrances(search_text, match_limit)`. Barcode scanning, reviewed unknown-link submissions, admin barcode review, barcode import tooling, catalog image fallback, and personal photo uploads are also implemented. LLM fallback, a dedicated E2E suite, and the recorded live barcode smoke pass remain follow-ups.
 
 > **Historical status (2026-04-23):** Tasks 1–21, 24, 25 shipped. Tasks 22 (Apple Sign In) and 23 (Google Sign In) deferred to Phase 4. Task 26 had not been completed in this historical snapshot; the 2026-04-24 override above is current.
 >

@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-04-25 - Audit Phase 2 barcode docs
+
+### Summary
+
+Updated project documentation to match the current barcode/admin/import state after the latest Phase 2 slices.
+
+### Shipped
+
+- Marked barcode scanning, pending-link review, admin review navigation, and barcode import tooling as shipped.
+- Added `docs/catalog-barcode-import.md` for CSV barcode linkage imports.
+- Updated status/index docs to point at the barcode live smoke checklist.
+- Replaced stale hidden-route language with the admin-only Collection entry.
+
+### Verification
+
+- `rg -n "hidden admin|hidden review|barcode|LLM|outstanding|Phase 2|smoke|review route|import" docs README.md CHANGELOG.md`
+
 ## 2026-04-25 - Surface last-worn summaries
 
 ### Summary

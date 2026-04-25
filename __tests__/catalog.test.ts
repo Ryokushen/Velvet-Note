@@ -1,7 +1,10 @@
 import {
+  approveCatalogBarcodeSubmission,
   findSupabaseCatalogByBarcode,
+  listPendingCatalogBarcodeSubmissions,
   notesToAccords,
   normalizeBarcode,
+  rejectCatalogBarcodeSubmission,
   searchCatalog,
   searchSupabaseCatalog,
   submitCatalogBarcodeSubmission,
@@ -173,5 +176,67 @@ describe('catalog', () => {
     ).rejects.toThrow('Valid barcode required');
 
     expect(supabase.from).not.toHaveBeenCalled();
+  });
+
+  it('lists pending barcode submissions from the admin review RPC', async () => {
+    supabase.rpc.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'submission-1',
+          barcode: '3348901321129',
+          catalog_fragrance_id: 'catalog-1',
+          catalog_brand: 'Dior',
+          catalog_name: 'Sauvage',
+          submitted_user_id: 'user-1',
+          status: 'pending',
+          source: 'app_scan',
+          reviewer_note: null,
+          created_at: '2026-04-25T12:00:00Z',
+        },
+      ],
+      error: null,
+    });
+
+    const submissions = await listPendingCatalogBarcodeSubmissions(25);
+
+    expect(supabase.rpc).toHaveBeenCalledWith('list_pending_catalog_barcode_submissions', {
+      match_limit: 25,
+    });
+    expect(submissions).toEqual([
+      {
+        id: 'submission-1',
+        barcode: '3348901321129',
+        catalogFragranceId: 'catalog-1',
+        catalogBrand: 'Dior',
+        catalogName: 'Sauvage',
+        submittedUserId: 'user-1',
+        status: 'pending',
+        source: 'app_scan',
+        reviewerNote: null,
+        createdAt: '2026-04-25T12:00:00Z',
+      },
+    ]);
+  });
+
+  it('approves a pending barcode submission through the admin RPC', async () => {
+    supabase.rpc.mockResolvedValueOnce({ data: null, error: null });
+
+    await approveCatalogBarcodeSubmission('submission-1', 'Looks correct');
+
+    expect(supabase.rpc).toHaveBeenCalledWith('approve_catalog_barcode_submission', {
+      submission_id: 'submission-1',
+      review_note: 'Looks correct',
+    });
+  });
+
+  it('rejects a pending barcode submission through the admin RPC', async () => {
+    supabase.rpc.mockResolvedValueOnce({ data: null, error: null });
+
+    await rejectCatalogBarcodeSubmission('submission-1', 'Wrong bottle');
+
+    expect(supabase.rpc).toHaveBeenCalledWith('reject_catalog_barcode_submission', {
+      submission_id: 'submission-1',
+      review_note: 'Wrong bottle',
+    });
   });
 });

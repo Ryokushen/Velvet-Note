@@ -21,6 +21,19 @@ export type CatalogFragrance = {
   source: string;
 };
 
+export type CatalogBarcodeSubmission = {
+  id: string;
+  barcode: string;
+  catalogFragranceId: string;
+  catalogBrand: string;
+  catalogName: string;
+  submittedUserId: string;
+  status: 'pending' | 'approved' | 'rejected';
+  source: string;
+  reviewerNote: string | null;
+  createdAt: string;
+};
+
 type LocalCatalogRow = Omit<
   CatalogFragrance,
   'notesTop' | 'notesMiddle' | 'notesBase' | 'releaseYear' | 'perfumers' | 'ratingValue' | 'ratingCount'
@@ -52,6 +65,19 @@ type CatalogRow = {
   rating_count: number | null;
   image_url: string | null;
   source: string;
+};
+
+type CatalogBarcodeSubmissionRow = {
+  id: string;
+  barcode: string;
+  catalog_fragrance_id: string;
+  catalog_brand: string;
+  catalog_name: string;
+  submitted_user_id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  source: string;
+  reviewer_note: string | null;
+  created_at: string;
 };
 
 export function notesToAccords(notes: string[]): string[] {
@@ -161,6 +187,61 @@ export async function submitCatalogBarcodeSubmission(
   }
 }
 
+export async function listPendingCatalogBarcodeSubmissions(
+  limit = 50,
+): Promise<CatalogBarcodeSubmission[]> {
+  const { data, error } = await supabase.rpc('list_pending_catalog_barcode_submissions', {
+    match_limit: limit,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as CatalogBarcodeSubmissionRow[]).map(mapCatalogBarcodeSubmissionRow);
+}
+
+export async function approveCatalogBarcodeSubmission(
+  submissionId: string,
+  reviewNote?: string,
+): Promise<void> {
+  await reviewCatalogBarcodeSubmission(
+    'approve_catalog_barcode_submission',
+    submissionId,
+    reviewNote,
+  );
+}
+
+export async function rejectCatalogBarcodeSubmission(
+  submissionId: string,
+  reviewNote?: string,
+): Promise<void> {
+  await reviewCatalogBarcodeSubmission(
+    'reject_catalog_barcode_submission',
+    submissionId,
+    reviewNote,
+  );
+}
+
+async function reviewCatalogBarcodeSubmission(
+  rpcName: string,
+  submissionId: string,
+  reviewNote?: string,
+): Promise<void> {
+  if (!submissionId.trim()) {
+    throw new Error('Submission id required');
+  }
+
+  const { error } = await supabase.rpc(rpcName, {
+    submission_id: submissionId,
+    review_note: reviewNote?.trim() || null,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 function mapCatalogRow(row: CatalogRow): CatalogFragrance {
   const notesTop = uniqueText(row.notes_top ?? []);
   const notesMiddle = uniqueText(row.notes_middle ?? []);
@@ -186,6 +267,23 @@ function mapCatalogRow(row: CatalogRow): CatalogFragrance {
     ratingCount: row.rating_count ?? null,
     imageUrl: row.image_url ?? null,
     source: row.source,
+  };
+}
+
+function mapCatalogBarcodeSubmissionRow(
+  row: CatalogBarcodeSubmissionRow,
+): CatalogBarcodeSubmission {
+  return {
+    id: row.id,
+    barcode: row.barcode,
+    catalogFragranceId: row.catalog_fragrance_id,
+    catalogBrand: row.catalog_brand,
+    catalogName: row.catalog_name,
+    submittedUserId: row.submitted_user_id,
+    status: row.status,
+    source: row.source,
+    reviewerNote: row.reviewer_note,
+    createdAt: row.created_at,
   };
 }
 

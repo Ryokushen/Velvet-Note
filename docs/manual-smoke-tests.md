@@ -9,6 +9,7 @@ Run this checklist on a dev build before any demo or release.
 - [ ] `search_catalog_fragrances(search_text, match_limit)` RPC exists and is granted to anon/authenticated users
 - [ ] `catalog_barcodes` table and `find_catalog_fragrance_by_barcode(barcode_text)` RPC exist for exact barcode lookup
 - [ ] `catalog_barcode_submissions` table exists and authenticated users can insert their own pending barcode links
+- [ ] `app_admins` allowlist and barcode review RPCs exist for promoting/rejecting pending submissions
 - [ ] `fragrance-images` Storage bucket exists and is public-read
 - [ ] `user-fragrance-photos` Storage bucket exists, is public-read, and authenticated users can write only under their own user-id folder
 - [ ] `list_fragrances_with_catalog_images()` RPC exists for shelf image fallback
@@ -76,6 +77,13 @@ Run this checklist on a dev build before any demo or release.
 - [ ] Use this match returns to Add with the matched catalog metadata
 - [ ] Unknown barcode shows the no-match state with catalog search
 - [ ] Selecting a catalog row for an unknown barcode submits a pending barcode link
+
+## Barcode Review
+
+- [ ] Non-admin authenticated users cannot list, approve, or reject pending barcode submissions
+- [ ] An `app_admins` user can list pending barcode submissions
+- [ ] Approving a pending submission writes or updates the matching `catalog_barcodes` row
+- [ ] Rejecting a pending submission marks it rejected without creating a shared barcode match
 
 ## Search + Sort
 

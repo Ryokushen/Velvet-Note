@@ -12,7 +12,7 @@ Index: [[Fragrance App Index]]
 
 ## Overview
 
-Status note, 2026-04-25: Phase 1.5 includes wear logging, Calendar month/by-bottle views, same-day wear counts, selected-date wear entry/edit/confirmed delete, and curated accord autocomplete. Phase 2 catalog foundation is also live: the shared Supabase catalog seed is loaded and searchable by brand, bottle name, accords, and notes, with release year, perfumer, and top/heart/base note metadata surfaced in the app. Community ratings stay out of the personal UI so the user's own rating remains primary. Barcode scanning now has a dedicated route, exact barcode lookup, and pending user submissions for unknown barcode links. Moderation tooling and LLM fallback remain Phase 2 follow-ups.
+Status note, 2026-04-25: Phase 1.5 includes wear logging, Calendar month/by-bottle views, same-day wear counts, selected-date wear entry/edit/confirmed delete, and curated accord autocomplete. Phase 2 catalog foundation is also live: the shared Supabase catalog seed is loaded and searchable by brand, bottle name, accords, and notes, with release year, perfumer, and top/heart/base note metadata surfaced in the app. Community ratings stay out of the personal UI so the user's own rating remains primary. Barcode scanning now has a dedicated route, exact barcode lookup, pending user submissions for unknown barcode links, and admin-gated RPCs to approve or reject submitted links. A review UI and LLM fallback remain Phase 2 follow-ups.
 
 A personal fragrance collection tracker. Mobile-first (Expo / React Native, iOS + Android), backed by Supabase. Core job: remember what I own — a searchable catalog of my bottles with brand, name, concentration, accords, and a personal rating. Shipped in phases so real usage drives what gets built next.
 
@@ -182,7 +182,7 @@ create table catalog_barcode_submissions (
 );
 ```
 
-`catalog_fragrances` is public-read through RLS and searched through `search_catalog_fragrances(search_text, match_limit)`, which ranks exact brand/name matches, exact accord/note matches, note position, then rating popularity. `catalog_barcodes` is also public-read and resolves scans through `find_catalog_fragrance_by_barcode(barcode_text)`. Unknown barcode scans create authenticated, user-owned rows in `catalog_barcode_submissions`; a later moderation step can promote trusted submissions into `catalog_barcodes`. Catalog image URLs are nullable and intended for scraper/backfilled enrichment through the `fragrance-images` Supabase Storage bucket. User-owned `fragrances` rows can store optional catalog metadata (`catalog_id`, `image_url`, `catalog_description`, `catalog_source`) without making catalog rows user-owned. App shelf reads use `list_fragrances_with_catalog_images()`, which returns a user photo first and falls back to the linked catalog image.
+`catalog_fragrances` is public-read through RLS and searched through `search_catalog_fragrances(search_text, match_limit)`, which ranks exact brand/name matches, exact accord/note matches, note position, then rating popularity. `catalog_barcodes` is also public-read and resolves scans through `find_catalog_fragrance_by_barcode(barcode_text)`. Unknown barcode scans create authenticated, user-owned rows in `catalog_barcode_submissions`. Trusted users are allowlisted in `app_admins`; admin-gated RPCs list pending submissions, approve them into `catalog_barcodes`, or reject them with a reviewer note. Catalog image URLs are nullable and intended for scraper/backfilled enrichment through the `fragrance-images` Supabase Storage bucket. User-owned `fragrances` rows can store optional catalog metadata (`catalog_id`, `image_url`, `catalog_description`, `catalog_source`) without making catalog rows user-owned. App shelf reads use `list_fragrances_with_catalog_images()`, which returns a user photo first and falls back to the linked catalog image.
 
 ## Phased Roadmap
 
@@ -246,7 +246,8 @@ Scope:
 - Shipped: barcode DB contract through `catalog_barcodes` and `find_catalog_fragrance_by_barcode(barcode_text)`.
 - Shipped: dedicated `/scan` camera route wired to barcode lookup and Add prefill.
 - Shipped: unknown barcode linking creates pending user submissions through `catalog_barcode_submissions`.
-- Next: moderation tooling to approve or reject submitted barcode links and corrected catalog rows.
+- Shipped: admin-gated review RPCs can approve submitted barcode links into `catalog_barcodes` or reject them.
+- Next: a compact review UI for pending barcode submissions.
 - Later: LLM fallback for unknown entries, generating accord/note suggestions that the user confirms before saving.
 
 ### Phase 3 — Offline-First

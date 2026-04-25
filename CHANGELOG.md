@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-04-25 - Add barcode submission review RPCs
+
+### Summary
+
+Added the backend review path for unknown barcode submissions so trusted admins can promote pending links into shared scanner matches or reject incorrect submissions.
+
+### Shipped
+
+- Added `app_admins` as the allowlist for review-only RPC access.
+- Added `list_pending_catalog_barcode_submissions(match_limit)` for admin review queues.
+- Added `approve_catalog_barcode_submission(submission_id, review_note)` to promote a pending submission into `catalog_barcodes`.
+- Added `reject_catalog_barcode_submission(submission_id, review_note)` to close bad pending links.
+- Added typed catalog helpers for listing, approving, and rejecting barcode submissions.
+
+### Verification
+
+- `npm test -- __tests__/catalog.test.ts --runInBand --watchman=false`
+
 ## 2026-04-25 - Add unknown barcode linking queue
 
 ### Summary

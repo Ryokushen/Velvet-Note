@@ -59,6 +59,10 @@ jest.mock('../hooks/useWears', () => ({
     mutateAsync: jest.fn(),
     isPending: false,
   }),
+  useSetActiveWear: () => ({
+    mutateAsync: jest.fn(),
+    isPending: false,
+  }),
   useFragranceWearsQuery: () => ({
     data: [],
     isLoading: false,

@@ -140,11 +140,13 @@ function ActiveWearCard({
   const activeWearIdRef = useRef(row.wear.id);
   const label = fragranceLabel(row);
   const context = formatContext(row);
+  const activeWearChanged = activeWearIdRef.current !== row.wear.id;
+
+  activeWearIdRef.current = row.wear.id;
 
   useEffect(() => {
     const next = clampComplimentCount(row.wear.compliment_count ?? 0);
-    if (activeWearIdRef.current !== row.wear.id) {
-      activeWearIdRef.current = row.wear.id;
+    if (activeWearChanged) {
       pendingComplimentWritesRef.current = 0;
       complimentUpdateQueueRef.current = Promise.resolve();
       complimentCountRef.current = next;
@@ -171,20 +173,37 @@ function ActiveWearCard({
 
     complimentCountRef.current = next;
     setComplimentCount(next);
+    const wearIdForUpdate = row.wear.id;
     pendingComplimentWritesRef.current += 1;
-    const queuedUpdate = complimentUpdateQueueRef.current.then(() =>
-      onComplimentChange(next).then(() => {
+    const queuedUpdate = complimentUpdateQueueRef.current.then(() => {
+      if (activeWearIdRef.current !== wearIdForUpdate) {
+        return undefined;
+      }
+
+      return onComplimentChange(next).then(() => {
+        if (activeWearIdRef.current !== wearIdForUpdate) {
+          return;
+        }
+
         lastServerComplimentCountRef.current = next;
-      }),
-    );
+      });
+    });
 
     const settledUpdate = queuedUpdate.finally(() => {
+      if (activeWearIdRef.current !== wearIdForUpdate) {
+        return;
+      }
+
       pendingComplimentWritesRef.current = Math.max(0, pendingComplimentWritesRef.current - 1);
     });
 
     complimentUpdateQueueRef.current = settledUpdate.catch(() => undefined);
 
     settledUpdate.catch(() => {
+      if (activeWearIdRef.current !== wearIdForUpdate) {
+        return;
+      }
+
       const restored = lastServerComplimentCountRef.current;
       complimentCountRef.current = restored;
       setComplimentCount(restored);

@@ -8,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   approveCatalogBarcodeSubmission,
@@ -16,12 +17,14 @@ import {
   type CatalogBarcodeSubmission,
 } from '../lib/catalog';
 import { GhostButton, PrimaryButton } from '../components/ui/Button';
+import { IconChevronLeft } from '../components/ui/Icon';
 import { Caption, Serif } from '../components/ui/text';
 import { colors } from '../theme/colors';
 import { radius } from '../theme/spacing';
 import { typography } from '../theme/typography';
 
 export default function BarcodeReview() {
+  const router = useRouter();
   const [submissions, setSubmissions] = useState<CatalogBarcodeSubmission[]>([]);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -67,12 +70,31 @@ export default function BarcodeReview() {
     }
   }
 
+  function goBackToAdd() {
+    if (typeof router.canGoBack === 'function' && router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace('/add' as never);
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <View>
-          <Caption style={{ marginBottom: 6 }}>Admin</Caption>
-          <Serif size={22}>Barcode review</Serif>
+        <View style={styles.titleRow}>
+          <Pressable
+            onPress={goBackToAdd}
+            accessibilityRole="button"
+            accessibilityLabel="Back to Add"
+            style={styles.backButton}
+            hitSlop={8}
+          >
+            <IconChevronLeft size={22} color={colors.text} />
+          </Pressable>
+          <View>
+            <Caption style={{ marginBottom: 6 }}>Admin</Caption>
+            <Serif size={22}>Barcode review</Serif>
+          </View>
         </View>
         <Pressable
           onPress={loadSubmissions}
@@ -180,6 +202,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 14,
+  },
+  titleRow: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   refreshButton: {
     height: 40,

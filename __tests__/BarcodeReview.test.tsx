@@ -6,6 +6,18 @@ import {
   rejectCatalogBarcodeSubmission,
 } from '../lib/catalog';
 
+const mockBack = jest.fn();
+const mockCanGoBack = jest.fn();
+const mockReplace = jest.fn();
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({
+    back: mockBack,
+    canGoBack: mockCanGoBack,
+    replace: mockReplace,
+  }),
+}));
+
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -31,6 +43,10 @@ const pendingSubmission = {
 
 describe('Barcode review screen', () => {
   beforeEach(() => {
+    mockBack.mockReset();
+    mockCanGoBack.mockReset();
+    mockCanGoBack.mockReturnValue(true);
+    mockReplace.mockReset();
     jest.mocked(approveCatalogBarcodeSubmission).mockReset();
     jest.mocked(approveCatalogBarcodeSubmission).mockResolvedValue(undefined);
     jest.mocked(listPendingCatalogBarcodeSubmissions).mockReset();
@@ -48,6 +64,20 @@ describe('Barcode review screen', () => {
       expect(getByText('Dior')).toBeTruthy();
       expect(getByText('Sauvage')).toBeTruthy();
     });
+  });
+
+  it('falls back to Add when back is pressed without navigation history', async () => {
+    mockCanGoBack.mockReturnValue(false);
+    const { getByLabelText } = render(<BarcodeReview />);
+
+    await waitFor(() => {
+      expect(listPendingCatalogBarcodeSubmissions).toHaveBeenCalledWith(50);
+    });
+
+    fireEvent.press(getByLabelText('Back to Add'));
+
+    expect(mockBack).not.toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenCalledWith('/add');
   });
 
   it('approves a pending barcode submission with a review note', async () => {

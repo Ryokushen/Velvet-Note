@@ -17,4 +17,16 @@ describe('personal journal migration', () => {
     expect(migration).toContain('compliment_note');
     expect(migration).toContain('list_fragrances_with_catalog_images');
   });
+
+  it('adds active wear column, index, and RPC', () => {
+    const migration = readFileSync(
+      path.join(__dirname, '..', 'supabase/migrations/20260425030000_today_active_wear.sql'),
+      'utf8',
+    );
+
+    expect(migration).toContain('add column if not exists is_active boolean');
+    expect(migration).toContain('wears_one_active_per_user_day_idx');
+    expect(migration).toContain('create or replace function public.set_active_wear');
+    expect(migration).toContain('grant execute on function public.set_active_wear(uuid) to authenticated');
+  });
 });

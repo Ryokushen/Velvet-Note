@@ -162,7 +162,13 @@ export default function CalendarScreen() {
       } else {
         const createdWear = await createWear.mutateAsync(input);
         if (selectedDate === todayLocalDate()) {
-          await setActiveWear.mutateAsync(createdWear.id);
+          try {
+            await setActiveWear.mutateAsync(createdWear.id);
+          } catch {
+            resetWearEntry();
+            Alert.alert('Wear logged', 'The wear was saved, but could not be made current.');
+            return;
+          }
         }
       }
       resetWearEntry();

@@ -186,6 +186,25 @@ describe('Calendar wear entry', () => {
     });
   });
 
+  it('clears the create flow when today activation fails after saving wear', async () => {
+    mockMutateAsync.mockResolvedValueOnce({ id: 'wear-today' });
+    mockSetActiveWearMutateAsync.mockRejectedValueOnce(new Error('rpc failed'));
+    const { getByLabelText, queryByText, getByText } = render(<CalendarScreen />);
+
+    fireEvent.press(getByLabelText('Log wear for selected day'));
+    fireEvent.press(getByText('Shalimar'));
+    fireEvent.press(getByText('Save wear'));
+
+    await waitFor(() => {
+      expect(mockSetActiveWearMutateAsync).toHaveBeenCalledWith('wear-today');
+      expect(queryByText('Choose bottle')).toBeNull();
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Wear logged',
+        'The wear was saved, but could not be made current.',
+      );
+    });
+  });
+
   it('updates an existing wear from the selected day sheet', async () => {
     const now = new Date();
     const selectedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-16`;

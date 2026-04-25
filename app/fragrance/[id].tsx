@@ -298,10 +298,20 @@ export default function Detail() {
     }
   }
 
+  function resetWearLogForm() {
+    setWearNotes('');
+    setWearSeason(seasonForDate(todayLocalDate()));
+    setWearTimeOfDay(null);
+    setWearOccasion('');
+    setComplimentCount(0);
+    setComplimentNote('');
+  }
+
   async function logWearToday() {
     if (!fragranceId) return;
+    let createdWear: { id: string };
     try {
-      const createdWear = await createWear.mutateAsync({
+      createdWear = await createWear.mutateAsync({
         fragrance_id: fragranceId,
         worn_on: todayLocalDate(),
         notes: wearNotes.trim() ? wearNotes.trim() : null,
@@ -311,17 +321,21 @@ export default function Detail() {
         compliment_count: complimentCount,
         compliment_note: complimentNote.trim() ? complimentNote.trim() : null,
       });
-      await setActiveWear.mutateAsync(createdWear.id);
-      setWearNotes('');
-      setWearSeason(seasonForDate(todayLocalDate()));
-      setWearTimeOfDay(null);
-      setWearOccasion('');
-      setComplimentCount(0);
-      setComplimentNote('');
-      Alert.alert('Wear logged', `${fragrance!.brand} ${fragrance!.name} was added to today's wear history.`);
     } catch (e: any) {
       Alert.alert('Could not log wear', e.message ?? 'Unknown error');
+      return;
     }
+
+    try {
+      await setActiveWear.mutateAsync(createdWear.id);
+    } catch {
+      resetWearLogForm();
+      Alert.alert('Wear logged', 'The wear was saved, but could not be made current.');
+      return;
+    }
+
+    resetWearLogForm();
+    Alert.alert('Wear logged', `${fragrance!.brand} ${fragrance!.name} was added to today's wear history.`);
   }
 
   if (editing) {

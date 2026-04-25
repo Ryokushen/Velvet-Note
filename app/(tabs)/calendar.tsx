@@ -52,6 +52,7 @@ export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(() => todayLocalDate());
   const [loggingDay, setLoggingDay] = useState(false);
   const [editingWearId, setEditingWearId] = useState<string | null>(null);
+  const [pendingDeleteWearId, setPendingDeleteWearId] = useState<string | null>(null);
   const [selectedFragranceId, setSelectedFragranceId] = useState('');
   const [wearNotes, setWearNotes] = useState('');
 
@@ -95,18 +96,21 @@ export default function CalendarScreen() {
   function resetWearEntry() {
     setLoggingDay(false);
     setEditingWearId(null);
+    setPendingDeleteWearId(null);
     setSelectedFragranceId('');
     setWearNotes('');
   }
 
   function startAddWear() {
     setEditingWearId(null);
+    setPendingDeleteWearId(null);
     setSelectedFragranceId('');
     setWearNotes('');
     setLoggingDay(true);
   }
 
   function startEditWear(wear: Wear) {
+    setPendingDeleteWearId(null);
     setEditingWearId(wear.id);
     setSelectedFragranceId(wear.fragrance_id);
     setWearNotes(wear.notes ?? '');
@@ -141,6 +145,7 @@ export default function CalendarScreen() {
   async function deleteCalendarWear(wear: Wear) {
     try {
       await deleteWear.mutateAsync(wear.id);
+      setPendingDeleteWearId(null);
       if (editingWearId === wear.id) {
         resetWearEntry();
       }
@@ -150,20 +155,9 @@ export default function CalendarScreen() {
   }
 
   function confirmDeleteCalendarWear(wear: Wear) {
-    Alert.alert(
-      'Delete wear?',
-      `Remove this wear from ${formatMonthDay(parseWearDate(wear.worn_on))}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            void deleteCalendarWear(wear);
-          },
-        },
-      ],
-    );
+    setLoggingDay(false);
+    setEditingWearId(null);
+    setPendingDeleteWearId(wear.id);
   }
 
   return (
@@ -279,13 +273,16 @@ export default function CalendarScreen() {
                   notes={wearNotes}
                   saving={createWear.isPending || updateWear.isPending}
                   deleting={deleteWear.isPending}
+                  pendingDeleteWearId={pendingDeleteWearId}
                   onAdd={startAddWear}
                   onCancelAdd={resetWearEntry}
+                  onCancelDelete={() => setPendingDeleteWearId(null)}
                   onSelectFragrance={setSelectedFragranceId}
                   onChangeNotes={setWearNotes}
                   onSave={saveSelectedDayWear}
                   onEditWear={startEditWear}
                   onDeleteWear={confirmDeleteCalendarWear}
+                  onConfirmDeleteWear={deleteCalendarWear}
                   onOpenFragrance={(fragranceId) => router.push(`/fragrance/${fragranceId}` as never)}
                 />
               ) : null}
@@ -342,13 +339,16 @@ function DayDetail({
   notes,
   saving,
   deleting,
+  pendingDeleteWearId,
   onAdd,
   onCancelAdd,
+  onCancelDelete,
   onSelectFragrance,
   onChangeNotes,
   onSave,
   onEditWear,
   onDeleteWear,
+  onConfirmDeleteWear,
   onOpenFragrance,
 }: {
   date: Date;
@@ -361,13 +361,16 @@ function DayDetail({
   notes: string;
   saving: boolean;
   deleting: boolean;
+  pendingDeleteWearId: string | null;
   onAdd: () => void;
   onCancelAdd: () => void;
+  onCancelDelete: () => void;
   onSelectFragrance: (fragranceId: string) => void;
   onChangeNotes: (notes: string) => void;
   onSave: () => void;
   onEditWear: (wear: Wear) => void;
   onDeleteWear: (wear: Wear) => void;
+  onConfirmDeleteWear: (wear: Wear) => void;
   onOpenFragrance: (fragranceId: string) => void;
 }) {
   return (
@@ -440,6 +443,30 @@ function DayDetail({
                     <IconTrash size={15} color={colors.textMuted} />
                   </Pressable>
                 </View>
+                {pendingDeleteWearId === wear.id ? (
+                  <View style={styles.deleteWearConfirm}>
+                    <Text style={styles.deleteWearTitle}>Delete wear?</Text>
+                    <Text style={styles.deleteWearBody}>
+                      Remove {labelName} from {formatMonthDay(parseWearDate(wear.worn_on))}?
+                    </Text>
+                    <View style={styles.deleteWearActions}>
+                      <Pressable
+                        onPress={onCancelDelete}
+                        disabled={deleting}
+                        style={styles.deleteWearSecondary}
+                      >
+                        <Text style={styles.deleteWearSecondaryText}>Cancel</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => onConfirmDeleteWear(wear)}
+                        disabled={deleting}
+                        style={[styles.deleteWearPrimary, deleting && { opacity: 0.6 }]}
+                      >
+                        <Text style={styles.deleteWearPrimaryText}>Delete</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : null}
               </View>
             );
           })
@@ -882,6 +909,7 @@ const styles = StyleSheet.create({
   },
   dayWearRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 14,
   },
@@ -910,6 +938,55 @@ const styles = StyleSheet.create({
     height: 30,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  deleteWearConfirm: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  deleteWearTitle: {
+    fontFamily: typography.serif,
+    fontSize: 18,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  deleteWearBody: {
+    ...typography.bodyDim,
+    color: colors.textDim,
+    fontSize: 13,
+    marginBottom: 12,
+  },
+  deleteWearActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  deleteWearSecondary: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  deleteWearSecondaryText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  deleteWearPrimary: {
+    borderRadius: radius.sm,
+    backgroundColor: colors.error,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  deleteWearPrimaryText: {
+    fontSize: 12,
+    color: colors.background,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    fontWeight: '600',
   },
   emptyDay: {
     ...typography.bodyDim,

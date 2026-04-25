@@ -8,7 +8,7 @@ import { colors } from '../theme/colors';
 
 const queryClient = new QueryClient();
 
-function AuthGate({ children }: { children: React.ReactNode }) {
+export function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -25,6 +25,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       router.replace('/' as never);
     }
   }, [session, loading, pathname, segments, router]);
+
+  if (loading) {
+    return null;
+  }
 
   return <>{children}</>;
 }

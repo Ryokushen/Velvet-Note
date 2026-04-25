@@ -19,6 +19,7 @@ jest.mock('../lib/supabase', () => {
   return {
     supabase: {
       from: jest.fn(() => builder),
+      rpc: jest.fn(),
       auth: {
         getUser: jest.fn().mockResolvedValue({
           data: { user: { id: 'u' } },
@@ -38,18 +39,38 @@ beforeEach(() => {
 });
 
 describe('listFragrances', () => {
-  it('selects all columns and orders by created_at desc', async () => {
-    builder.order.mockResolvedValueOnce({ data: [], error: null });
+  it('loads fragrances through the catalog image fallback RPC', async () => {
+    supabase.rpc.mockResolvedValueOnce({ data: [], error: null });
+
     const result = await listFragrances();
-    expect(supabase.from).toHaveBeenCalledWith('fragrances');
-    expect(builder.select).toHaveBeenCalledWith('*');
-    expect(builder.order).toHaveBeenCalledWith('created_at', { ascending: false });
+
+    expect(supabase.rpc).toHaveBeenCalledWith('list_fragrances_with_catalog_images');
+    expect(supabase.from).not.toHaveBeenCalled();
     expect(result).toEqual([]);
   });
 
   it('throws on Supabase error', async () => {
-    builder.order.mockResolvedValueOnce({ data: null, error: { message: 'boom' } });
+    supabase.rpc.mockResolvedValueOnce({ data: null, error: { message: 'boom' } });
+
     await expect(listFragrances()).rejects.toThrow('boom');
+  });
+
+  it('falls back to the raw fragrances table before the image fallback RPC is applied', async () => {
+    supabase.rpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: 'PGRST202',
+        message: 'Could not find the function public.list_fragrances_with_catalog_images',
+      },
+    });
+    builder.order.mockResolvedValueOnce({ data: [{ id: 'fallback' }], error: null });
+
+    const result = await listFragrances();
+
+    expect(supabase.from).toHaveBeenCalledWith('fragrances');
+    expect(builder.select).toHaveBeenCalledWith('*');
+    expect(builder.order).toHaveBeenCalledWith('created_at', { ascending: false });
+    expect(result).toEqual([{ id: 'fallback' }]);
   });
 });
 

@@ -12,7 +12,7 @@ Index: [[Fragrance App Index]]
 
 ## Current State
 
-Phase 1.5 wear logging and the Calendar UI are shipped on `main`. Calendar day-sheet logging for arbitrary selected dates and curated accord autocomplete were added after the initial Phase 1.5 shipment. Catalog lookup has moved beyond this phase: the local Kaggle lookup was superseded by the Phase 2 shared Supabase catalog search path.
+Phase 1.5 wear logging and the Calendar UI are shipped on `main`. Calendar day-sheet logging for arbitrary selected dates and curated accord autocomplete were added after the initial Phase 1.5 shipment. Catalog lookup has moved beyond this phase: the local Kaggle lookup was superseded by the Phase 2 shared Supabase catalog search path, catalog image infrastructure is ready for scraper backfill, and self-attached personal photo upload is implemented locally.
 
 Shipped:
 
@@ -42,6 +42,7 @@ Key commits:
 - `785737c` - persisted catalog metadata on shelf entries.
 - `ba9ba7c` - Add search moved to Supabase RPC.
 - `5c820df` - catalog search ranking and scrollable results.
+- Current working slice - richer catalog metadata, delete/back fixes, editable photo URLs, scraper-ready catalog image infrastructure, and self-attached personal photo uploads.
 
 Live Supabase project:
 
@@ -49,6 +50,11 @@ Live Supabase project:
 - `wears` migration is applied.
 - `catalog_fragrances` is seeded with the Parfumo TidyTuesday snapshot.
 - `search_catalog_fragrances(search_text, match_limit)` is live for Add-screen catalog search.
+- `catalog_fragrances.image_url`, `image_scraped_at`, and `image_scrape_status` are available for scraper-backed image enrichment and returned by catalog search.
+- Storage bucket `fragrance-images` is live, public-read, and configured for JPEG/PNG/WebP up to 10 MB.
+- `list_fragrances_with_catalog_images()` is live for app shelf reads; user-owned `fragrances.image_url` takes priority, then linked catalog image fallback.
+- Scraper handoff contract: `docs/catalog-image-scraper-contract.md`.
+- Pending live apply: `supabase/migrations/20260424060000_personal_fragrance_photos.sql` creates `user-fragrance-photos` for user-attached bottle photos. The app code and tests are ready, but the live Storage migration still needs explicit approval before applying.
 
 ## Verification
 
@@ -75,7 +81,8 @@ Temporary test users were removed from Supabase after verification.
 
 - Detail/list do not yet surface "last worn" summary outside the detail wear history section.
 - No dedicated E2E test suite yet; Playwright was used as an ad hoc smoke check.
+- Live Supabase still needs the personal photo Storage migration applied before media-library uploads work outside local/test code.
 
 ## Next Good Slice
 
-Surface richer shared catalog metadata in the app: top/middle/base notes, year, perfumers, and rating metadata on Add results and fragrance detail.
+Apply the personal photo Storage migration to live Supabase, then smoke-test Add and Detail media-library uploads in the app browser/native simulator. After that, move on to barcode scanning or scraper backfill integration.

@@ -45,6 +45,13 @@ describe('Add catalog prefill', () => {
         concentration: 'EDP',
         description: '',
         notes: ['Sweet', 'Spicy', 'Tobacco Leaf'],
+        notesTop: ['Tobacco Leaf'],
+        notesMiddle: ['Honey'],
+        notesBase: ['Amber'],
+        releaseYear: 2001,
+        perfumers: ['Christopher Sheldrake'],
+        ratingValue: 7.8,
+        ratingCount: 1242,
         imageUrl: null,
         source: 'parfumo_tidytuesday_2024_12_10',
       },
@@ -59,6 +66,7 @@ describe('Add catalog prefill', () => {
     await waitFor(() => {
       expect(searchSupabaseCatalog).toHaveBeenCalledWith('chergui', 20);
       expect(getByText('Chergui')).toBeTruthy();
+      expect(getByText('2001 · Christopher Sheldrake')).toBeTruthy();
     });
 
     fireEvent.press(getByText('Chergui'));
@@ -75,6 +83,17 @@ describe('Add catalog prefill', () => {
           catalog_id: 'catalog-1',
           image_url: null,
           catalog_source: 'parfumo_tidytuesday_2024_12_10',
+          catalog_release_year: 2001,
+          catalog_notes_top: ['Tobacco Leaf'],
+          catalog_notes_middle: ['Honey'],
+          catalog_notes_base: ['Amber'],
+          catalog_perfumers: ['Christopher Sheldrake'],
+        }),
+      );
+      expect(mockMutateAsync).toHaveBeenCalledWith(
+        expect.not.objectContaining({
+          catalog_rating_value: expect.anything(),
+          catalog_rating_count: expect.anything(),
         }),
       );
     });

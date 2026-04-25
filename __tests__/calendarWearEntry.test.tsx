@@ -163,21 +163,17 @@ describe('Calendar wear entry', () => {
     });
   });
 
-  it('confirms before deleting an existing wear from the selected day sheet', async () => {
+  it('shows an in-app confirmation before deleting an existing wear from the selected day sheet', async () => {
     const { getByLabelText, getByText } = render(<CalendarScreen />);
 
     fireEvent.press(getByText('16'));
     fireEvent.press(getByLabelText('Delete wear for Shalimar'));
 
     expect(mockDeleteMutateAsync).not.toHaveBeenCalled();
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Delete wear?',
-      'Remove this wear from April 16?',
-      expect.any(Array),
-    );
+    expect(getByText('Delete wear?')).toBeTruthy();
+    expect(getByText('Remove Shalimar from April 16?')).toBeTruthy();
 
-    const buttons = alertSpy.mock.calls[0][2] as { text: string; onPress?: () => void }[];
-    buttons.find((button) => button.text === 'Delete')?.onPress?.();
+    fireEvent.press(getByText('Delete'));
 
     await waitFor(() => {
       expect(mockDeleteMutateAsync).toHaveBeenCalledWith('wear-1');

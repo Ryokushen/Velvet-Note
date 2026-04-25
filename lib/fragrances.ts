@@ -2,12 +2,37 @@ import { supabase } from './supabase';
 import type { Fragrance, NewFragrance, FragranceUpdate } from '../types/fragrance';
 
 export async function listFragrances(): Promise<Fragrance[]> {
+  const { data, error } = await supabase.rpc('list_fragrances_with_catalog_images') as {
+    data: Fragrance[] | null;
+    error: { code?: string; message: string } | null;
+  };
+  if (isMissingCatalogImageRpc(error)) {
+    return listFragrancesFromTable();
+  }
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Fragrance[];
+}
+
+async function listFragrancesFromTable(): Promise<Fragrance[]> {
   const { data, error } = await supabase
     .from('fragrances')
     .select('*')
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as Fragrance[];
+}
+
+function isMissingCatalogImageRpc(error: { code?: string; message?: string } | null): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const maybeError = error as { code?: string; message?: string };
+  return (
+    maybeError.code === 'PGRST202' ||
+    maybeError.code === '42883' ||
+    maybeError.message?.includes('list_fragrances_with_catalog_images') === true
+  );
 }
 
 export async function createFragrance(input: NewFragrance): Promise<Fragrance> {

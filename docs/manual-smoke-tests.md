@@ -7,6 +7,9 @@ Run this checklist on a dev build before any demo or release.
 - [ ] `.env.local` contains valid Supabase URL + anon key
 - [ ] Migrations applied: `fragrances`, `wears`, and `catalog_fragrances` tables exist in Supabase
 - [ ] `search_catalog_fragrances(search_text, match_limit)` RPC exists and is granted to anon/authenticated users
+- [ ] `fragrance-images` Storage bucket exists and is public-read
+- [ ] `user-fragrance-photos` Storage bucket exists, is public-read, and authenticated users can write only under their own user-id folder
+- [ ] `list_fragrances_with_catalog_images()` RPC exists for shelf image fallback
 
 ## Auth
 
@@ -31,6 +34,9 @@ Run this checklist on a dev build before any demo or release.
 - [ ] Searching `vanilla` and `sandalwood` returns distinct catalog result sets
 - [ ] Catalog result panel scrolls beyond the first five visible rows
 - [ ] Selecting a catalog result prefills brand, name, concentration when present, and accords
+- [ ] Photo URL preview appears when a valid image link is entered
+- [ ] Attach photo opens the media picker, uploads the selected bottle photo, and saves it to the new shelf row
+- [ ] Selecting a catalog result with an image does not copy the catalog image into `fragrances.image_url`; catalog imagery remains fallback-only
 - [ ] Submit happy path adds new row to Collection
 - [ ] Concentration picker, accord chips, and rating dots are interactive
 - [ ] Accord chip autocomplete suggests curated descriptors while typing
@@ -42,6 +48,8 @@ Run this checklist on a dev build before any demo or release.
 - [ ] Log today with optional wear note and success alert appears
 - [ ] Detail wear history shows the new wear
 - [ ] Edit changes persist
+- [ ] Edit Photo URL updates or removes the bottle image
+- [ ] Edit Attach photo uploads a replacement personal bottle photo and persists it after Save
 - [ ] Edit cancel discards changes
 - [ ] Delete confirm removes row from Collection
 

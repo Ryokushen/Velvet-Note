@@ -27,8 +27,9 @@ import { NotesRows } from '../../components/ui/NotesRows';
 import { GhostButton, PrimaryButton } from '../../components/ui/Button';
 import { Caption, Serif } from '../../components/ui/text';
 import { SectionDivider } from '../../components/ui/SectionDivider';
-import { IconChevronLeft } from '../../components/ui/Icon';
+import { IconChevronLeft, IconTrash } from '../../components/ui/Icon';
 import { BottleArt } from '../../components/BottleArt';
+import { pickPersonalFragrancePhoto, uploadPersonalFragrancePhoto } from '../../lib/fragrancePhotos';
 import type { Concentration } from '../../types/fragrance';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -45,6 +46,10 @@ export default function Detail() {
   const fragranceConcentration = fragrance?.concentration;
   const fragranceAccords = fragrance?.accords;
   const fragranceRating = fragrance?.rating;
+  const fragrancePersonalImageUrl =
+    fragrance?.personal_image_url === undefined
+      ? fragrance?.image_url
+      : fragrance.personal_image_url;
   const update = useUpdateFragrance();
   const del = useDeleteFragrance();
   const wears = useFragranceWearsQuery(fragranceId);
@@ -56,7 +61,10 @@ export default function Detail() {
   const [concentration, setConcentration] = useState<Concentration | null>(null);
   const [accords, setAccords] = useState<string[]>([]);
   const [rating, setRating] = useState(0);
+  const [imageUrl, setImageUrl] = useState('');
+  const [photoUploadPending, setPhotoUploadPending] = useState(false);
   const [wearNotes, setWearNotes] = useState('');
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     if (!fragranceId) return;
@@ -65,6 +73,7 @@ export default function Detail() {
     setConcentration(fragranceConcentration ?? null);
     setAccords(fragranceAccords ?? []);
     setRating(fragranceRating ?? 0);
+    setImageUrl(fragrancePersonalImageUrl ?? '');
   }, [
     fragranceId,
     fragranceBrand,
@@ -72,6 +81,7 @@ export default function Detail() {
     fragranceConcentration,
     fragranceAccords,
     fragranceRating,
+    fragrancePersonalImageUrl,
   ]);
 
   if (!fragrance) {
@@ -96,6 +106,7 @@ export default function Detail() {
           concentration,
           accords,
           rating: rating > 0 ? rating : null,
+          image_url: imageUrl.trim() ? imageUrl.trim() : null,
         },
       });
       setEditing(false);
@@ -104,26 +115,43 @@ export default function Detail() {
     }
   }
 
+  async function attachPhoto() {
+    if (!fragranceId) return;
+    setPhotoUploadPending(true);
+    try {
+      const selectedPhoto = await pickPersonalFragrancePhoto();
+      if (!selectedPhoto) {
+        return;
+      }
+      const uploadedUrl = await uploadPersonalFragrancePhoto(selectedPhoto, fragranceId);
+      setImageUrl(uploadedUrl);
+    } catch (e: any) {
+      Alert.alert('Could not attach photo', e.message ?? 'Unknown error');
+    } finally {
+      setPhotoUploadPending(false);
+    }
+  }
+
+  function goBackToCollection() {
+    if (typeof router.canGoBack === 'function' && router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace('/' as never);
+  }
+
   function confirmDelete() {
-    Alert.alert(
-      'Remove from shelf',
-      `Remove ${fragrance!.brand} ${fragrance!.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await del.mutateAsync(fragrance!.id);
-              router.replace('/' as never);
-            } catch (e: any) {
-              Alert.alert('Could not delete', e.message ?? 'Unknown error');
-            }
-          },
-        },
-      ],
-    );
+    setConfirmingDelete(true);
+  }
+
+  async function removeFromShelf() {
+    try {
+      await del.mutateAsync(fragrance!.id);
+      setConfirmingDelete(false);
+      router.replace('/' as never);
+    } catch (e: any) {
+      Alert.alert('Could not delete', e.message ?? 'Unknown error');
+    }
   }
 
   async function logWearToday() {
@@ -149,7 +177,11 @@ export default function Detail() {
             <Text style={styles.headerText}>Cancel</Text>
           </Pressable>
           <Caption tone="dim">Editing</Caption>
-          <Pressable onPress={save} style={styles.headerAction} disabled={update.isPending}>
+          <Pressable
+            onPress={save}
+            style={styles.headerAction}
+            disabled={update.isPending || photoUploadPending}
+          >
             <Text style={[styles.headerText, styles.headerSave]}>Save</Text>
           </Pressable>
         </View>
@@ -163,6 +195,27 @@ export default function Detail() {
           >
             <EditField label="Brand" value={brand} onChangeText={setBrand} />
             <EditField label="Name" value={name} onChangeText={setName} serif />
+            <View style={styles.photoEditRow}>
+              <BottleArt imageUrl={imageUrl.trim() || null} width={64} height={82} />
+              <View style={styles.photoEditField}>
+                <GhostButton
+                  onPress={attachPhoto}
+                  loading={photoUploadPending}
+                  style={styles.photoAttachButton}
+                >
+                  Attach photo
+                </GhostButton>
+                <EditField
+                  label="Photo URL"
+                  value={imageUrl}
+                  onChangeText={setImageUrl}
+                  placeholder="Paste an image link"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                />
+              </View>
+            </View>
             <ConcentrationPicker value={concentration} onChange={setConcentration} />
             <AccordChips value={accords} onChange={setAccords} />
             <View>
@@ -180,14 +233,56 @@ export default function Detail() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.headerAction} hitSlop={8}>
+        <Pressable
+          onPress={goBackToCollection}
+          style={styles.headerAction}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Back to collection"
+        >
           <IconChevronLeft size={22} />
         </Pressable>
         <View />
-        <Pressable onPress={() => setEditing(true)} style={styles.headerAction}>
-          <Text style={styles.headerText}>Edit</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={confirmDelete}
+            style={styles.iconHeaderAction}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`Remove ${fragrance.name} from shelf`}
+          >
+            <IconTrash size={18} color={colors.error} />
+          </Pressable>
+          <Pressable onPress={() => setEditing(true)} style={styles.headerAction}>
+            <Text style={styles.headerText}>Edit</Text>
+          </Pressable>
+        </View>
       </View>
+      {confirmingDelete ? (
+        <View style={styles.deleteConfirm}>
+          <Text style={styles.deleteConfirmTitle}>Remove from shelf?</Text>
+          <Text style={styles.deleteConfirmBody}>
+            Remove {fragrance.brand} {fragrance.name}?
+          </Text>
+          <View style={styles.deleteConfirmActions}>
+            <GhostButton
+              onPress={() => setConfirmingDelete(false)}
+              disabled={del.isPending}
+              style={styles.deleteConfirmButton}
+            >
+              Cancel
+            </GhostButton>
+            <GhostButton
+              danger
+              onPress={removeFromShelf}
+              loading={del.isPending}
+              style={styles.deleteConfirmButton}
+            >
+              Remove
+            </GhostButton>
+          </View>
+        </View>
+      ) : null}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -227,6 +322,19 @@ export default function Detail() {
               <SectionDivider marginVertical={24} />
               <Caption style={{ marginBottom: 12 }}>Catalog notes</Caption>
               <Text style={styles.catalogDescription}>{fragrance.catalog_description}</Text>
+            </>
+          ) : null}
+
+          {hasCatalogMetadata(fragrance) ? (
+            <>
+              <SectionDivider marginVertical={24} />
+              <CatalogProfile
+                releaseYear={fragrance.catalog_release_year}
+                perfumers={fragrance.catalog_perfumers ?? []}
+                notesTop={fragrance.catalog_notes_top ?? []}
+                notesMiddle={fragrance.catalog_notes_middle ?? []}
+                notesBase={fragrance.catalog_notes_base ?? []}
+              />
             </>
           ) : null}
 
@@ -273,6 +381,77 @@ export default function Detail() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+function CatalogProfile({
+  releaseYear,
+  perfumers,
+  notesTop,
+  notesMiddle,
+  notesBase,
+}: {
+  releaseYear: number | null;
+  perfumers: string[];
+  notesTop: string[];
+  notesMiddle: string[];
+  notesBase: string[];
+}) {
+  const metaItems = [
+    releaseYear ? { label: 'Year', value: String(releaseYear) } : null,
+    perfumers.length > 0 ? { label: 'Perfumer', value: perfumers.join(', ') } : null,
+  ].filter((item): item is { label: string; value: string } => Boolean(item));
+
+  return (
+    <View>
+      <Caption style={{ marginBottom: 14 }}>Catalog profile</Caption>
+      {metaItems.length > 0 ? (
+        <View style={styles.catalogStats}>
+          {metaItems.map((item) => (
+            <View key={item.label} style={styles.catalogStat}>
+              <Caption tone="muted">{item.label}</Caption>
+              <Text style={styles.catalogStatValue}>{item.value}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      {notesTop.length || notesMiddle.length || notesBase.length ? (
+        <View style={styles.catalogPyramid}>
+          <CatalogNoteRow label="Top" notes={notesTop} />
+          <CatalogNoteRow label="Heart" notes={notesMiddle} />
+          <CatalogNoteRow label="Base" notes={notesBase} />
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+function CatalogNoteRow({ label, notes }: { label: string; notes: string[] }) {
+  if (notes.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.catalogNoteRow}>
+      <Caption tone="muted" style={styles.catalogNoteLabel}>{label}</Caption>
+      <Text style={styles.catalogNoteText}>{notes.join(', ')}</Text>
+    </View>
+  );
+}
+
+function hasCatalogMetadata(fragrance: {
+  catalog_release_year: number | null;
+  catalog_perfumers: string[] | null;
+  catalog_notes_top: string[] | null;
+  catalog_notes_middle: string[] | null;
+  catalog_notes_base: string[] | null;
+}): boolean {
+  return Boolean(
+    fragrance.catalog_release_year ||
+    (fragrance.catalog_perfumers?.length ?? 0) > 0 ||
+    (fragrance.catalog_notes_top?.length ?? 0) > 0 ||
+    (fragrance.catalog_notes_middle?.length ?? 0) > 0 ||
+    (fragrance.catalog_notes_base?.length ?? 0) > 0,
   );
 }
 
@@ -325,6 +504,7 @@ function EditField({
       <Caption style={{ marginBottom: 8 }}>{label}</Caption>
       <TextInput
         {...rest}
+        accessibilityLabel={label}
         placeholderTextColor={colors.textMuted}
         style={[styles.input, serif && { fontFamily: typography.serif, fontSize: 17 }]}
       />
@@ -371,6 +551,40 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.borderSoft,
   },
   headerAction: { padding: 6, minWidth: 44 },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconHeaderAction: {
+    padding: 8,
+  },
+  deleteConfirm: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSoft,
+    backgroundColor: colors.surface,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+  deleteConfirmTitle: {
+    fontFamily: typography.serif,
+    fontSize: 20,
+    color: colors.text,
+    marginBottom: 6,
+  },
+  deleteConfirmBody: {
+    ...typography.bodyDim,
+    color: colors.textDim,
+    marginBottom: 14,
+  },
+  deleteConfirmActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  deleteConfirmButton: {
+    flex: 1,
+    height: 44,
+  },
   headerText: {
     color: colors.textDim,
     fontSize: 12,
@@ -391,11 +605,62 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  photoEditRow: {
+    flexDirection: 'row',
+    gap: 14,
+    alignItems: 'flex-start',
+  },
+  photoEditField: {
+    flex: 1,
+    minWidth: 0,
+  },
+  photoAttachButton: {
+    height: 44,
+    marginBottom: 10,
+  },
   metaRow: { flexDirection: 'row', alignItems: 'baseline', gap: 16, marginBottom: 32 },
   catalogDescription: {
     ...typography.body,
     color: colors.textDim,
     lineHeight: 22,
+  },
+  catalogStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 20,
+  },
+  catalogStat: {
+    minWidth: '46%',
+    borderWidth: 1,
+    borderColor: colors.borderSoft,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  catalogStatValue: {
+    fontFamily: typography.serif,
+    fontSize: 16,
+    color: colors.text,
+    marginTop: 4,
+  },
+  catalogPyramid: {
+    gap: 12,
+  },
+  catalogNoteRow: {
+    flexDirection: 'row',
+    gap: 14,
+  },
+  catalogNoteLabel: {
+    width: 54,
+    paddingTop: 1,
+  },
+  catalogNoteText: {
+    flex: 1,
+    ...typography.body,
+    color: colors.textDim,
+    lineHeight: 21,
   },
   wearHeader: {
     marginBottom: 14,

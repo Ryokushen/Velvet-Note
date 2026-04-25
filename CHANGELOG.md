@@ -1,5 +1,105 @@
 # Changelog
 
+## 2026-04-24 - Fix Calendar wear delete confirmation
+
+### Summary
+
+Replaced the Calendar wear delete native alert with an in-app confirmation so deleting wear entries is actionable on Expo web.
+
+### Shipped
+
+- Added a selected-row delete confirmation panel in the Calendar day sheet.
+- Kept the destructive delete action behind a second explicit button.
+- Added regression coverage for the in-app confirmation and delete mutation.
+
+### Verification
+
+- `npm test -- __tests__/calendarWearEntry.test.tsx --runInBand --watchman=false`
+- `npm test -- --runInBand --watchman=false`
+- `npm run lint`
+- `./node_modules/.bin/tsc --noEmit`
+- Browser check on `http://localhost:8082/calendar`
+
+## 2026-04-24 - Add self-attached bottle photo uploads
+
+### Summary
+
+Added personal bottle photo attachment on Add and Detail so user-owned shelf rows can store their own image URL instead of only pasted links or catalog fallback imagery.
+
+### Shipped
+
+- Added `expo-image-picker` and a shared photo helper for picking media-library images.
+- Added upload support to the `user-fragrance-photos` Supabase Storage bucket path `<user_id>/<fragrance_namespace>-<timestamp>.<ext>`.
+- Added an Attach photo action on the Add form and Detail edit screen.
+- Kept catalog images fallback-only by clearing the user photo field when a catalog row is selected.
+- Added a Storage migration for the `user-fragrance-photos` public-read bucket with authenticated owner write/update/delete policies.
+
+### Verification
+
+- `npm test -- --runInBand --watchman=false`
+- `npm run lint`
+- `./node_modules/.bin/tsc --noEmit`
+
+## 2026-04-24 - Prepare shared catalog image backfill
+
+### Summary
+
+Added the shared-catalog image URL plumbing so external image enrichment can write into `catalog_fragrances` and flow through Add-screen catalog selection.
+
+### Shipped
+
+- Added nullable `catalog_fragrances.image_url`, scrape timestamp, and scrape status schema support.
+- Added the `fragrance-images` public-read Supabase Storage bucket setup for scraper uploads.
+- Added a pending-image index for scraper batch selection.
+- Updated `search_catalog_fragrances` to return catalog image URLs.
+- Mapped RPC `image_url` into app-facing catalog results instead of dropping it.
+- Added `list_fragrances_with_catalog_images()` so existing shelf rows can fall back to scraper-filled catalog imagery.
+- Documented the scraper write/read contract in `docs/catalog-image-scraper-contract.md`.
+
+### Verification
+
+- `npm test -- --runInBand --watchman=false`
+- `npm run lint`
+- `./node_modules/.bin/tsc --noEmit`
+
+## 2026-04-24 - Add editable bottle photo URLs
+
+### Summary
+
+Added the first photo-management slice using the existing `image_url` field, so bottle art can be attached without adding a new picker dependency yet.
+
+### Shipped
+
+- Added a `Photo URL` field to the Add form for manually entered bottle imagery.
+- Added a `Photo URL` field to the Detail edit form with a live bottle-art preview.
+- Saved trimmed image URLs and stored empty photo fields as `null`.
+- Kept catalog-selected imagery editable by preloading the catalog image URL into the Add form.
+
+### Verification
+
+- `npm test -- --runInBand --watchman=false`
+- `npm run lint`
+- `./node_modules/.bin/tsc --noEmit`
+
+## 2026-04-24 - Surface richer catalog metadata
+
+### Summary
+
+Added the next Phase 2 catalog slice so selected shared catalog rows carry richer metadata into user shelf entries without surfacing community ratings beside personal ratings.
+
+### Shipped
+
+- Extended `search_catalog_fragrances` to return release year, perfumers, and top/heart/base notes.
+- Added shelf-row columns for persisted catalog release year, note pyramid, and perfumers.
+- Added compact release/perfumer context to Add-screen catalog results.
+- Added a Catalog profile section on fragrance detail for saved year, perfumer, and true top/heart/base notes.
+
+### Verification
+
+- `node --max-old-space-size=8192 ./node_modules/.bin/jest --runInBand --watchman=false`
+- `npm run lint`
+- `./node_modules/.bin/tsc --noEmit`
+
 ## 2026-04-24 - Audit docs for Phase 2 catalog state
 
 ### Summary

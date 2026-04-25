@@ -12,7 +12,7 @@ Index: [[Fragrance App Index]]
 
 ## Overview
 
-Status note, 2026-04-24: Phase 1.5 includes wear logging, Calendar month/by-bottle views, same-day wear counts, selected-date wear entry/edit/confirmed delete, and curated accord autocomplete. Phase 2 catalog foundation is also live: the shared Supabase catalog seed is loaded and searchable by brand, bottle name, accords, and notes. Barcode scanning, contribution/moderation, and LLM fallback remain Phase 2 follow-ups.
+Status note, 2026-04-24: Phase 1.5 includes wear logging, Calendar month/by-bottle views, same-day wear counts, selected-date wear entry/edit/confirmed delete, and curated accord autocomplete. Phase 2 catalog foundation is also live: the shared Supabase catalog seed is loaded and searchable by brand, bottle name, accords, and notes, with release year, perfumer, and top/heart/base note metadata surfaced in the app. Community ratings stay out of the personal UI so the user's own rating remains primary. Barcode scanning, contribution/moderation, and LLM fallback remain Phase 2 follow-ups.
 
 A personal fragrance collection tracker. Mobile-first (Expo / React Native, iOS + Android), backed by Supabase. Core job: remember what I own — a searchable catalog of my bottles with brand, name, concentration, accords, and a personal rating. Shipped in phases so real usage drives what gets built next.
 
@@ -143,12 +143,15 @@ create table catalog_fragrances (
   perfumers text[] not null default '{}',
   rating_value numeric,
   rating_count int,
+  image_url text,
+  image_scraped_at timestamptz,
+  image_scrape_status text check (image_scrape_status in ('ok', 'not_found', 'error')),
   source text not null default 'parfumo_tidytuesday_2024_12_10',
   imported_at timestamptz not null default now()
 );
 ```
 
-`catalog_fragrances` is public-read through RLS and searched through `search_catalog_fragrances(search_text, match_limit)`, which ranks exact brand/name matches, exact accord/note matches, note position, then rating popularity. User-owned `fragrances` rows can store optional catalog metadata (`catalog_id`, `image_url`, `catalog_description`, `catalog_source`) without making catalog rows user-owned.
+`catalog_fragrances` is public-read through RLS and searched through `search_catalog_fragrances(search_text, match_limit)`, which ranks exact brand/name matches, exact accord/note matches, note position, then rating popularity. Catalog image URLs are nullable and intended for scraper/backfilled enrichment through the `fragrance-images` Supabase Storage bucket. User-owned `fragrances` rows can store optional catalog metadata (`catalog_id`, `image_url`, `catalog_description`, `catalog_source`) without making catalog rows user-owned. App shelf reads use `list_fragrances_with_catalog_images()`, which returns a user photo first and falls back to the linked catalog image.
 
 ## Phased Roadmap
 
@@ -206,7 +209,9 @@ Scope:
 - Shipped: shared public-read `catalog_fragrances` table seeded from Parfumo.
 - Shipped: Add flow searches Supabase via `search_catalog_fragrances(search_text, match_limit)`.
 - Shipped: selected catalog metadata can persist on user-owned shelf rows.
-- Next: surface richer catalog fields in the app, especially top/middle/base notes, year, perfumers, and rating metadata.
+- Shipped: richer catalog fields surface in the app, including top/middle/base notes, year, and perfumers. Community ratings remain catalog-only and are not shown next to personal ratings.
+- Shipped: catalog image infrastructure is live for scraper backfill, including `catalog_fragrances.image_url`, scrape status fields, the `fragrance-images` Storage bucket, and shelf fallback from user photo to catalog image.
+- Ready: personal photo upload from device media for user-owned shelf rows using the `user-fragrance-photos` Storage bucket; live migration still needs explicit apply.
 - Next: Expo Camera barcode scanning.
 - Next: contribution/moderation queue for unknown or corrected catalog rows.
 - Later: LLM fallback for unknown entries, generating accord/note suggestions that the user confirms before saving.
@@ -256,5 +261,6 @@ CI is optional in Phase 1. GitHub Actions can run typecheck + Jest on PR; EAS CI
 - **LLM fallback prompt design** — Phase 2 follow-up
 - **Offline sync library choice** (WatermelonDB vs PowerSync vs custom) — Phase 3
 - **App Store compliance checklist** — Phase 4
-- **Bottle imagery enrichment** — shelf rows can store `image_url`, but the Parfumo seed does not include image URLs
+- **Catalog bottle image backfill** — app/database contract is ready; external scraper will populate `catalog_fragrances.image_url`
+- **Personal photo upload** — app implementation and migration are ready; apply `20260424060000_personal_fragrance_photos.sql` live, then smoke-test media-library uploads
 - **Wear metadata richness** (occasion, weather, longevity) — Phase 1.5 shipped with date + notes; expand only if used

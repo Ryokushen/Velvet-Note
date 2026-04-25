@@ -17,9 +17,10 @@ import { notesToAccords, searchSupabaseCatalog, type CatalogFragrance } from '..
 import { AccordChips } from '../../components/AccordChips';
 import { ConcentrationPicker } from '../../components/ConcentrationPicker';
 import { RatingDots } from '../../components/ui/RatingDots';
-import { PrimaryButton } from '../../components/ui/Button';
+import { GhostButton, PrimaryButton } from '../../components/ui/Button';
 import { Caption, Serif } from '../../components/ui/text';
 import { BottleArt } from '../../components/BottleArt';
+import { pickPersonalFragrancePhoto, uploadPersonalFragrancePhoto } from '../../lib/fragrancePhotos';
 import type { Concentration } from '../../types/fragrance';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -33,6 +34,8 @@ export default function Add() {
   const [concentration, setConcentration] = useState<Concentration | null>(null);
   const [accords, setAccords] = useState<string[]>([]);
   const [rating, setRating] = useState(0);
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [photoUploadPending, setPhotoUploadPending] = useState(false);
   const [catalogQuery, setCatalogQuery] = useState('');
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogFragrance | null>(null);
   const [catalogResults, setCatalogResults] = useState<CatalogFragrance[]>([]);
@@ -68,7 +71,24 @@ export default function Add() {
     setName(entry.name);
     setConcentration(entry.concentration ?? null);
     setAccords(notesToAccords(entry.notes));
+    setPhotoUrl('');
     setCatalogQuery('');
+  }
+
+  async function attachPhoto() {
+    setPhotoUploadPending(true);
+    try {
+      const selectedPhoto = await pickPersonalFragrancePhoto();
+      if (!selectedPhoto) {
+        return;
+      }
+      const uploadedUrl = await uploadPersonalFragrancePhoto(selectedPhoto, 'new-fragrance');
+      setPhotoUrl(uploadedUrl);
+    } catch (e: any) {
+      Alert.alert('Could not attach photo', e.message ?? 'Unknown error');
+    } finally {
+      setPhotoUploadPending(false);
+    }
   }
 
   async function submit() {
@@ -84,9 +104,14 @@ export default function Add() {
         accords,
         rating: rating > 0 ? rating : null,
         catalog_id: selectedCatalog?.id ?? null,
-        image_url: selectedCatalog?.imageUrl ?? null,
+        image_url: photoUrl.trim() ? photoUrl.trim() : null,
         catalog_description: selectedCatalog?.description ?? null,
         catalog_source: selectedCatalog?.source ?? null,
+        catalog_release_year: selectedCatalog?.releaseYear ?? null,
+        catalog_notes_top: selectedCatalog?.notesTop ?? null,
+        catalog_notes_middle: selectedCatalog?.notesMiddle ?? null,
+        catalog_notes_base: selectedCatalog?.notesBase ?? null,
+        catalog_perfumers: selectedCatalog?.perfumers ?? null,
       });
       // Reset in case user comes back to this screen.
       setBrand('');
@@ -94,6 +119,7 @@ export default function Add() {
       setConcentration(null);
       setAccords([]);
       setRating(0);
+      setPhotoUrl('');
       setSelectedCatalog(null);
       router.replace('/' as never);
     } catch (e: any) {
@@ -148,6 +174,7 @@ export default function Add() {
                     <View style={styles.catalogResultText}>
                       <Caption style={{ marginBottom: 4 }}>{entry.brand}</Caption>
                       <Text style={styles.catalogResultName}>{entry.name}</Text>
+                      <CatalogMetaLine entry={entry} />
                       {entry.notes.length > 0 ? (
                         <Text style={styles.catalogResultNotes} numberOfLines={1}>
                           {entry.notes.slice(0, 4).join(', ')}
@@ -164,6 +191,7 @@ export default function Add() {
                 <View style={styles.catalogResultText}>
                   <Caption style={{ marginBottom: 4 }}>Catalog match</Caption>
                   <Text style={styles.catalogResultName}>{selectedCatalog.name}</Text>
+                  <CatalogMetaLine entry={selectedCatalog} />
                   <Text style={styles.catalogResultNotes} numberOfLines={2}>
                     Catalog metadata will be saved with this shelf entry.
                   </Text>
@@ -185,6 +213,27 @@ export default function Add() {
             placeholder="What it's called"
             autoCapitalize="words"
           />
+          <View style={styles.photoEditRow}>
+            <BottleArt imageUrl={photoUrl.trim() || null} width={64} height={82} />
+            <View style={styles.photoEditField}>
+              <GhostButton
+                onPress={attachPhoto}
+                loading={photoUploadPending}
+                style={styles.photoAttachButton}
+              >
+                Attach photo
+              </GhostButton>
+              <Field
+                label="Photo URL"
+                value={photoUrl}
+                onChangeText={setPhotoUrl}
+                placeholder="Paste an image link"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+              />
+            </View>
+          </View>
           <ConcentrationPicker value={concentration} onChange={setConcentration} />
           <AccordChips value={accords} onChange={setAccords} />
           <View>
@@ -193,13 +242,26 @@ export default function Add() {
           </View>
         </ScrollView>
         <View style={styles.footer}>
-          <PrimaryButton loading={create.isPending} onPress={submit}>
+          <PrimaryButton loading={create.isPending} disabled={photoUploadPending} onPress={submit}>
             Save to shelf
           </PrimaryButton>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+}
+
+function CatalogMetaLine({ entry }: { entry: CatalogFragrance }) {
+  const parts = [
+    entry.releaseYear ? String(entry.releaseYear) : null,
+    entry.perfumers.length > 0 ? entry.perfumers.slice(0, 2).join(', ') : null,
+  ].filter(Boolean);
+
+  if (parts.length === 0) {
+    return null;
+  }
+
+  return <Text style={styles.catalogMetaLine}>{parts.join(' · ')}</Text>;
 }
 
 function Field({
@@ -211,6 +273,7 @@ function Field({
       <Caption style={{ marginBottom: 8 }}>{label}</Caption>
       <TextInput
         {...rest}
+        accessibilityLabel={label}
         placeholderTextColor={colors.textMuted}
         style={styles.input}
       />
@@ -277,6 +340,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
+  catalogMetaLine: {
+    ...typography.bodyDim,
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 4,
+  },
   selectedCatalog: {
     marginTop: 12,
     flexDirection: 'row',
@@ -287,6 +356,19 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     backgroundColor: colors.surfaceElevated,
     padding: 12,
+  },
+  photoEditRow: {
+    flexDirection: 'row',
+    gap: 14,
+    alignItems: 'flex-start',
+  },
+  photoEditField: {
+    flex: 1,
+    minWidth: 0,
+  },
+  photoAttachButton: {
+    height: 44,
+    marginBottom: 10,
   },
   footer: {
     padding: 16,

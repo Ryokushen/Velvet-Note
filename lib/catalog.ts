@@ -10,11 +10,32 @@ export type CatalogFragrance = {
   concentration?: Concentration | null;
   description: string;
   notes: string[];
+  notesTop: string[];
+  notesMiddle: string[];
+  notesBase: string[];
+  releaseYear: number | null;
+  perfumers: string[];
+  ratingValue: number | null;
+  ratingCount: number | null;
   imageUrl: string | null;
   source: string;
 };
 
-const catalog = catalogData as CatalogFragrance[];
+type LocalCatalogRow = Omit<
+  CatalogFragrance,
+  'notesTop' | 'notesMiddle' | 'notesBase' | 'releaseYear' | 'perfumers' | 'ratingValue' | 'ratingCount'
+>;
+
+const catalog = (catalogData as LocalCatalogRow[]).map((entry) => ({
+  ...entry,
+  notesTop: [],
+  notesMiddle: [],
+  notesBase: [],
+  releaseYear: null,
+  perfumers: [],
+  ratingValue: null,
+  ratingCount: null,
+}));
 
 type CatalogRow = {
   id: string;
@@ -25,6 +46,11 @@ type CatalogRow = {
   notes_top: string[] | null;
   notes_middle: string[] | null;
   notes_base: string[] | null;
+  release_year: number | null;
+  perfumers: string[] | null;
+  rating_value: number | string | null;
+  rating_count: number | null;
+  image_url: string | null;
   source: string;
 };
 
@@ -85,6 +111,9 @@ export async function searchSupabaseCatalog(
 }
 
 function mapCatalogRow(row: CatalogRow): CatalogFragrance {
+  const notesTop = uniqueText(row.notes_top ?? []);
+  const notesMiddle = uniqueText(row.notes_middle ?? []);
+  const notesBase = uniqueText(row.notes_base ?? []);
   return {
     id: row.id,
     brand: row.brand,
@@ -93,13 +122,28 @@ function mapCatalogRow(row: CatalogRow): CatalogFragrance {
     description: '',
     notes: uniqueText([
       ...(row.accords ?? []),
-      ...(row.notes_top ?? []),
-      ...(row.notes_middle ?? []),
-      ...(row.notes_base ?? []),
+      ...notesTop,
+      ...notesMiddle,
+      ...notesBase,
     ]),
-    imageUrl: null,
+    notesTop,
+    notesMiddle,
+    notesBase,
+    releaseYear: row.release_year ?? null,
+    perfumers: uniqueText(row.perfumers ?? []),
+    ratingValue: normalizeNumber(row.rating_value),
+    ratingCount: row.rating_count ?? null,
+    imageUrl: row.image_url ?? null,
     source: row.source,
   };
+}
+
+function normalizeNumber(value: number | string | null): number | null {
+  if (value === null) {
+    return null;
+  }
+  const numeric = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
 }
 
 function uniqueText(values: string[]): string[] {

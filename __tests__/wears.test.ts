@@ -3,6 +3,7 @@ import {
   deleteWear,
   listWears,
   listWearsForFragrance,
+  setActiveWear,
   updateWear,
 } from '../lib/wears';
 
@@ -20,6 +21,7 @@ jest.mock('../lib/supabase', () => {
   return {
     supabase: {
       from: jest.fn(() => builder),
+      rpc: jest.fn(),
       auth: {
         getUser: jest.fn().mockResolvedValue({
           data: { user: { id: 'u' } },
@@ -130,6 +132,23 @@ describe('updateWear', () => {
     expect(builder.update).toHaveBeenCalledWith({ notes: null });
     expect(builder.eq).toHaveBeenCalledWith('id', 'w');
     expect(result).toEqual(updated);
+  });
+});
+
+describe('setActiveWear', () => {
+  it('marks a wear active through the Supabase RPC', async () => {
+    supabase.rpc.mockResolvedValueOnce({ data: wearRow, error: null });
+
+    const result = await setActiveWear('w');
+
+    expect(supabase.rpc).toHaveBeenCalledWith('set_active_wear', { wear_id: 'w' });
+    expect(result).toEqual(wearRow);
+  });
+
+  it('throws on Supabase RPC error', async () => {
+    supabase.rpc.mockResolvedValueOnce({ data: null, error: { message: 'boom' } });
+
+    await expect(setActiveWear('w')).rejects.toThrow('boom');
   });
 });
 

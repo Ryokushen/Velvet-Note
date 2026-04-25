@@ -5,6 +5,7 @@ import CalendarScreen from '../app/(tabs)/calendar';
 const mockMutateAsync = jest.fn();
 const mockUpdateMutateAsync = jest.fn();
 const mockDeleteMutateAsync = jest.fn();
+const mockSetActiveWearMutateAsync = jest.fn();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({
@@ -40,6 +41,10 @@ jest.mock('../hooks/useWears', () => ({
   }),
   useDeleteWear: () => ({
     mutateAsync: mockDeleteMutateAsync,
+    isPending: false,
+  }),
+  useSetActiveWear: () => ({
+    mutateAsync: mockSetActiveWearMutateAsync,
     isPending: false,
   }),
   useWearsQuery: () => ({
@@ -110,6 +115,8 @@ describe('Calendar wear entry', () => {
     mockUpdateMutateAsync.mockResolvedValue({});
     mockDeleteMutateAsync.mockReset();
     mockDeleteMutateAsync.mockResolvedValue({});
+    mockSetActiveWearMutateAsync.mockReset();
+    mockSetActiveWearMutateAsync.mockResolvedValue({});
   });
 
   afterEach(() => {
@@ -147,6 +154,35 @@ describe('Calendar wear entry', () => {
         compliment_count: 1,
         compliment_note: 'Asked what it was',
       });
+    });
+  });
+
+  it("marks today's newly logged wear active", async () => {
+    const now = new Date();
+    const selectedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    mockMutateAsync.mockResolvedValueOnce({ id: 'wear-today' });
+    const { getByLabelText, getByPlaceholderText, getByText } = render(<CalendarScreen />);
+
+    fireEvent.press(getByLabelText('Log wear for selected day'));
+    fireEvent.press(getByText('Shalimar'));
+    fireEvent.press(getByText('Night'));
+    fireEvent.changeText(getByPlaceholderText('Occasion'), 'Office');
+    fireEvent.changeText(getByPlaceholderText('Compliment note'), 'Asked what it was');
+    fireEvent.press(getByText('+'));
+    fireEvent.press(getByText('Save wear'));
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        fragrance_id: 'fragrance-1',
+        worn_on: selectedDate,
+        notes: null,
+        season: expect.any(String),
+        time_of_day: 'night',
+        occasion: 'Office',
+        compliment_count: 1,
+        compliment_note: 'Asked what it was',
+      });
+      expect(mockSetActiveWearMutateAsync).toHaveBeenCalledWith('wear-today');
     });
   });
 

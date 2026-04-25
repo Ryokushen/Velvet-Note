@@ -4,6 +4,7 @@ import {
   deleteWear,
   listWears,
   listWearsForFragrance,
+  setActiveWear,
   updateWear,
 } from '../lib/wears';
 import type { NewWear, WearUpdate } from '../types/wear';
@@ -33,6 +34,14 @@ export function useUpdateWear() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: WearUpdate }) =>
       updateWear(id, input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['wears'] }),
+  });
+}
+
+export function useSetActiveWear() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (wearId: string) => setActiveWear(wearId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['wears'] }),
   });
 }

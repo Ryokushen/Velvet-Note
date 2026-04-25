@@ -46,6 +46,12 @@ export async function updateWear(id: string, input: WearUpdate): Promise<Wear> {
   return data as Wear;
 }
 
+export async function setActiveWear(wearId: string): Promise<Wear> {
+  const { data, error } = await supabase.rpc('set_active_wear', { wear_id: wearId });
+  if (error) throw new Error(error.message);
+  return data as Wear;
+}
+
 export async function deleteWear(id: string): Promise<void> {
   const { error } = await supabase.from('wears').delete().eq('id', id);
   if (error) throw new Error(error.message);

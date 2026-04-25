@@ -24,6 +24,7 @@ import { useFragrancesQuery } from '../../hooks/useFragrances';
 import {
   useCreateWear,
   useDeleteWear,
+  useSetActiveWear,
   useUpdateWear,
   useWearsQuery,
 } from '../../hooks/useWears';
@@ -49,6 +50,7 @@ export default function CalendarScreen() {
   const createWear = useCreateWear();
   const updateWear = useUpdateWear();
   const deleteWear = useDeleteWear();
+  const setActiveWear = useSetActiveWear();
   const [mode, setMode] = useState<CalendarMode>('month');
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState(() => todayLocalDate());
@@ -158,7 +160,10 @@ export default function CalendarScreen() {
       if (editingWearId) {
         await updateWear.mutateAsync({ id: editingWearId, input });
       } else {
-        await createWear.mutateAsync(input);
+        const createdWear = await createWear.mutateAsync(input);
+        if (selectedDate === todayLocalDate()) {
+          await setActiveWear.mutateAsync(createdWear.id);
+        }
       }
       resetWearEntry();
     } catch (e: any) {
@@ -303,7 +308,7 @@ export default function CalendarScreen() {
                   occasion={wearOccasion}
                   complimentCount={complimentCount}
                   complimentNote={complimentNote}
-                  saving={createWear.isPending || updateWear.isPending}
+                  saving={createWear.isPending || updateWear.isPending || setActiveWear.isPending}
                   deleting={deleteWear.isPending}
                   pendingDeleteWearId={pendingDeleteWearId}
                   onAdd={startAddWear}

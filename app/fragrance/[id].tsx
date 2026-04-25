@@ -21,7 +21,7 @@ import {
   useUpdateFragrance,
   useDeleteFragrance,
 } from '../../hooks/useFragrances';
-import { useCreateWear, useFragranceWearsQuery } from '../../hooks/useWears';
+import { useCreateWear, useFragranceWearsQuery, useSetActiveWear } from '../../hooks/useWears';
 import { AccordChips } from '../../components/AccordChips';
 import { ConcentrationPicker } from '../../components/ConcentrationPicker';
 import { RatingDots } from '../../components/ui/RatingDots';
@@ -89,6 +89,7 @@ export default function Detail() {
   const del = useDeleteFragrance();
   const wears = useFragranceWearsQuery(fragranceId);
   const createWear = useCreateWear();
+  const setActiveWear = useSetActiveWear();
 
   const [editing, setEditing] = useState(false);
   const [brand, setBrand] = useState('');
@@ -300,7 +301,7 @@ export default function Detail() {
   async function logWearToday() {
     if (!fragranceId) return;
     try {
-      await createWear.mutateAsync({
+      const createdWear = await createWear.mutateAsync({
         fragrance_id: fragranceId,
         worn_on: todayLocalDate(),
         notes: wearNotes.trim() ? wearNotes.trim() : null,
@@ -310,6 +311,7 @@ export default function Detail() {
         compliment_count: complimentCount,
         compliment_note: complimentNote.trim() ? complimentNote.trim() : null,
       });
+      await setActiveWear.mutateAsync(createdWear.id);
       setWearNotes('');
       setWearSeason(seasonForDate(todayLocalDate()));
       setWearTimeOfDay(null);
@@ -666,7 +668,7 @@ export default function Detail() {
             multiline
             style={styles.notesInput}
           />
-          <PrimaryButton loading={createWear.isPending} onPress={logWearToday}>
+          <PrimaryButton loading={createWear.isPending || setActiveWear.isPending} onPress={logWearToday}>
             Log today
           </PrimaryButton>
 

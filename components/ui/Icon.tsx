@@ -25,3 +25,4 @@ export const IconTrash = makeIcon('trash-2');
 export const IconLogOut = makeIcon('log-out');
 export const IconBook = makeIcon('book-open');
 export const IconCalendar = makeIcon('calendar');
+export const IconCamera = makeIcon('camera');

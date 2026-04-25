@@ -6,6 +6,7 @@ const mockMutateAsync = jest.fn();
 const mockReplace = jest.fn();
 
 jest.mock('expo-router', () => ({
+  useLocalSearchParams: () => ({}),
   useRouter: () => ({
     replace: mockReplace,
   }),
@@ -27,6 +28,7 @@ jest.mock('../hooks/useFragrances', () => ({
 }));
 
 jest.mock('../lib/catalog', () => ({
+  findSupabaseCatalogByBarcode: jest.fn(),
   notesToAccords: (notes: string[]) => notes.map((note) => note.trim().toLowerCase()).filter(Boolean),
   searchSupabaseCatalog: jest.fn(),
 }));

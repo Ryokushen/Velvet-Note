@@ -42,7 +42,7 @@ Key commits:
 - `785737c` - persisted catalog metadata on shelf entries.
 - `ba9ba7c` - Add search moved to Supabase RPC.
 - `5c820df` - catalog search ranking and scrollable results.
-- Current working slice - richer catalog metadata, delete/back fixes, editable photo URLs, scraper-ready catalog image infrastructure, self-attached personal photo uploads, and a local barcode mapping contract.
+- Current working slice - richer catalog metadata, delete/back fixes, editable photo URLs, scraper-ready catalog image infrastructure, self-attached personal photo uploads, barcode mapping, and a dedicated scanner route.
 
 Live Supabase project:
 
@@ -55,7 +55,7 @@ Live Supabase project:
 - `list_fragrances_with_catalog_images()` is live for app shelf reads; user-owned `fragrances.image_url` takes priority, then linked catalog image fallback.
 - Scraper handoff contract: `docs/catalog-image-scraper-contract.md`.
 - `user-fragrance-photos` is live for user-attached bottle photos.
-- Pending live apply: `supabase/migrations/20260424070000_catalog_barcodes.sql` creates `catalog_barcodes` and `find_catalog_fragrance_by_barcode(barcode_text)`.
+- `catalog_barcodes` and `find_catalog_fragrance_by_barcode(barcode_text)` are live for exact barcode lookup.
 
 ## Verification
 
@@ -82,9 +82,8 @@ Temporary test users were removed from Supabase after verification.
 
 - Detail/list do not yet surface "last worn" summary outside the detail wear history section.
 - No dedicated E2E test suite yet; Playwright was used as an ad hoc smoke check.
-- Camera scanning UI is not implemented yet.
-- Live Supabase still needs the barcode contract migration applied before barcode lookup can work outside local/test code.
+- Unknown barcode contribution/linking flow is not implemented yet.
 
 ## Next Good Slice
 
-Apply the barcode contract migration to live Supabase, then implement the Expo camera scanner flow that calls `find_catalog_fragrance_by_barcode(barcode_text)` and prefills Add when a match exists.
+Implement an unknown-barcode linking flow: after a no-match scan, let the user search the catalog and create a reviewed `catalog_barcodes` mapping instead of losing the scanned code.

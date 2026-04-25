@@ -31,6 +31,8 @@ Run this checklist on a dev build before any demo or release.
 ## Add
 
 - [ ] Brand + name required, blocked with alert if missing
+- [ ] Scan barcode opens the dedicated scanner screen
+- [ ] A matched barcode returns to Add and prefills the catalog result
 - [ ] Catalog lookup finds a bottle by name, brand, or note
 - [ ] Searching `vanilla` and `sandalwood` returns distinct catalog result sets
 - [ ] Catalog result panel scrolls beyond the first five visible rows
@@ -65,6 +67,13 @@ Run this checklist on a dev build before any demo or release.
 - [ ] Logged wear appears in the selected-day detail sheet
 - [ ] By bottle toggle shows last-worn status and sparkline markers
 - [ ] Month previous/next controls navigate without crashing
+
+## Barcode Scan
+
+- [ ] `/scan` asks for camera permission when needed
+- [ ] Scanner recognizes UPC/EAN labels and shows matched catalog result
+- [ ] Use this match returns to Add with the matched catalog metadata
+- [ ] Unknown barcode shows the no-match state and can return to manual catalog search
 
 ## Search + Sort
 

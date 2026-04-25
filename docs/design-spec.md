@@ -226,9 +226,9 @@ Scope:
 - Shipped: selected catalog metadata can persist on user-owned shelf rows.
 - Shipped: richer catalog fields surface in the app, including top/middle/base notes, year, and perfumers. Community ratings remain catalog-only and are not shown next to personal ratings.
 - Shipped: catalog image infrastructure is live for scraper backfill, including `catalog_fragrances.image_url`, scrape status fields, the `fragrance-images` Storage bucket, and shelf fallback from user photo to catalog image.
-- Ready: personal photo upload from device media for user-owned shelf rows using the `user-fragrance-photos` Storage bucket; live migration still needs explicit apply.
-- Ready: barcode DB contract through `catalog_barcodes` and `find_catalog_fragrance_by_barcode(barcode_text)`; live migration still needs explicit apply.
-- Next: Expo Camera barcode scanning wired to the lookup RPC.
+- Shipped: personal photo upload from device media for user-owned shelf rows using the `user-fragrance-photos` Storage bucket.
+- Shipped: barcode DB contract through `catalog_barcodes` and `find_catalog_fragrance_by_barcode(barcode_text)`.
+- Shipped: dedicated `/scan` camera route wired to barcode lookup and Add prefill.
 - Next: contribution/moderation queue for unknown or corrected catalog rows.
 - Later: LLM fallback for unknown entries, generating accord/note suggestions that the user confirms before saving.
 

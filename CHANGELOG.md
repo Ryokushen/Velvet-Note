@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-04-25 - Add dedicated barcode scanner screen
+
+### Summary
+
+Added a separate camera-first scanner route so Add stays focused on form entry while barcode capture and lookup happen in their own flow.
+
+### Shipped
+
+- Added `expo-camera`.
+- Added `/scan` with camera permission handling, barcode scan feedback, match/no-match states, and retry controls.
+- Added a compact `Scan barcode` entry point to Add.
+- Wired matched scans back to Add through the scanned barcode so Add can prefill from `find_catalog_fragrance_by_barcode`.
+- Added tests for Add scanner routing, barcode prefill, scanner match handoff, and no-match handling.
+
+### Verification
+
+- `npm test -- __tests__/AddBarcodeScan.test.tsx __tests__/ScanBarcode.test.tsx --runInBand --watchman=false`
+- `npm test -- --runInBand --watchman=false`
+- `npm run lint`
+- `./node_modules/.bin/tsc --noEmit`
+
 ## 2026-04-24 - Add barcode catalog contract
 
 ### Summary

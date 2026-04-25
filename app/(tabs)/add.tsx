@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ScrollView,
   View,
@@ -10,10 +10,15 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useCreateFragrance } from '../../hooks/useFragrances';
-import { notesToAccords, searchSupabaseCatalog, type CatalogFragrance } from '../../lib/catalog';
+import {
+  findSupabaseCatalogByBarcode,
+  notesToAccords,
+  searchSupabaseCatalog,
+  type CatalogFragrance,
+} from '../../lib/catalog';
 import { AccordChips } from '../../components/AccordChips';
 import { ConcentrationPicker } from '../../components/ConcentrationPicker';
 import { RatingDots } from '../../components/ui/RatingDots';
@@ -21,6 +26,7 @@ import { GhostButton, PrimaryButton } from '../../components/ui/Button';
 import { Caption, Serif } from '../../components/ui/text';
 import { BottleArt } from '../../components/BottleArt';
 import { pickPersonalFragrancePhoto, uploadPersonalFragrancePhoto } from '../../lib/fragrancePhotos';
+import { IconCamera } from '../../components/ui/Icon';
 import type { Concentration } from '../../types/fragrance';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -28,6 +34,7 @@ import { radius } from '../../theme/spacing';
 
 export default function Add() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ barcode?: string | string[] }>();
   const create = useCreateFragrance();
   const [brand, setBrand] = useState('');
   const [name, setName] = useState('');
@@ -39,6 +46,8 @@ export default function Add() {
   const [catalogQuery, setCatalogQuery] = useState('');
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogFragrance | null>(null);
   const [catalogResults, setCatalogResults] = useState<CatalogFragrance[]>([]);
+  const resolvedBarcodeRef = useRef('');
+  const barcodeParam = firstParam(params.barcode);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,6 +73,26 @@ export default function Add() {
       cancelled = true;
     };
   }, [catalogQuery]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!barcodeParam || barcodeParam === resolvedBarcodeRef.current) {
+      return undefined;
+    }
+
+    resolvedBarcodeRef.current = barcodeParam;
+    findSupabaseCatalogByBarcode(barcodeParam)
+      .then((entry) => {
+        if (!cancelled && entry) {
+          applyCatalogEntry(entry);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [barcodeParam]);
 
   function applyCatalogEntry(entry: CatalogFragrance) {
     setSelectedCatalog(entry);
@@ -145,6 +174,17 @@ export default function Add() {
         >
           <View>
             <Caption style={{ marginBottom: 8 }}>Catalog lookup</Caption>
+            <Pressable
+              onPress={() => router.push('/scan' as never)}
+              accessibilityRole="button"
+              style={({ pressed }) => [
+                styles.scanButton,
+                pressed && { opacity: 0.78 },
+              ]}
+            >
+              <IconCamera size={17} color={colors.text} />
+              <Text style={styles.scanButtonText}>Scan barcode</Text>
+            </Pressable>
             <TextInput
               value={catalogQuery}
               onChangeText={setCatalogQuery}
@@ -264,6 +304,10 @@ function CatalogMetaLine({ entry }: { entry: CatalogFragrance }) {
   return <Text style={styles.catalogMetaLine}>{parts.join(' · ')}</Text>;
 }
 
+function firstParam(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] ?? '' : value ?? '';
+}
+
 function Field({
   label,
   ...rest
@@ -306,6 +350,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
     fontFamily: typography.serif,
+  },
+  scanButton: {
+    height: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    marginBottom: 10,
+  },
+  scanButtonText: {
+    fontSize: 12,
+    color: colors.text,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    fontWeight: '600',
   },
   catalogResults: {
     marginTop: 10,

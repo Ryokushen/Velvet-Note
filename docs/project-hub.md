@@ -14,3 +14,4 @@ Personal fragrance collection tracker. Mobile-first (Expo / React Native), Supab
 Detailed project notes:
 
 - [[Fragrance App Index]]
+- [[barcode-live-smoke-test|Barcode Live Smoke Test]]

@@ -1,0 +1,3 @@
+export const COLLECTION_DETAIL_MORPH_DURATION_MS = 480;
+export const DETAIL_CONTENT_FADE_DELAY_MS = 120;
+export const COLLECTION_DETAIL_EASING = [0.2, 0.7, 0.2, 1] as const;

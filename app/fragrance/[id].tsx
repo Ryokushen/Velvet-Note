@@ -1,5 +1,6 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import {
+  Animated,
   ScrollView,
   View,
   Text,
@@ -10,8 +11,10 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Easing,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   useFragrancesQuery,
@@ -29,16 +32,28 @@ import { Caption, Serif } from '../../components/ui/text';
 import { SectionDivider } from '../../components/ui/SectionDivider';
 import { IconChevronLeft, IconTrash } from '../../components/ui/Icon';
 import { BottleArt } from '../../components/BottleArt';
+import {
+  CollectionDetailMorph,
+  fallbackRowRect,
+  runCollectionDetailMorph,
+} from '../../components/CollectionDetailMorph';
 import { pickPersonalFragrancePhoto, uploadPersonalFragrancePhoto } from '../../lib/fragrancePhotos';
 import { formatLastWornLong, latestWearForFragrance } from '../../lib/lastWorn';
+import {
+  COLLECTION_DETAIL_EASING,
+  COLLECTION_DETAIL_MORPH_DURATION_MS,
+  DETAIL_CONTENT_FADE_DELAY_MS,
+} from '../../lib/morphTransition';
 import type { Concentration } from '../../types/fragrance';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { radius } from '../../theme/spacing';
+import { cancelAnimation, useSharedValue } from 'react-native-reanimated';
 
 export default function Detail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, fromCollection } = useLocalSearchParams<{ id: string; fromCollection?: string }>();
   const router = useRouter();
+  const navigation = useNavigation();
   const { data } = useFragrancesQuery();
   const fragrance = useMemo(() => data?.find((f) => f.id === id), [data, id]);
   const fragranceId = fragrance?.id;
@@ -66,6 +81,27 @@ export default function Detail() {
   const [photoUploadPending, setPhotoUploadPending] = useState(false);
   const [wearNotes, setWearNotes] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [closingToCollection, setClosingToCollection] = useState(false);
+  const cameFromCollection = fromCollection === '1';
+  const contentOpacity = useRef(new Animated.Value(cameFromCollection ? 0 : 1)).current;
+  const closeProgress = useSharedValue(0);
+  const closeFrame = useRef<number | null>(null);
+  const allowRouteRemoval = useRef(false);
+
+  const startClosingMorph = useCallback((onComplete: () => void) => {
+    if (closeFrame.current != null) {
+      cancelAnimationFrame(closeFrame.current);
+      closeFrame.current = null;
+    }
+    setClosingToCollection(true);
+    contentOpacity.setValue(0);
+    cancelAnimation(closeProgress);
+    closeProgress.value = 0;
+    closeFrame.current = requestAnimationFrame(() => {
+      closeFrame.current = null;
+      runCollectionDetailMorph(closeProgress, onComplete);
+    });
+  }, [closeProgress, contentOpacity]);
 
   useEffect(() => {
     if (!fragranceId) return;
@@ -84,6 +120,46 @@ export default function Detail() {
     fragranceRating,
     fragrancePersonalImageUrl,
   ]);
+
+  useEffect(() => {
+    return () => {
+      if (closeFrame.current != null) {
+        cancelAnimationFrame(closeFrame.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!fragranceId || editing) return;
+    contentOpacity.setValue(cameFromCollection ? 0 : 1);
+    if (cameFromCollection) {
+      Animated.timing(contentOpacity, {
+        toValue: 1,
+        delay: DETAIL_CONTENT_FADE_DELAY_MS,
+        duration: COLLECTION_DETAIL_MORPH_DURATION_MS - DETAIL_CONTENT_FADE_DELAY_MS,
+        easing: Easing.bezier(...COLLECTION_DETAIL_EASING),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [cameFromCollection, contentOpacity, editing, fragranceId]);
+
+  useEffect(() => {
+    if (!cameFromCollection) return undefined;
+
+    const unsubscribe = navigation.addListener('beforeRemove', (event) => {
+      if (allowRouteRemoval.current || editing || closingToCollection) {
+        return;
+      }
+
+      event.preventDefault();
+      startClosingMorph(() => {
+        allowRouteRemoval.current = true;
+        navigation.dispatch(event.data.action);
+      });
+    });
+
+    return unsubscribe;
+  }, [cameFromCollection, closingToCollection, editing, navigation, startClosingMorph]);
 
   if (!fragrance) {
     return (
@@ -134,6 +210,17 @@ export default function Detail() {
   }
 
   function goBackToCollection() {
+    if (cameFromCollection && !closingToCollection) {
+      startClosingMorph(() => {
+        allowRouteRemoval.current = true;
+        finishBackToCollection();
+      });
+      return;
+    }
+    finishBackToCollection();
+  }
+
+  function finishBackToCollection() {
     if (typeof router.canGoBack === 'function' && router.canGoBack()) {
       router.back();
       return;
@@ -300,7 +387,12 @@ export default function Detail() {
                 {fragrance.name}
               </Serif>
             </View>
-            <BottleArt imageUrl={fragrance.image_url} width={96} height={124} />
+          </View>
+          <View
+            testID="detail-hero-image"
+            style={[styles.heroImage, closingToCollection && styles.heroImageClosing]}
+          >
+            <BottleArt imageUrl={fragrance.image_url} width={176} height={228} />
           </View>
           {fragrance.concentration ? (
             <View style={styles.metaRow}>
@@ -308,6 +400,10 @@ export default function Detail() {
             </View>
           ) : null}
 
+          <Animated.View
+            testID="detail-delayed-content"
+            style={{ opacity: contentOpacity }}
+          >
           {lastWear ? (
             <View style={styles.lastWornPanel}>
               <Caption style={{ marginBottom: 6 }}>Last worn</Caption>
@@ -387,8 +483,17 @@ export default function Detail() {
               Remove from shelf
             </GhostButton>
           </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+      {closingToCollection ? (
+        <CollectionDetailMorph
+          closing
+          fragrance={fragrance}
+          origin={fallbackRowRect()}
+          progress={closeProgress}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -605,14 +710,19 @@ const styles = StyleSheet.create({
   readScroll: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 },
   editScroll: { padding: 20, paddingBottom: 40, gap: 20 },
   heroRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 18,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   heroText: {
-    flex: 1,
     minWidth: 0,
+  },
+  heroImage: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+    marginBottom: 28,
+  },
+  heroImageClosing: {
+    opacity: 0,
   },
   photoEditRow: {
     flexDirection: 'row',

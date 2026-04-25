@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   FlatList,
@@ -6,12 +6,19 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
+  type LayoutRectangle,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFragrancesQuery } from '../../hooks/useFragrances';
 import { useWearsQuery } from '../../hooks/useWears';
 import { FragranceRow } from '../../components/FragranceRow';
+import {
+  CollectionDetailMorph,
+  fallbackRowRect,
+  runCollectionDetailMorph,
+  type MorphRect,
+} from '../../components/CollectionDetailMorph';
 import { EmptyState } from '../../components/EmptyState';
 import { filterFragrances, sortFragrances, type SortMode } from '../../lib/filters';
 import { formatLastWornShort, latestWearForFragrance } from '../../lib/lastWorn';
@@ -21,6 +28,8 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { Caption, Serif } from '../../components/ui/text';
 import { IconSearch, IconX, IconLogOut, IconBook } from '../../components/ui/Icon';
+import type { Fragrance } from '../../types/fragrance';
+import { cancelAnimation, useSharedValue } from 'react-native-reanimated';
 
 export default function Collection() {
   const { data, isLoading, error, refetch, isRefetching } = useFragrancesQuery();
@@ -28,6 +37,10 @@ export default function Collection() {
   const [query, setQuery] = useState('');
   const [sortMode] = useState<SortMode>('rating');
   const [showBarcodeReview, setShowBarcodeReview] = useState(false);
+  const [morph, setMorph] = useState<{ fragrance: Fragrance; origin: MorphRect } | null>(null);
+  const morphProgress = useSharedValue(0);
+  const rowLayouts = useRef<Record<string, LayoutRectangle>>({});
+  const morphFrame = useRef<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -50,6 +63,14 @@ export default function Collection() {
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (morphFrame.current != null) {
+        cancelAnimationFrame(morphFrame.current);
+      }
+    };
+  }, []);
+
   const visible = useMemo(() => {
     if (!data) return [];
     return sortFragrances(filterFragrances(data, query), sortMode);
@@ -58,6 +79,39 @@ export default function Collection() {
   const count = data?.length ?? 0;
   const favorites = data?.filter((f) => (f.rating ?? 0) >= 8).length ?? 0;
   const isEmpty = !isLoading && !error && count === 0;
+
+  function openFragrance(fragrance: Fragrance) {
+    const fallback = fallbackRowRect();
+    const layout = rowLayouts.current[fragrance.id];
+    startFragranceMorph(
+      fragrance,
+      layout
+        ? {
+            x: layout.x,
+            y: fallback.y + layout.y,
+            width: layout.width || fallback.width,
+            height: layout.height || fallback.height,
+          }
+        : fallback,
+    );
+  }
+
+  function startFragranceMorph(fragrance: Fragrance, origin: MorphRect) {
+    if (morphFrame.current != null) {
+      cancelAnimationFrame(morphFrame.current);
+      morphFrame.current = null;
+    }
+    cancelAnimation(morphProgress);
+    morphProgress.value = 0;
+    setMorph({ fragrance, origin });
+    morphFrame.current = requestAnimationFrame(() => {
+      morphFrame.current = null;
+      runCollectionDetailMorph(morphProgress, () => {
+        router.push(`/fragrance/${fragrance.id}?fromCollection=1` as never);
+        setMorph(null);
+      });
+    });
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -134,10 +188,14 @@ export default function Collection() {
               contentContainerStyle={{ paddingBottom: 32 }}
               renderItem={({ item }) => (
                 <FragranceRow
+                  onLayout={(event) => {
+                    rowLayouts.current[item.id] = event.nativeEvent.layout;
+                  }}
                   fragrance={item}
-                  onPress={() => router.push(`/fragrance/${item.id}` as never)}
+                  onPress={() => openFragrance(item)}
                   withImage
                   lastWornLabel={lastWornLabel(wears.data, item.id)}
+                  transitioning={morph?.fragrance.id === item.id}
                 />
               )}
               refreshing={isRefetching}
@@ -154,6 +212,13 @@ export default function Collection() {
           )}
         </>
       )}
+      {morph ? (
+        <CollectionDetailMorph
+          fragrance={morph.fragrance}
+          origin={morph.origin}
+          progress={morphProgress}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

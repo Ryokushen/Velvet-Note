@@ -1,26 +1,42 @@
-import { Pressable, View, Text, StyleSheet } from 'react-native';
+import { Pressable, View, Text, StyleSheet, type ViewProps } from 'react-native';
 import type { Fragrance } from '../types/fragrance';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { Caption, Serif } from './ui/text';
 import { BottleArt } from './BottleArt';
 
+type FragranceRowProps = {
+  fragrance: Fragrance;
+  onPress: () => void;
+  withImage?: boolean;
+  lastWornLabel?: string | null;
+  transitioning?: boolean;
+  onLayout?: ViewProps['onLayout'];
+};
+
 export function FragranceRow({
   fragrance,
   onPress,
   withImage = false,
   lastWornLabel,
-}: {
-  fragrance: Fragrance;
-  onPress: () => void;
-  withImage?: boolean;
-  lastWornLabel?: string | null;
-}) {
+  transitioning = false,
+  onLayout,
+}: FragranceRowProps) {
   const rating = fragrance.rating != null ? fragrance.rating.toFixed(1) : '—';
   const accordPreview = fragrance.accords.slice(0, 3).join(', ');
   const subline = [fragrance.concentration, accordPreview].filter(Boolean).join(' · ');
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && { opacity: 0.75 }]}>
+    <Pressable
+      onPress={onPress}
+      onLayout={onLayout}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${fragrance.brand} ${fragrance.name}`}
+      style={({ pressed }) => [
+        styles.row,
+        pressed && { opacity: 0.75 },
+        transitioning && { opacity: 0 },
+      ]}
+    >
       {withImage && (
         <BottleArt imageUrl={fragrance.image_url} width={56} height={72} />
       )}

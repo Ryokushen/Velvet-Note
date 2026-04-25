@@ -14,6 +14,8 @@ type Props = {
 // Tap dot N to set rating to N; tap again to set to N-0.5.
 export function RatingDots({ value, onChange, label = 'out of ten' }: Props) {
   const readOnly = !onChange;
+  const decrease = () => onChange?.(clampRating(value - 0.5));
+  const increase = () => onChange?.(clampRating(value + 0.5));
   return (
     <View>
       <View style={styles.header}>
@@ -46,8 +48,35 @@ export function RatingDots({ value, onChange, label = 'out of ten' }: Props) {
           );
         })}
       </View>
+      {!readOnly ? (
+        <View style={styles.stepper}>
+          <Pressable
+            onPress={decrease}
+            accessibilityRole="button"
+            accessibilityLabel="Decrease rating by 0.5"
+            hitSlop={6}
+            style={({ pressed }) => [styles.stepButton, pressed && { opacity: 0.75 }]}
+          >
+            <Text style={styles.stepSymbol}>-</Text>
+          </Pressable>
+          <Caption style={styles.stepCaption}>0.5 steps</Caption>
+          <Pressable
+            onPress={increase}
+            accessibilityRole="button"
+            accessibilityLabel="Increase rating by 0.5"
+            hitSlop={6}
+            style={({ pressed }) => [styles.stepButton, pressed && { opacity: 0.75 }]}
+          >
+            <Text style={styles.stepSymbol}>+</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
+}
+
+function clampRating(value: number): number {
+  return Math.max(0, Math.min(10, Math.round(value * 2) / 2));
 }
 
 const styles = StyleSheet.create({
@@ -72,5 +101,31 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     backgroundColor: colors.accent,
+  },
+  stepper: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  stepButton: {
+    width: 32,
+    height: 32,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  stepSymbol: {
+    color: colors.text,
+    fontSize: 18,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  stepCaption: {
+    minWidth: 58,
+    textAlign: 'center',
   },
 });

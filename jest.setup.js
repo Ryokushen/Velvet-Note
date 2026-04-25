@@ -16,3 +16,16 @@ require('@testing-library/jest-native/extend-expect');
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
+
+globalThis.__mockNavigation = {
+  addListener: jest.fn(() => jest.fn()),
+  dispatch: jest.fn(),
+};
+
+jest.mock('@react-navigation/native', () => {
+  const actual = jest.requireActual('@react-navigation/native');
+  return {
+    ...actual,
+    useNavigation: () => globalThis.__mockNavigation,
+  };
+});

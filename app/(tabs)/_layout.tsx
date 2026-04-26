@@ -24,7 +24,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Collection',
-          tabBarLabel: ({ color }) => <Text style={[styles.label, { color }]}>Collection</Text>,
+          tabBarLabel: ({ color }) => <TabLabel color={color}>Collection</TabLabel>,
           tabBarIcon: ({ color }) => <IconBook size={22} color={color} />,
         }}
       />
@@ -32,7 +32,7 @@ export default function TabsLayout() {
         name="calendar"
         options={{
           title: 'Wears',
-          tabBarLabel: ({ color }) => <Text style={[styles.label, { color }]}>Wears</Text>,
+          tabBarLabel: ({ color }) => <TabLabel color={color}>Wears</TabLabel>,
           tabBarIcon: ({ color }) => <IconCalendar size={22} color={color} />,
         }}
       />
@@ -40,7 +40,7 @@ export default function TabsLayout() {
         name="today"
         options={{
           title: 'Today',
-          tabBarLabel: ({ color }) => <Text style={[styles.label, { color }]}>Today</Text>,
+          tabBarLabel: ({ color }) => <TabLabel color={color}>Today</TabLabel>,
           tabBarIcon: ({ color }) => <IconZap size={22} color={color} />,
         }}
       />
@@ -48,7 +48,7 @@ export default function TabsLayout() {
         name="insights"
         options={{
           title: 'Insights',
-          tabBarLabel: ({ color }) => <Text style={[styles.label, { color }]}>Insights</Text>,
+          tabBarLabel: ({ color }) => <TabLabel color={color}>Insights</TabLabel>,
           tabBarIcon: ({ color }) => <IconBarChart size={22} color={color} />,
         }}
       />
@@ -56,7 +56,7 @@ export default function TabsLayout() {
         name="add"
         options={{
           title: 'Add',
-          tabBarLabel: ({ color }) => <Text style={[styles.label, { color }]}>Add</Text>,
+          tabBarLabel: ({ color }) => <TabLabel color={color}>Add</TabLabel>,
           tabBarIcon: ({ color }) => <IconPlus size={22} color={color} />,
         }}
       />
@@ -64,12 +64,28 @@ export default function TabsLayout() {
   );
 }
 
+function TabLabel({ children, color }: { children: string; color: string }) {
+  return (
+    <Text
+      adjustsFontSizeToFit
+      allowFontScaling={false}
+      minimumFontScale={0.82}
+      numberOfLines={1}
+      style={[styles.label, { color }]}
+    >
+      {children}
+    </Text>
+  );
+}
+
 const styles = StyleSheet.create({
   label: {
     fontSize: 10,
-    letterSpacing: 0.9,
+    letterSpacing: 0.25,
     textTransform: 'uppercase',
     fontWeight: '500',
     marginTop: 2,
+    minWidth: 62,
+    textAlign: 'center',
   },
 });

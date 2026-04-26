@@ -12,7 +12,7 @@ Index: [[Fragrance App Index]]
 
 ## Current State
 
-Phase 1.5 wear logging and the Wears UI are shipped on `main`. The route is still `app/(tabs)/calendar.tsx` to avoid route churn, but the product label is now Wears. Day-sheet logging for arbitrary selected dates and curated accord autocomplete were added after the initial Phase 1.5 shipment. Catalog lookup has moved beyond this phase: the local Kaggle lookup was superseded by the Phase 2 shared Supabase catalog search path, catalog image infrastructure is ready for scraper backfill, and self-attached personal photo upload is implemented locally. The personal journal roadmap slice is implemented locally and extends this phase with richer wear context, a new Today tab for the active current-day wear, plus a new Insights tab.
+Phase 1.5 wear logging and the Wears UI are shipped on `main`. The route is still `app/(tabs)/calendar.tsx` to avoid route churn, but the product label is now Wears. Day-sheet logging for arbitrary selected dates and curated accord autocomplete were added after the initial Phase 1.5 shipment. Catalog lookup has moved beyond this phase: the local Kaggle lookup was superseded by the Phase 2 shared Supabase catalog search path, catalog image infrastructure is ready for scraper backfill, and self-attached personal photo upload is implemented locally. The personal journal roadmap slice is implemented and live-migrated, extending this phase with richer wear context, a new Today tab for the active current-day wear, plus a new Insights tab.
 
 Shipped:
 
@@ -70,8 +70,9 @@ Live Supabase project:
 - `/barcode-review` lists, approves, and rejects pending barcode links; admins can reach it from the Collection header after `is_app_admin()` succeeds.
 - `npm run import:barcodes -- path/to/barcode-linkages.csv` imports external barcode mapping data into `catalog_barcodes` with service-role credentials.
 - Barcode live smoke checklist: `docs/barcode-live-smoke-test.md`.
-- Local migration `supabase/migrations/20260425020000_personal_journal_fields.sql` adds the personal journal fields and updates `list_fragrances_with_catalog_images()` to return them. Apply it before live-testing Bottle, Wear Profile, richer wear context, or Insights with Supabase data.
-- Local migration `supabase/migrations/20260425030000_today_active_wear.sql` adds `wears.is_active` and `set_active_wear(wear_id)` for the Today tab. Apply it after the personal journal metadata migration.
+- `supabase/migrations/20260425020000_personal_journal_fields.sql` is applied live; it adds personal journal fields and updates `list_fragrances_with_catalog_images()` to return them.
+- `supabase/migrations/20260425030000_today_active_wear.sql` is applied live; it adds `wears.is_active`, `set_active_wear(wear_id)`, and the one-active-wear-per-user/day index for the Today tab.
+- EAS project `@ryokushen/fragrance-app` is linked for native builds. Android preview uses application id `com.charlesdorfeuille.velvetnote` and the `preview` APK profile in `eas.json`.
 
 ## Verification
 
@@ -97,10 +98,10 @@ Temporary test users were removed from Supabase after verification.
 ## Intentional Gaps
 
 - Barcode scan/review still needs a recorded end-to-end live Supabase smoke pass: unknown scan submission -> review approval -> repeat scan resolves as a catalog match. The checklist is documented in `docs/barcode-live-smoke-test.md`.
-- Personal journal metadata migration still needs a live Supabase apply/smoke pass.
+- Android preview APK needs an on-device smoke pass after install.
 - No dedicated E2E test suite yet; Playwright was used as an ad hoc smoke check.
 - Barcode mapping data still depends on external source/import feeds; the repo now has importer plumbing but not a populated barcode dataset.
 
 ## Next Good Slice
 
-Apply the personal journal metadata and active-wear migrations, then smoke Bottle/Wear Profile/Wears/Today/Insights against live Supabase data. After that, run the live barcode scan/review smoke loop. The next good product slice is either a dedicated E2E smoke suite, barcode data population from a vetted source, or LLM fallback for unknown catalog entries.
+Install the Android preview APK on a physical device and smoke auth, Add, Wears, Today, catalog search, and barcode permission against live Supabase. After that, run the live barcode scan/review smoke loop. The next good product slice is either a dedicated E2E smoke suite, barcode data population from a vetted source, or LLM fallback for unknown catalog entries.

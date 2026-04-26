@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "fragrance-app",
+    "name": "Velvet Note",
     "slug": "fragrance-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.charlesdorfeuille.velvetnote",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -19,7 +20,10 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA"
+      ]
     },
     "web": {
       "output": "static",
@@ -27,6 +31,13 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Velvet Note to scan fragrance barcodes.",
+          "recordAudioAndroid": false
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -43,6 +54,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "cfa658e3-b9f6-4faa-a38b-a5be9bde42d7"
+      }
     }
   }
 }

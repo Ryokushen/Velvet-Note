@@ -34,6 +34,25 @@ npx expo prebuild
 npx expo run:ios   # or run:android
 ```
 
+## Android preview build
+
+The project is linked to EAS under `@ryokushen/fragrance-app`.
+
+Build an installable Android preview APK:
+
+```bash
+npx eas-cli@latest build --platform android --profile preview
+```
+
+Required EAS preview environment variables:
+
+```text
+EXPO_PUBLIC_SUPABASE_URL
+EXPO_PUBLIC_SUPABASE_ANON_KEY
+```
+
+The Android application id is `com.charlesdorfeuille.velvetnote`. The preview profile outputs an APK for direct install on Android devices.
+
 ## Test
 
 ```bash
@@ -58,7 +77,6 @@ Shipped:
 - Online-only (offline is Phase 3)
 
 Deferred to Phase 2:
-- Apply and live-smoke the personal journal metadata migration on Supabase
 - Live barcode scan/review smoke pass
 - Dedicated E2E test suite
 - LLM fallback for unknown entries
@@ -76,6 +94,6 @@ npm run import:barcodes -- path/to/barcode-linkages.csv
 
 Milestones:
 - `phase-1` tag: Phase 1 email/password collection MVP
-- `main`: Phase 1.5 Wears foundation plus Phase 2 shared catalog, imagery, barcode lookup, barcode review, and personal journal foundation
+- `main`: Phase 1.5 Wears foundation plus Phase 2 shared catalog, imagery, barcode lookup, barcode review, personal journal foundation, and Android preview build setup
 
 See `docs/design-spec.md`, `docs/phase-1-plan.md`, `docs/phase-1.5-status.md`, `docs/parfumo-catalog-import.md`, `docs/catalog-barcode-import.md`, and `docs/barcode-live-smoke-test.md` for the full spec, roadmap, and catalog/barcode notes.

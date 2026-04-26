@@ -4,6 +4,7 @@ Run this checklist on a dev build before any demo or release.
 
 ## Setup
 
+- [ ] For Android release smoke, install the latest EAS `preview` APK on a physical Android device
 - [ ] `.env.local` contains valid Supabase URL + anon key
 - [ ] Migrations applied: `fragrances`, `wears`, and `catalog_fragrances` tables exist in Supabase
 - [ ] `search_catalog_fragrances(search_text, match_limit)` RPC exists and is granted to anon/authenticated users

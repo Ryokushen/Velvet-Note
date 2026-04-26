@@ -1,4 +1,5 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 import Today from '../app/(tabs)/today';
 import type { Fragrance } from '../types/fragrance';
 import type { Wear } from '../types/wear';
@@ -6,6 +7,7 @@ import type { Wear } from '../types/wear';
 const mockPush = jest.fn();
 const mockUpdateMutateAsync = jest.fn();
 const mockSetActiveWearMutateAsync = jest.fn();
+const mockAlert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 
 let mockWearsData: Wear[] = [];
 let mockFragrancesData: Fragrance[] = [];
@@ -55,6 +57,7 @@ jest.mock('../hooks/useWears', () => ({
 describe('Today tab', () => {
   beforeEach(() => {
     mockPush.mockReset();
+    mockAlert.mockClear();
     mockUpdateMutateAsync.mockReset();
     mockUpdateMutateAsync.mockResolvedValue({});
     mockSetActiveWearMutateAsync.mockReset();
@@ -281,6 +284,17 @@ describe('Today tab', () => {
     });
   });
 
+  it('alerts when journal save fails', async () => {
+    mockUpdateMutateAsync.mockRejectedValueOnce(new Error('boom'));
+    const { getByText } = render(<Today />);
+
+    fireEvent.press(getByText('Save journal'));
+
+    await waitFor(() => {
+      expect(mockAlert).toHaveBeenCalledWith('Could not save journal', 'Please try again.');
+    });
+  });
+
   it('switches active wear from a stack row', async () => {
     const { getByLabelText } = render(<Today />);
 
@@ -288,6 +302,17 @@ describe('Today tab', () => {
 
     await waitFor(() => {
       expect(mockSetActiveWearMutateAsync).toHaveBeenCalledWith('wear-stack');
+    });
+  });
+
+  it('alerts when switching active wear fails', async () => {
+    mockSetActiveWearMutateAsync.mockRejectedValueOnce(new Error('boom'));
+    const { getByLabelText } = render(<Today />);
+
+    fireEvent.press(getByLabelText('Make Diptyque Tam Dao current'));
+
+    await waitFor(() => {
+      expect(mockAlert).toHaveBeenCalledWith('Could not switch current wear', 'Please try again.');
     });
   });
 });

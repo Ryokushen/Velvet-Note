@@ -89,10 +89,14 @@ export default function Today() {
             }
             onSaveJournal={() => {
               const notes = journal.trim();
-              return updateWear.mutateAsync({
-                id: todayState.active!.wear.id,
-                input: { notes: notes.length > 0 ? notes : null },
-              });
+              return updateWear
+                .mutateAsync({
+                  id: todayState.active!.wear.id,
+                  input: { notes: notes.length > 0 ? notes : null },
+                })
+                .catch(() => {
+                  Alert.alert('Could not save journal', 'Please try again.');
+                });
             }}
             saving={updateWear.isPending}
           />
@@ -105,7 +109,11 @@ export default function Today() {
                   key={row.wear.id}
                   row={row}
                   active={row.wear.id === todayState.active?.wear.id}
-                  onPress={() => setActiveWear.mutateAsync(row.wear.id)}
+                  onPress={() =>
+                    setActiveWear.mutateAsync(row.wear.id).catch(() => {
+                      Alert.alert('Could not switch current wear', 'Please try again.');
+                    })
+                  }
                 />
               ))}
             </View>

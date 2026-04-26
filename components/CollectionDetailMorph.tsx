@@ -17,14 +17,16 @@ import { formatAccordList } from '../lib/accordDisplay';
 import {
   COLLECTION_DETAIL_EASING,
   COLLECTION_DETAIL_MORPH_DURATION_MS,
+  type MorphRect,
 } from '../lib/morphTransition';
 
-export type MorphRect = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
+export type { MorphRect };
+
+const HEADING_ROW_LEFT = 20;
+const HEADING_ROW_TOP = 20;
+const HEADING_DETAIL_LEFT = 24;
+const HEADING_DETAIL_TOP = 76;
+const HEADING_ROW_SCALE = 0.54;
 
 type Props = {
   fragrance: Fragrance;
@@ -82,10 +84,26 @@ export function CollectionDetailMorph({
     const phase = closing ? 1 - progress.value : progress.value;
 
     return {
-      left: interpolate(phase, [0, 1], [20, 24], Extrapolation.CLAMP),
-      top: interpolate(phase, [0, 1], [20, 76], Extrapolation.CLAMP),
       transform: [
-        { scale: interpolate(phase, [0, 1], [0.54, 1], Extrapolation.CLAMP) },
+        {
+          translateX: interpolate(
+            phase,
+            [0, 1],
+            [HEADING_ROW_LEFT - HEADING_DETAIL_LEFT, 0],
+            Extrapolation.CLAMP,
+          ),
+        },
+        {
+          translateY: interpolate(
+            phase,
+            [0, 1],
+            [HEADING_ROW_TOP - HEADING_DETAIL_TOP, 0],
+            Extrapolation.CLAMP,
+          ),
+        },
+        {
+          scale: interpolate(phase, [0, 1], [HEADING_ROW_SCALE, 1], Extrapolation.CLAMP),
+        },
       ],
     };
   }, [closing]);
@@ -212,6 +230,8 @@ const styles = StyleSheet.create({
   },
   sharedHeading: {
     position: 'absolute',
+    left: HEADING_DETAIL_LEFT,
+    top: HEADING_DETAIL_TOP,
     maxWidth: 320,
     transformOrigin: 'left top',
   },

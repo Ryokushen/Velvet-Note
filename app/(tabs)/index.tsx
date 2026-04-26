@@ -6,7 +6,6 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
-  type LayoutRectangle,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,8 +16,8 @@ import {
   CollectionDetailMorph,
   fallbackRowRect,
   runCollectionDetailMorph,
-  type MorphRect,
 } from '../../components/CollectionDetailMorph';
+import { setMorphOrigin, type MorphRect } from '../../lib/morphTransition';
 import { EmptyState } from '../../components/EmptyState';
 import { filterFragrances, sortFragrances, type SortMode } from '../../lib/filters';
 import { formatLastWornShort, latestWearForFragrance } from '../../lib/lastWorn';
@@ -39,7 +38,8 @@ export default function Collection() {
   const [showBarcodeReview, setShowBarcodeReview] = useState(false);
   const [morph, setMorph] = useState<{ fragrance: Fragrance; origin: MorphRect } | null>(null);
   const morphProgress = useSharedValue(0);
-  const rowLayouts = useRef<Record<string, LayoutRectangle>>({});
+  const rowRefs = useRef<Record<string, View | null>>({});
+  const rowRects = useRef<Record<string, MorphRect>>({});
   const morphFrame = useRef<number | null>(null);
   const router = useRouter();
 
@@ -81,19 +81,8 @@ export default function Collection() {
   const isEmpty = !isLoading && !error && count === 0;
 
   function openFragrance(fragrance: Fragrance) {
-    const fallback = fallbackRowRect();
-    const layout = rowLayouts.current[fragrance.id];
-    startFragranceMorph(
-      fragrance,
-      layout
-        ? {
-            x: layout.x,
-            y: fallback.y + layout.y,
-            width: layout.width || fallback.width,
-            height: layout.height || fallback.height,
-          }
-        : fallback,
-    );
+    const cached = rowRects.current[fragrance.id];
+    startFragranceMorph(fragrance, cached ?? fallbackRowRect());
   }
 
   function startFragranceMorph(fragrance: Fragrance, origin: MorphRect) {
@@ -103,6 +92,7 @@ export default function Collection() {
     }
     cancelAnimation(morphProgress);
     morphProgress.value = 0;
+    setMorphOrigin(origin);
     setMorph({ fragrance, origin });
     morphFrame.current = requestAnimationFrame(() => {
       morphFrame.current = null;
@@ -110,6 +100,16 @@ export default function Collection() {
         router.push(`/fragrance/${fragrance.id}?fromCollection=1` as never);
         setMorph(null);
       });
+    });
+  }
+
+  function captureRowRect(id: string) {
+    const node = rowRefs.current[id];
+    if (!node || typeof node.measureInWindow !== 'function') return;
+    node.measureInWindow((x, y, width, height) => {
+      if (width > 0 && height > 0) {
+        rowRects.current[id] = { x, y, width, height };
+      }
     });
   }
 
@@ -187,16 +187,25 @@ export default function Collection() {
               keyExtractor={(f) => f.id}
               contentContainerStyle={{ paddingBottom: 32 }}
               renderItem={({ item }) => (
-                <FragranceRow
-                  onLayout={(event) => {
-                    rowLayouts.current[item.id] = event.nativeEvent.layout;
+                <View
+                  ref={(node) => {
+                    if (node) rowRefs.current[item.id] = node;
+                    else delete rowRefs.current[item.id];
                   }}
-                  fragrance={item}
-                  onPress={() => openFragrance(item)}
-                  withImage
-                  lastWornLabel={lastWornLabel(wears.data, item.id)}
-                  transitioning={morph?.fragrance.id === item.id}
-                />
+                  collapsable={false}
+                  onLayout={() => captureRowRect(item.id)}
+                >
+                  <FragranceRow
+                    fragrance={item}
+                    onPress={() => {
+                      captureRowRect(item.id);
+                      openFragrance(item);
+                    }}
+                    withImage
+                    lastWornLabel={lastWornLabel(wears.data, item.id)}
+                    transitioning={morph?.fragrance.id === item.id}
+                  />
+                </View>
               )}
               refreshing={isRefetching}
               onRefresh={refetch}

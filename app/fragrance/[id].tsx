@@ -43,6 +43,9 @@ import {
   COLLECTION_DETAIL_EASING,
   COLLECTION_DETAIL_MORPH_DURATION_MS,
   DETAIL_CONTENT_FADE_DELAY_MS,
+  getMorphOrigin,
+  setMorphOrigin,
+  type MorphRect,
 } from '../../lib/morphTransition';
 import type { Concentration } from '../../types/fragrance';
 import { colors } from '../../theme/colors';
@@ -120,6 +123,7 @@ export default function Detail() {
   const closeProgress = useSharedValue(0);
   const closeFrame = useRef<number | null>(null);
   const allowRouteRemoval = useRef(false);
+  const closeOriginRef = useRef<MorphRect>(getMorphOrigin() ?? fallbackRowRect());
 
   const startClosingMorph = useCallback((onComplete: () => void) => {
     if (closeFrame.current != null) {
@@ -168,6 +172,7 @@ export default function Detail() {
       if (closeFrame.current != null) {
         cancelAnimationFrame(closeFrame.current);
       }
+      setMorphOrigin(null);
     };
   }, []);
 
@@ -712,7 +717,7 @@ export default function Detail() {
         <CollectionDetailMorph
           closing
           fragrance={fragrance}
-          origin={fallbackRowRect()}
+          origin={closeOriginRef.current}
           progress={closeProgress}
         />
       ) : null}

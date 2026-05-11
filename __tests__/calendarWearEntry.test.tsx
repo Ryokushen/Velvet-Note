@@ -7,6 +7,13 @@ const mockUpdateMutateAsync = jest.fn();
 const mockDeleteMutateAsync = jest.fn();
 const mockSetActiveWearMutateAsync = jest.fn();
 
+const currentTestDate = new Date();
+const currentTestWearLabel = new Date(
+  currentTestDate.getFullYear(),
+  currentTestDate.getMonth(),
+  16,
+).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     push: jest.fn(),
@@ -47,30 +54,38 @@ jest.mock('../hooks/useWears', () => ({
     mutateAsync: mockSetActiveWearMutateAsync,
     isPending: false,
   }),
-  useWearsQuery: () => ({
-    data: [
-      {
-        id: 'wear-1',
-        user_id: 'user-1',
-        fragrance_id: 'fragrance-1',
-        worn_on: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-16`,
-        notes: 'Office day',
-        created_at: '2026-04-16T12:00:00Z',
-        updated_at: '2026-04-16T12:00:00Z',
-      },
-      {
-        id: 'wear-2',
-        user_id: 'user-1',
-        fragrance_id: 'fragrance-2',
-        worn_on: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-16`,
-        notes: 'Rainy commute',
-        created_at: '2026-04-16T10:00:00Z',
-        updated_at: '2026-04-16T10:00:00Z',
-      },
-    ],
-    isLoading: false,
-    error: null,
-  }),
+  useWearsQuery: () => {
+    const now = new Date();
+    const currentWearDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      '0',
+    )}-16`;
+
+    return {
+      data: [
+        {
+          id: 'wear-1',
+          user_id: 'user-1',
+          fragrance_id: 'fragrance-1',
+          worn_on: currentWearDate,
+          notes: 'Office day',
+          created_at: '2026-04-16T12:00:00Z',
+          updated_at: '2026-04-16T12:00:00Z',
+        },
+        {
+          id: 'wear-2',
+          user_id: 'user-1',
+          fragrance_id: 'fragrance-2',
+          worn_on: currentWearDate,
+          notes: 'Rainy commute',
+          created_at: '2026-04-16T10:00:00Z',
+          updated_at: '2026-04-16T10:00:00Z',
+        },
+      ],
+      isLoading: false,
+      error: null,
+    };
+  },
 }));
 
 jest.mock('../hooks/useFragrances', () => ({
@@ -126,7 +141,7 @@ describe('Calendar wear entry', () => {
   it('shows a count badge when a day has multiple wears', () => {
     const { getByLabelText } = render(<CalendarScreen />);
 
-    expect(getByLabelText('2 wears on April 16')).toBeTruthy();
+    expect(getByLabelText(`2 wears on ${currentTestWearLabel}`)).toBeTruthy();
   });
 
   it('logs the selected calendar date for the chosen fragrance', async () => {
@@ -240,7 +255,7 @@ describe('Calendar wear entry', () => {
 
     expect(mockDeleteMutateAsync).not.toHaveBeenCalled();
     expect(getByText('Delete wear?')).toBeTruthy();
-    expect(getByText('Remove Shalimar from April 16?')).toBeTruthy();
+    expect(getByText(`Remove Shalimar from ${currentTestWearLabel}?`)).toBeTruthy();
 
     fireEvent.press(getByText('Delete'));
 

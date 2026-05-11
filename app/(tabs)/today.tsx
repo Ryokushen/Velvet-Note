@@ -102,7 +102,7 @@ export default function Today() {
           />
 
           <View style={styles.section}>
-            <Caption style={{ marginBottom: 12 }}>Today's stack</Caption>
+            <Caption style={{ marginBottom: 12 }}>{"Today's stack"}</Caption>
             <View style={styles.stack}>
               {todayState.stack.map((row) => (
                 <StackRow
@@ -170,7 +170,7 @@ function ActiveWearCard({
     complimentCountRef.current = next;
     lastServerComplimentCountRef.current = next;
     setComplimentCount(next);
-  }, [row.wear.id, row.wear.compliment_count]);
+  }, [activeWearChanged, row.wear.id, row.wear.compliment_count]);
 
   const updateComplimentCount = (delta: number) => {
     const previous = complimentCountRef.current;

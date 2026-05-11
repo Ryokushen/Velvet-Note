@@ -47,7 +47,6 @@ import {
   setMorphOrigin,
   type MorphRect,
 } from '../../lib/morphTransition';
-import type { Concentration } from '../../types/fragrance';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { radius } from '../../theme/spacing';
@@ -58,6 +57,7 @@ import {
   PREFERRED_TIMES_OF_DAY,
   SEASONS,
   type BottleStatus,
+  type Concentration,
   type PreferredTimeOfDay,
   type Season,
 } from '../../types/fragrance';

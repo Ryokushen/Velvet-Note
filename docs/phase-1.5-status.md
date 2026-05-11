@@ -98,10 +98,11 @@ Temporary test users were removed from Supabase after verification.
 ## Intentional Gaps
 
 - Barcode scan/review still needs a recorded end-to-end live Supabase smoke pass: unknown scan submission -> review approval -> repeat scan resolves as a catalog match. The checklist is documented in `docs/barcode-live-smoke-test.md`.
+- The live `catalog_barcodes` table currently has no seeded barcode rows, so the known-barcode path cannot be meaningfully tested until a small trusted starter set is created from physical bottles/boxes or an approved linkage source.
 - Android preview APK needs an on-device smoke pass after install.
 - No dedicated E2E test suite yet; Playwright was used as an ad hoc smoke check.
 - Barcode mapping data still depends on external source/import feeds; the repo now has importer plumbing but not a populated barcode dataset.
 
 ## Next Good Slice
 
-Install the Android preview APK on a physical device and smoke auth, Add, Wears, Today, catalog search, and barcode permission against live Supabase. After that, run the live barcode scan/review smoke loop. The next good product slice is either a dedicated E2E smoke suite, barcode data population from a vetted source, or LLM fallback for unknown catalog entries.
+Install the Android preview APK on a physical device and smoke auth, Add, Wears, Today, catalog search, and barcode permission against live Supabase. Defer the live barcode resolution loop until physical bottles/boxes or a vetted barcode linkage source are available; then seed a tiny starter set and run `docs/barcode-live-smoke-test.md`. The next good product slice while barcode data is blocked is either a dedicated E2E smoke suite or LLM fallback for unknown catalog entries.

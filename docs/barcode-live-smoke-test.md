@@ -12,6 +12,8 @@ unknown scan submission -> admin review approval -> repeat scan resolves as cata
 - [ ] The test barcode is synthetic and unused in `catalog_barcodes`.
 - [ ] Camera access is available, or a generated barcode image can be scanned from another screen/device.
 
+> **Outstanding data item:** As of the latest live Supabase check, `catalog_barcodes` has no seeded rows. Known-barcode resolution needs either a physical bottle/box-derived starter set or a vetted external linkage import before it can be tested with real product barcodes. Until then, use the synthetic unknown -> review -> approve -> rescan loop below to validate scanner plumbing without pretending the shared barcode catalog is populated.
+
 ## Synthetic Barcode Convention
 
 Use a synthetic numeric Code 128 barcode so it cannot be confused with a real UPC/EAN label:

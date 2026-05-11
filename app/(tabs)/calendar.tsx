@@ -28,8 +28,7 @@ import {
   useUpdateWear,
   useWearsQuery,
 } from '../../hooks/useWears';
-import type { Fragrance } from '../../types/fragrance';
-import { SEASONS, type Season } from '../../types/fragrance';
+import { SEASONS, type Fragrance, type Season } from '../../types/fragrance';
 import type { Wear, WearTimeOfDay } from '../../types/wear';
 import { SEASON_LABELS, WEAR_TIME_LABELS, seasonForDate } from '../../lib/journal';
 import { colors } from '../../theme/colors';

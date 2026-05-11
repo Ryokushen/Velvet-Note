@@ -1,6 +1,8 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { View } from 'react-native';
 import Collection from '../app/(tabs)/index';
 import Detail from '../app/fragrance/[id]';
+import { getMorphOrigin, setMorphOrigin } from '../lib/morphTransition';
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -14,6 +16,21 @@ function mockNavigation() {
     addListener: jest.Mock;
     dispatch: jest.Mock;
   };
+}
+
+type MeasureInWindowCallback = (x: number, y: number, width: number, height: number) => void;
+type MeasurableViewPrototype = {
+  measureInWindow: (callback: MeasureInWindowCallback) => void;
+};
+
+function viewPrototype() {
+  return (View as unknown as { prototype: MeasurableViewPrototype }).prototype;
+}
+
+function measureInWindowMock() {
+  return viewPrototype().measureInWindow as jest.MockedFunction<
+    MeasurableViewPrototype['measureInWindow']
+  >;
 }
 
 const fragranceFixture = {
@@ -144,12 +161,17 @@ describe('collection/detail morph transition', () => {
     });
     mockBeforeRemoveListener = null;
     mockParams = { id: 'fragrance-1', fromCollection: undefined };
+    setMorphOrigin(null);
+    jest.spyOn(viewPrototype(), 'measureInWindow').mockImplementation((callback) => {
+      callback(16, 156, 320, 96);
+    });
   });
 
   afterEach(() => {
     act(() => {
       jest.runOnlyPendingTimers();
     });
+    jest.restoreAllMocks();
     jest.useRealTimers();
   });
 
@@ -178,6 +200,26 @@ describe('collection/detail morph transition', () => {
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/fragrance/fragrance-1?fromCollection=1');
     });
+  });
+
+  it('waits for a fresh row window measurement before starting the opening morph', () => {
+    const freshRect = { x: 33, y: 222, width: 321, height: 98 };
+    measureInWindowMock().mockImplementationOnce((callback) => {
+      setTimeout(() => callback(freshRect.x, freshRect.y, freshRect.width, freshRect.height), 0);
+    });
+
+    const { getByLabelText, queryByLabelText } = render(<Collection />);
+
+    fireEvent.press(getByLabelText('Open Serge Lutens Chergui'));
+
+    expect(queryByLabelText('Opening Serge Lutens Chergui')).toBeNull();
+
+    act(() => {
+      jest.advanceTimersByTime(0);
+    });
+
+    expect(getByLabelText('Opening Serge Lutens Chergui')).toBeTruthy();
+    expect(getMorphOrigin()).toEqual(freshRect);
   });
 
   it('delays detail content fade-in after the hero morph target appears', () => {

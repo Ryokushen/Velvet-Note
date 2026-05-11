@@ -81,8 +81,9 @@ export default function Collection() {
   const isEmpty = !isLoading && !error && count === 0;
 
   function openFragrance(fragrance: Fragrance) {
-    const cached = rowRects.current[fragrance.id];
-    startFragranceMorph(fragrance, cached ?? fallbackRowRect());
+    measureRowRect(fragrance.id, (origin) => {
+      startFragranceMorph(fragrance, origin);
+    });
   }
 
   function startFragranceMorph(fragrance: Fragrance, origin: MorphRect) {
@@ -103,13 +104,23 @@ export default function Collection() {
     });
   }
 
-  function captureRowRect(id: string) {
+  function measureRowRect(id: string, onMeasured?: (rect: MorphRect) => void) {
     const node = rowRefs.current[id];
-    if (!node || typeof node.measureInWindow !== 'function') return;
+    const cached = rowRects.current[id];
+    const fallback = cached ?? fallbackRowRect();
+    if (!node || typeof node.measureInWindow !== 'function') {
+      onMeasured?.(fallback);
+      return;
+    }
     node.measureInWindow((x, y, width, height) => {
+      const rect =
+        width > 0 && height > 0
+          ? { x, y, width, height }
+          : fallback;
       if (width > 0 && height > 0) {
-        rowRects.current[id] = { x, y, width, height };
+        rowRects.current[id] = rect;
       }
+      onMeasured?.(rect);
     });
   }
 
@@ -193,14 +204,11 @@ export default function Collection() {
                     else delete rowRefs.current[item.id];
                   }}
                   collapsable={false}
-                  onLayout={() => captureRowRect(item.id)}
+                  onLayout={() => measureRowRect(item.id)}
                 >
                   <FragranceRow
                     fragrance={item}
-                    onPress={() => {
-                      captureRowRect(item.id);
-                      openFragrance(item);
-                    }}
+                    onPress={() => openFragrance(item)}
                     withImage
                     lastWornLabel={lastWornLabel(wears.data, item.id)}
                     transitioning={morph?.fragrance.id === item.id}

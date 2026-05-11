@@ -11,11 +11,27 @@ if (typeof globalThis.__ExpoImportMetaRegistry === 'undefined') {
   });
 }
 
-require('@testing-library/jest-native/extend-expect');
-
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
+
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  const MockIcon = ({ name }) => React.createElement(Text, null, name ?? 'icon');
+
+  return {
+    Feather: MockIcon,
+  };
+});
+
+jest.mock('@expo/vector-icons/MaterialIcons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  return ({ name }) => React.createElement(Text, null, name ?? 'icon');
+});
 
 globalThis.__mockNavigation = {
   addListener: jest.fn(() => jest.fn()),

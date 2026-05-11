@@ -48,15 +48,11 @@ export default function Collection() {
 
     isAppAdmin()
       .then((isAdmin) => {
-        if (mounted) {
-          setShowBarcodeReview(isAdmin);
+        if (mounted && isAdmin) {
+          setShowBarcodeReview(true);
         }
       })
-      .catch(() => {
-        if (mounted) {
-          setShowBarcodeReview(false);
-        }
-      });
+      .catch(() => undefined);
 
     return () => {
       mounted = false;

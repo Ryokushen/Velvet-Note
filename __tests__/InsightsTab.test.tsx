@@ -59,14 +59,17 @@ jest.mock('../hooks/useWears', () => ({
 
 describe('Insights tab', () => {
   it('renders wear intelligence and taste profile summaries', () => {
-    const { getByText } = render(<Insights />);
+    const { getByText, getAllByText } = render(<Insights />);
 
     expect(getByText('Insights')).toBeTruthy();
     expect(getByText('Most worn')).toBeTruthy();
-    expect(getByText('Compliment leaders')).toBeTruthy();
+    expect(getByText('Crowd-pleasers')).toBeTruthy();
+    expect(getByText('Current streak')).toBeTruthy();
+    expect(getByText('Shelf economics')).toBeTruthy();
+    expect(getByText('Year in review')).toBeTruthy();
     expect(getByText('Taste profile')).toBeTruthy();
     expect(getByText('Amber')).toBeTruthy();
-    expect(getByText('Spring')).toBeTruthy();
-    expect(getByText('Night')).toBeTruthy();
+    expect(getAllByText('Spring').length).toBeGreaterThan(0);
+    expect(getAllByText('Night').length).toBeGreaterThan(0);
   });
 });

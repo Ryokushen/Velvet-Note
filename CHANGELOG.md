@@ -1,5 +1,49 @@
 # Changelog
 
+## 2026-07-06 - Wear intelligence, wishlist, grid view, and Year in Review
+
+### Summary
+
+Major feature slice that puts the journal data to work: a scored daily wear suggestion, bottle economics, a real wishlist, one-tap logging, a year heatmap, expanded insights, a Year in Review screen, cached cold starts, and haptics throughout.
+
+### Shipped
+
+- Today tab now opens with a scored "Today's pick" suggestion (season, time of day, rest period, rating, compliments-per-wear) with reasons, shuffle, and one-tap wear (`lib/suggestion.ts`).
+- Bottle economics: cost per wear and estimated remaining ml on the Detail Bottle section, plus shelf value and best-value rankings on Insights (`lib/bottleEconomics.ts`).
+- Collection tab rebuilt: Shelf/Wants/Past segments (wishlist and sold/gifted bottles get their own views), list/grid view toggle (persisted), exposed Top rated/Recent sort, In season and Neglected filter chips, and long-press quick logging with a "Logged today" confirmation.
+- Wishlist conversion: a "Got it — mark as owned" action on wishlist detail pages.
+- Wears tab gained a Year segment with a GitHub-style wear heatmap and per-year navigation (`components/WearHeatmap.tsx`, `lib/wearAnalytics.ts`).
+- Insights expanded with current/longest wear streaks, seasonal signatures, crowd-pleasers ranked by compliments per wear, and shelf economics.
+- New Year in Review screen (`/wrapped`, linked from Insights): total wears, bottles worn, ml sprayed, compliments, fragrance of the year, compliment champion, season/month leaders, longest streak, best value, and bottles added — with per-year browsing.
+- TanStack Query cache now persists to AsyncStorage (7-day window) so the shelf renders instantly on cold start.
+- Haptic feedback on wear logging, segment/filter/sort changes, and view toggles (`lib/haptics.ts`).
+
+### Verification
+
+- `npx tsc --noEmit && npm run lint && npx jest --ci` (39 suites, 216 tests)
+- `EXPO_PUBLIC_SUPABASE_URL=... npx expo export --platform web`
+
+## 2026-07-06 - Rebuild the collection/detail morph as a root overlay
+
+### Summary
+
+Restructured the shared-element transition so navigation happens immediately and the morph card plays over both screens, removing the flash, the double animation, and the blank slide-in that made opening and closing a fragrance feel rough.
+
+### Shipped
+
+- Turned `lib/morphTransition` into a small phase store (`idle → opening → open → closing`) that coordinates the Collection tab, the detail screen, and a new root-level `MorphOverlayHost`.
+- Detail route now pushes instantly as a transparent modal (fade for non-collection entries); the heavy detail mount hides behind the opaque morph card and reveals when the morph settles.
+- Closing pops the route on the next frame so the card shrinks into the real collection row instead of an empty background, then cross-fades out.
+- Backing out mid-open reverses the card along the same path instead of jumping to fullscreen.
+- Rewrote the overlay to animate transforms only (translate + scale with counter-scaled content) — no per-frame layout passes, and the card shadow rasterizes once.
+- Hidden detail content no longer receives touches while the morph plays.
+- Removed the now-unused `transitioning` row prop and the delayed detail content fade.
+
+### Verification
+
+- `npx tsc --noEmit && npm run lint && npx jest --ci`
+- `npx expo export --platform web` (static-renders all routes including the new overlay host)
+
 ## 2026-05-11 - Restore green quality baseline
 
 ### Summary

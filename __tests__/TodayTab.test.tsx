@@ -44,6 +44,10 @@ jest.mock('../hooks/useWears', () => ({
     isLoading: false,
     error: null,
   }),
+  useCreateWear: () => ({
+    mutateAsync: jest.fn(),
+    isPending: false,
+  }),
   useUpdateWear: () => ({
     mutateAsync: mockUpdateMutateAsync,
     isPending: false,

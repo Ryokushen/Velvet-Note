@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import {
-  Animated,
   ScrollView,
   View,
   Text,
@@ -11,7 +10,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Easing,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
@@ -32,25 +30,19 @@ import { Caption, Serif } from '../../components/ui/text';
 import { SectionDivider } from '../../components/ui/SectionDivider';
 import { IconChevronLeft, IconTrash } from '../../components/ui/Icon';
 import { BottleArt } from '../../components/BottleArt';
-import {
-  CollectionDetailMorph,
-  fallbackRowRect,
-  runCollectionDetailMorph,
-} from '../../components/CollectionDetailMorph';
 import { pickPersonalFragrancePhoto, uploadPersonalFragrancePhoto } from '../../lib/fragrancePhotos';
+import { costPerWear, estimatedRemainingMl, formatCostPerWear } from '../../lib/bottleEconomics';
+import { notifySuccess } from '../../lib/haptics';
 import { formatLastWornLong, latestWearForFragrance } from '../../lib/lastWorn';
 import {
-  COLLECTION_DETAIL_EASING,
-  COLLECTION_DETAIL_MORPH_DURATION_MS,
-  DETAIL_CONTENT_FADE_DELAY_MS,
-  getMorphOrigin,
-  setMorphOrigin,
-  type MorphRect,
+  closeMorph,
+  getMorphState,
+  releaseMorph,
+  subscribeToMorph,
 } from '../../lib/morphTransition';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { radius } from '../../theme/spacing';
-import { cancelAnimation, useSharedValue } from 'react-native-reanimated';
 import { formatAccordList } from '../../lib/accordDisplay';
 import {
   BOTTLE_STATUSES,
@@ -117,28 +109,28 @@ export default function Detail() {
   const [complimentCount, setComplimentCount] = useState(0);
   const [complimentNote, setComplimentNote] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [closingToCollection, setClosingToCollection] = useState(false);
   const cameFromCollection = fromCollection === '1';
-  const contentOpacity = useRef(new Animated.Value(cameFromCollection ? 0 : 1)).current;
-  const closeProgress = useSharedValue(0);
+  // While the shared-element morph is still playing over this screen, stay
+  // invisible so the collection shows through the transparent route.
+  const [revealed, setRevealed] = useState(() => {
+    if (!cameFromCollection) return true;
+    const phase = getMorphState().phase;
+    return phase === 'idle' || phase === 'open';
+  });
   const closeFrame = useRef<number | null>(null);
   const allowRouteRemoval = useRef(false);
-  const closeOriginRef = useRef<MorphRect>(getMorphOrigin() ?? fallbackRowRect());
 
-  const startClosingMorph = useCallback((onComplete: () => void) => {
+  const startClosingMorph = useCallback((onReadyToRemove: () => void) => {
     if (closeFrame.current != null) {
-      cancelAnimationFrame(closeFrame.current);
-      closeFrame.current = null;
+      return;
     }
-    setClosingToCollection(true);
-    contentOpacity.setValue(0);
-    cancelAnimation(closeProgress);
-    closeProgress.value = 0;
+    closeMorph();
+    // Give the overlay one frame to cover the screen before the route pops.
     closeFrame.current = requestAnimationFrame(() => {
       closeFrame.current = null;
-      runCollectionDetailMorph(closeProgress, onComplete);
+      onReadyToRemove();
     });
-  }, [closeProgress, contentOpacity]);
+  }, []);
 
   useEffect(() => {
     if (!fragranceId) return;
@@ -172,29 +164,26 @@ export default function Detail() {
       if (closeFrame.current != null) {
         cancelAnimationFrame(closeFrame.current);
       }
-      setMorphOrigin(null);
+      releaseMorph();
     };
   }, []);
 
   useEffect(() => {
-    if (!fragranceId || editing) return;
-    contentOpacity.setValue(cameFromCollection ? 0 : 1);
-    if (cameFromCollection) {
-      Animated.timing(contentOpacity, {
-        toValue: 1,
-        delay: DETAIL_CONTENT_FADE_DELAY_MS,
-        duration: COLLECTION_DETAIL_MORPH_DURATION_MS - DETAIL_CONTENT_FADE_DELAY_MS,
-        easing: Easing.bezier(...COLLECTION_DETAIL_EASING),
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [cameFromCollection, contentOpacity, editing, fragranceId]);
+    if (!cameFromCollection) return undefined;
+
+    return subscribeToMorph((state) => {
+      if (state.phase === 'open' || state.phase === 'idle') {
+        setRevealed(true);
+      }
+    });
+  }, [cameFromCollection]);
 
   useEffect(() => {
     if (!cameFromCollection) return undefined;
 
     const unsubscribe = navigation.addListener('beforeRemove', (event) => {
-      if (allowRouteRemoval.current || editing || closingToCollection) {
+      const phase = getMorphState().phase;
+      if (allowRouteRemoval.current || editing || (phase !== 'open' && phase !== 'opening')) {
         return;
       }
 
@@ -206,7 +195,7 @@ export default function Detail() {
     });
 
     return unsubscribe;
-  }, [cameFromCollection, closingToCollection, editing, navigation, startClosingMorph]);
+  }, [cameFromCollection, editing, navigation, startClosingMorph]);
 
   if (!fragrance) {
     return (
@@ -270,8 +259,21 @@ export default function Detail() {
     }
   }
 
+  async function markAsOwned() {
+    try {
+      await update.mutateAsync({
+        id: fragrance!.id,
+        input: { bottle_status: 'full' },
+      });
+      notifySuccess();
+    } catch (e: any) {
+      Alert.alert('Could not update', e.message ?? 'Unknown error');
+    }
+  }
+
   function goBackToCollection() {
-    if (cameFromCollection && !closingToCollection) {
+    const phase = getMorphState().phase;
+    if (cameFromCollection && (phase === 'open' || phase === 'opening')) {
       startClosingMorph(() => {
         allowRouteRemoval.current = true;
         finishBackToCollection();
@@ -478,7 +480,15 @@ export default function Detail() {
   const lastWear = latestWearForFragrance(wears.data, fragrance.id);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView
+      style={[styles.container, !revealed && styles.containerHidden]}
+      edges={['top']}
+    >
+      <View
+        testID="detail-screen-body"
+        style={[styles.body, !revealed && styles.bodyHidden]}
+        pointerEvents={revealed ? 'auto' : 'none'}
+      >
       <View style={styles.header}>
         <Pressable
           onPress={goBackToCollection}
@@ -546,10 +556,7 @@ export default function Detail() {
               </Serif>
             </View>
           </View>
-          <View
-            testID="detail-hero-image"
-            style={[styles.heroImage, closingToCollection && styles.heroImageClosing]}
-          >
+          <View testID="detail-hero-image" style={styles.heroImage}>
             <BottleArt imageUrl={fragrance.image_url} width={176} height={228} />
           </View>
           {fragrance.concentration ? (
@@ -558,10 +565,22 @@ export default function Detail() {
             </View>
           ) : null}
 
-          <Animated.View
-            testID="detail-delayed-content"
-            style={{ opacity: contentOpacity }}
-          >
+          <View>
+          {fragrance.bottle_status === 'wishlist' ? (
+            <View style={styles.wishlistPanel}>
+              <Caption style={{ marginBottom: 4 }}>On your wishlist</Caption>
+              <Text style={styles.wishlistHint}>
+                Tracked, not owned. Got the bottle? Move it to the shelf.
+              </Text>
+              <PrimaryButton
+                loading={update.isPending}
+                onPress={markAsOwned}
+                accessibilityLabel={`Mark ${fragrance.name} as owned`}
+              >
+                Got it — mark as owned
+              </PrimaryButton>
+            </View>
+          ) : null}
           {lastWear ? (
             <View style={styles.lastWornPanel}>
               <Caption style={{ marginBottom: 6 }}>Last worn</Caption>
@@ -579,7 +598,7 @@ export default function Detail() {
             <>
               <JournalMetadataSection
                 title="Bottle"
-                rows={buildBottleRows(fragrance)}
+                rows={buildBottleRows(fragrance, wears.data?.length ?? 0)}
               />
               <SectionDivider marginVertical={24} />
             </>
@@ -710,17 +729,10 @@ export default function Detail() {
               Remove from shelf
             </GhostButton>
           </View>
-          </Animated.View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
-      {closingToCollection ? (
-        <CollectionDetailMorph
-          closing
-          fragrance={fragrance}
-          origin={closeOriginRef.current}
-          progress={closeProgress}
-        />
-      ) : null}
+      </View>
     </SafeAreaView>
   );
 }
@@ -822,21 +834,32 @@ function hasWearProfile(fragrance: {
   );
 }
 
-function buildBottleRows(fragrance: {
-  bottle_status?: BottleStatus | null;
-  bottle_size_ml?: number | null;
-  purchase_date?: string | null;
-  purchase_source?: string | null;
-  purchase_price?: number | null;
-  purchase_currency?: string | null;
-}) {
+function buildBottleRows(
+  fragrance: {
+    bottle_status?: BottleStatus | null;
+    bottle_size_ml?: number | null;
+    purchase_date?: string | null;
+    purchase_source?: string | null;
+    purchase_price?: number | null;
+    purchase_currency?: string | null;
+  },
+  wearCount: number,
+) {
   const price = formatCurrency(fragrance.purchase_price, fragrance.purchase_currency ?? 'USD');
+  const perWear = formatCostPerWear(
+    costPerWear(fragrance.purchase_price, wearCount),
+    fragrance.purchase_currency ?? 'USD',
+  );
+  const remaining = estimatedRemainingMl(fragrance.bottle_size_ml, wearCount);
   return [
     fragrance.bottle_status
       ? { label: 'Status', value: BOTTLE_STATUS_LABELS[fragrance.bottle_status] }
       : null,
     fragrance.bottle_size_ml
       ? { label: 'Size', value: formatMl(fragrance.bottle_size_ml)! }
+      : null,
+    remaining != null && wearCount > 0
+      ? { label: 'Left (est.)', value: `~${Math.round(remaining)} ml` }
       : null,
     fragrance.purchase_date
       ? { label: 'Purchased', value: formatReadableDate(fragrance.purchase_date) }
@@ -845,6 +868,7 @@ function buildBottleRows(fragrance: {
       ? { label: 'Source', value: fragrance.purchase_source }
       : null,
     price ? { label: 'Price', value: price } : null,
+    perWear ? { label: 'Cost per wear', value: perWear } : null,
   ].filter((row): row is { label: string; value: string } => Boolean(row));
 }
 
@@ -1077,6 +1101,9 @@ function wearSummary(count: number): string {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  containerHidden: { backgroundColor: 'transparent' },
+  body: { flex: 1 },
+  bodyHidden: { opacity: 0 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
   header: {
     height: 52,
@@ -1144,9 +1171,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: 28,
   },
-  heroImageClosing: {
-    opacity: 0,
-  },
   photoEditRow: {
     flexDirection: 'row',
     gap: 14,
@@ -1169,6 +1193,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 30,
+  },
+  wishlistPanel: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    padding: 14,
+    marginBottom: 30,
+  },
+  wishlistHint: {
+    ...typography.bodyDim,
+    color: colors.textDim,
+    marginBottom: 12,
   },
   lastWornValue: {
     fontFamily: typography.serif,

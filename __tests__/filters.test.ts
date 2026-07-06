@@ -1,5 +1,13 @@
-import { filterFragrances, sortFragrances } from '../lib/filters';
+import {
+  NEGLECTED_AFTER_DAYS,
+  applyCollectionFilters,
+  daysSinceWorn,
+  filterFragrances,
+  segmentFragrances,
+  sortFragrances,
+} from '../lib/filters';
 import type { Fragrance } from '../types/fragrance';
+import type { Wear } from '../types/wear';
 
 const frag = (over: Partial<Fragrance> = {}): Fragrance => ({
   id: 'x',
@@ -45,6 +53,102 @@ describe('filterFragrances', () => {
       frag({ id: 'y', accords: ['floral'] }),
     ];
     expect(filterFragrances(list, 'floral')).toHaveLength(1);
+  });
+});
+
+const wear = (over: Partial<Wear> = {}): Wear => ({
+  id: 'w',
+  user_id: 'u',
+  fragrance_id: 'x',
+  worn_on: '2026-07-01',
+  notes: null,
+  created_at: '2026-07-01T00:00:00Z',
+  updated_at: '2026-07-01T00:00:00Z',
+  ...over,
+});
+
+describe('segmentFragrances', () => {
+  const shelfNull = frag({ id: 'null-status' });
+  const shelfFull = frag({ id: 'full', bottle_status: 'full' });
+  const shelfSample = frag({ id: 'sample', bottle_status: 'sample' });
+  const shelfEmpty = frag({ id: 'empty', bottle_status: 'empty' });
+  const want = frag({ id: 'want', bottle_status: 'wishlist' });
+  const sold = frag({ id: 'sold', bottle_status: 'sold' });
+  const gifted = frag({ id: 'gifted', bottle_status: 'gifted' });
+  const all = [shelfNull, shelfFull, shelfSample, shelfEmpty, want, sold, gifted];
+
+  it('shelf keeps owned statuses including empty and unset', () => {
+    expect(segmentFragrances(all, 'shelf').map((f) => f.id)).toEqual([
+      'null-status',
+      'full',
+      'sample',
+      'empty',
+    ]);
+  });
+
+  it('wants keeps only wishlist bottles', () => {
+    expect(segmentFragrances(all, 'wants').map((f) => f.id)).toEqual(['want']);
+  });
+
+  it('past keeps sold and gifted bottles', () => {
+    expect(segmentFragrances(all, 'past').map((f) => f.id)).toEqual(['sold', 'gifted']);
+  });
+});
+
+describe('daysSinceWorn', () => {
+  it('returns whole days between the latest wear and today', () => {
+    const wears = [wear({ worn_on: '2026-06-20' }), wear({ id: 'w2', worn_on: '2026-07-01' })];
+    expect(daysSinceWorn(wears, 'x', '2026-07-06')).toBe(5);
+  });
+
+  it('returns null when the fragrance has never been worn', () => {
+    expect(daysSinceWorn([wear({ fragrance_id: 'other' })], 'x', '2026-07-06')).toBeNull();
+  });
+});
+
+describe('applyCollectionFilters', () => {
+  const context = { todayKey: '2026-07-06', wears: [] as Wear[] };
+
+  it('returns the list untouched with no filters', () => {
+    const list = [frag()];
+    expect(applyCollectionFilters(list, [], context)).toBe(list);
+  });
+
+  it('in-season keeps only explicit current-season matches', () => {
+    const summer = frag({ id: 'summer', preferred_seasons: ['summer'] });
+    const winter = frag({ id: 'winter', preferred_seasons: ['winter'] });
+    const unset = frag({ id: 'unset' });
+    const result = applyCollectionFilters([summer, winter, unset], ['in-season'], context);
+    expect(result.map((f) => f.id)).toEqual(['summer']);
+  });
+
+  it('neglected keeps never-worn and long-rested bottles', () => {
+    const rested = frag({ id: 'rested' });
+    const recent = frag({ id: 'recent' });
+    const never = frag({ id: 'never' });
+    const wears = [
+      wear({ fragrance_id: 'rested', worn_on: '2026-04-01' }),
+      wear({ id: 'w2', fragrance_id: 'recent', worn_on: '2026-07-01' }),
+    ];
+    const result = applyCollectionFilters([rested, recent, never], ['neglected'], {
+      todayKey: '2026-07-06',
+      wears,
+    });
+    expect(result.map((f) => f.id)).toEqual(['rested', 'never']);
+  });
+
+  it('combines filters with AND semantics', () => {
+    const match = frag({ id: 'match', preferred_seasons: ['summer'] });
+    const wrongSeason = frag({ id: 'wrong', preferred_seasons: ['winter'] });
+    const result = applyCollectionFilters([match, wrongSeason], ['in-season', 'neglected'], {
+      todayKey: '2026-07-06',
+      wears: [],
+    });
+    expect(result.map((f) => f.id)).toEqual(['match']);
+  });
+
+  it('exposes the neglect threshold constant', () => {
+    expect(NEGLECTED_AFTER_DAYS).toBe(60);
   });
 });
 

@@ -9,38 +9,67 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFragrancesQuery } from '../../hooks/useFragrances';
 import { useWearsQuery } from '../../hooks/useWears';
+import { useQuickLogWear } from '../../hooks/useQuickLogWear';
 import { FragranceRow } from '../../components/FragranceRow';
-import {
-  CollectionDetailMorph,
-  fallbackRowRect,
-  runCollectionDetailMorph,
-} from '../../components/CollectionDetailMorph';
-import { setMorphOrigin, type MorphRect } from '../../lib/morphTransition';
+import { FragranceGridCell } from '../../components/FragranceGridCell';
+import { FilterChip } from '../../components/ui/FilterChip';
+import { fallbackRowRect } from '../../components/CollectionDetailMorph';
+import { openMorph, type MorphRect } from '../../lib/morphTransition';
 import { EmptyState } from '../../components/EmptyState';
-import { filterFragrances, sortFragrances, type SortMode } from '../../lib/filters';
+import {
+  applyCollectionFilters,
+  filterFragrances,
+  segmentFragrances,
+  sortFragrances,
+  type CollectionFilter,
+  type CollectionSegment,
+  type SortMode,
+} from '../../lib/filters';
 import { formatLastWornShort, latestWearForFragrance } from '../../lib/lastWorn';
+import { todayLocalDate } from '../../lib/todayWear';
+import { tapLight, tapMedium } from '../../lib/haptics';
 import { isAppAdmin } from '../../lib/admin';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { Caption, Serif } from '../../components/ui/text';
-import { IconSearch, IconX, IconLogOut, IconBook } from '../../components/ui/Icon';
+import {
+  IconSearch,
+  IconX,
+  IconLogOut,
+  IconBook,
+  IconGrid,
+  IconList,
+} from '../../components/ui/Icon';
 import type { Fragrance } from '../../types/fragrance';
-import { cancelAnimation, useSharedValue } from 'react-native-reanimated';
+
+type ViewMode = 'list' | 'grid';
+
+const VIEW_MODE_STORAGE_KEY = 'velvet-note-collection-view';
+
+const SEGMENTS: { key: CollectionSegment; label: string }[] = [
+  { key: 'shelf', label: 'Shelf' },
+  { key: 'wants', label: 'Wants' },
+  { key: 'past', label: 'Past' },
+];
 
 export default function Collection() {
   const { data, isLoading, error, refetch, isRefetching } = useFragrancesQuery();
   const wears = useWearsQuery();
+  const { quickLog, pendingFragranceId } = useQuickLogWear();
   const [query, setQuery] = useState('');
-  const [sortMode] = useState<SortMode>('rating');
+  const [segment, setSegment] = useState<CollectionSegment>('shelf');
+  const [sortMode, setSortMode] = useState<SortMode>('rating');
+  const [filters, setFilters] = useState<CollectionFilter[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [showBarcodeReview, setShowBarcodeReview] = useState(false);
-  const [morph, setMorph] = useState<{ fragrance: Fragrance; origin: MorphRect } | null>(null);
-  const morphProgress = useSharedValue(0);
+  const [justLoggedId, setJustLoggedId] = useState<string | null>(null);
+  const justLoggedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rowRefs = useRef<Record<string, View | null>>({});
   const rowRects = useRef<Record<string, MorphRect>>({});
-  const morphFrame = useRef<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -54,6 +83,14 @@ export default function Collection() {
       })
       .catch(() => undefined);
 
+    AsyncStorage.getItem(VIEW_MODE_STORAGE_KEY)
+      .then((stored) => {
+        if (mounted && stored === 'grid') {
+          setViewMode('grid');
+        }
+      })
+      .catch(() => undefined);
+
     return () => {
       mounted = false;
     };
@@ -61,16 +98,33 @@ export default function Collection() {
 
   useEffect(() => {
     return () => {
-      if (morphFrame.current != null) {
-        cancelAnimationFrame(morphFrame.current);
+      if (justLoggedTimer.current != null) {
+        clearTimeout(justLoggedTimer.current);
       }
     };
   }, []);
 
+  const segmentCounts = useMemo(() => {
+    return {
+      shelf: data ? segmentFragrances(data, 'shelf').length : 0,
+      wants: data ? segmentFragrances(data, 'wants').length : 0,
+      past: data ? segmentFragrances(data, 'past').length : 0,
+    };
+  }, [data]);
+
   const visible = useMemo(() => {
     if (!data) return [];
-    return sortFragrances(filterFragrances(data, query), sortMode);
-  }, [data, query, sortMode]);
+    const segmented = segmentFragrances(data, segment);
+    const searched = filterFragrances(segmented, query);
+    const filtered =
+      segment === 'shelf'
+        ? applyCollectionFilters(searched, filters, {
+            todayKey: todayLocalDate(),
+            wears: wears.data,
+          })
+        : searched;
+    return sortFragrances(filtered, sortMode);
+  }, [data, query, segment, filters, sortMode, wears.data]);
 
   const count = data?.length ?? 0;
   const favorites = data?.filter((f) => (f.rating ?? 0) >= 8).length ?? 0;
@@ -78,26 +132,53 @@ export default function Collection() {
 
   function openFragrance(fragrance: Fragrance) {
     measureRowRect(fragrance.id, (origin) => {
-      startFragranceMorph(fragrance, origin);
+      // The morph overlay covers the detail screen while it mounts, so the
+      // push happens immediately and the heavy mount hides behind the card.
+      openMorph(fragrance, origin);
+      router.push(`/fragrance/${fragrance.id}?fromCollection=1` as never);
     });
   }
 
-  function startFragranceMorph(fragrance: Fragrance, origin: MorphRect) {
-    if (morphFrame.current != null) {
-      cancelAnimationFrame(morphFrame.current);
-      morphFrame.current = null;
+  async function handleQuickLog(fragrance: Fragrance) {
+    if (segment !== 'shelf' || pendingFragranceId) return;
+    tapMedium();
+    const result = await quickLog(fragrance);
+    if (result === 'logged') {
+      if (justLoggedTimer.current != null) {
+        clearTimeout(justLoggedTimer.current);
+      }
+      setJustLoggedId(fragrance.id);
+      justLoggedTimer.current = setTimeout(() => {
+        justLoggedTimer.current = null;
+        setJustLoggedId(null);
+      }, 2500);
     }
-    cancelAnimation(morphProgress);
-    morphProgress.value = 0;
-    setMorphOrigin(origin);
-    setMorph({ fragrance, origin });
-    morphFrame.current = requestAnimationFrame(() => {
-      morphFrame.current = null;
-      runCollectionDetailMorph(morphProgress, () => {
-        router.push(`/fragrance/${fragrance.id}?fromCollection=1` as never);
-        setMorph(null);
-      });
-    });
+  }
+
+  function switchSegment(next: CollectionSegment) {
+    if (next === segment) return;
+    tapLight();
+    setSegment(next);
+  }
+
+  function toggleFilter(filter: CollectionFilter) {
+    tapLight();
+    setFilters((current) =>
+      current.includes(filter) ? current.filter((f) => f !== filter) : [...current, filter],
+    );
+  }
+
+  function switchSort(next: SortMode) {
+    if (next === sortMode) return;
+    tapLight();
+    setSortMode(next);
+  }
+
+  function toggleViewMode() {
+    const next: ViewMode = viewMode === 'list' ? 'grid' : 'list';
+    tapLight();
+    setViewMode(next);
+    AsyncStorage.setItem(VIEW_MODE_STORAGE_KEY, next).catch(() => undefined);
   }
 
   function measureRowRect(id: string, onMeasured?: (rect: MorphRect) => void) {
@@ -119,6 +200,13 @@ export default function Collection() {
       onMeasured?.(rect);
     });
   }
+
+  const titleText =
+    segment === 'shelf'
+      ? `${segmentCounts.shelf} ${segmentCounts.shelf === 1 ? 'bottle' : 'bottles'}`
+      : segment === 'wants'
+        ? `${segmentCounts.wants} wanted`
+        : `${segmentCounts.past} moved on`;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -174,25 +262,95 @@ export default function Collection() {
         <>
           <View style={styles.titleBlock}>
             <View style={styles.titleRow}>
-              <Serif size={28}>
-                {count} {count === 1 ? 'bottle' : 'bottles'}
-              </Serif>
-              {favorites > 0 && (
+              <Serif size={28}>{titleText}</Serif>
+              {segment === 'shelf' && favorites > 0 && (
                 <Caption>
                   {favorites} {favorites === 1 ? 'favorite' : 'favorites'}
                 </Caption>
               )}
             </View>
             <SearchField value={query} onChange={setQuery} />
+            <View style={styles.segmentRow}>
+              {SEGMENTS.map(({ key, label }) => (
+                <FilterChip
+                  key={key}
+                  label={label}
+                  active={segment === key}
+                  onPress={() => switchSegment(key)}
+                />
+              ))}
+              <View style={styles.controlsSpacer} />
+              <Pressable
+                onPress={toggleViewMode}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  viewMode === 'list' ? 'Switch to grid view' : 'Switch to list view'
+                }
+                style={styles.iconButton}
+              >
+                {viewMode === 'list' ? (
+                  <IconGrid size={18} color={colors.textMuted} />
+                ) : (
+                  <IconList size={18} color={colors.textMuted} />
+                )}
+              </Pressable>
+            </View>
+            <View style={styles.filterRow}>
+              <FilterChip
+                label="Top rated"
+                active={sortMode === 'rating'}
+                onPress={() => switchSort('rating')}
+              />
+              <FilterChip
+                label="Recent"
+                active={sortMode === 'recent'}
+                onPress={() => switchSort('recent')}
+              />
+              {segment === 'shelf' && (
+                <>
+                  <View style={styles.filterDivider} />
+                  <FilterChip
+                    label="In season"
+                    active={filters.includes('in-season')}
+                    onPress={() => toggleFilter('in-season')}
+                  />
+                  <FilterChip
+                    label="Neglected"
+                    active={filters.includes('neglected')}
+                    onPress={() => toggleFilter('neglected')}
+                  />
+                </>
+              )}
+            </View>
           </View>
 
           {visible.length === 0 ? (
-            <EmptyState title="No matches" hint={`Nothing matched “${query}”.`} />
+            query.length > 0 ? (
+              <EmptyState title="No matches" hint={`Nothing matched “${query}”.`} />
+            ) : segment === 'wants' ? (
+              <EmptyState
+                title="Nothing wanted yet."
+                hint="Set a bottle's status to Wishlist and it will wait for you here."
+              />
+            ) : segment === 'past' ? (
+              <EmptyState
+                title="Nothing has moved on."
+                hint="Bottles marked sold or gifted are archived here."
+              />
+            ) : (
+              <EmptyState title="No matches" hint="Clear the filters to see your shelf." />
+            )
           ) : (
             <FlatList
+              key={viewMode}
               data={visible}
               keyExtractor={(f) => f.id}
-              contentContainerStyle={{ paddingBottom: 32 }}
+              numColumns={viewMode === 'grid' ? 2 : 1}
+              columnWrapperStyle={viewMode === 'grid' ? styles.gridRow : undefined}
+              contentContainerStyle={
+                viewMode === 'grid' ? styles.gridContent : { paddingBottom: 32 }
+              }
               renderItem={({ item }) => (
                 <View
                   ref={(node) => {
@@ -201,14 +359,34 @@ export default function Collection() {
                   }}
                   collapsable={false}
                   onLayout={() => measureRowRect(item.id)}
+                  style={viewMode === 'grid' ? styles.gridCellWrap : undefined}
                 >
-                  <FragranceRow
-                    fragrance={item}
-                    onPress={() => openFragrance(item)}
-                    withImage
-                    lastWornLabel={lastWornLabel(wears.data, item.id)}
-                    transitioning={morph?.fragrance.id === item.id}
-                  />
+                  {viewMode === 'grid' ? (
+                    <FragranceGridCell
+                      fragrance={item}
+                      onPress={() => openFragrance(item)}
+                      onLongPress={
+                        segment === 'shelf' ? () => handleQuickLog(item) : undefined
+                      }
+                      lastWornLabel={
+                        segment === 'shelf' ? lastWornLabel(wears.data, item.id) : null
+                      }
+                      justLogged={justLoggedId === item.id}
+                    />
+                  ) : (
+                    <FragranceRow
+                      fragrance={item}
+                      onPress={() => openFragrance(item)}
+                      onLongPress={
+                        segment === 'shelf' ? () => handleQuickLog(item) : undefined
+                      }
+                      withImage
+                      lastWornLabel={
+                        segment === 'shelf' ? lastWornLabel(wears.data, item.id) : null
+                      }
+                      justLogged={justLoggedId === item.id}
+                    />
+                  )}
                 </View>
               )}
               refreshing={isRefetching}
@@ -225,13 +403,6 @@ export default function Collection() {
           )}
         </>
       )}
-      {morph ? (
-        <CollectionDetailMorph
-          fragrance={morph.fragrance}
-          origin={morph.origin}
-          progress={morphProgress}
-        />
-      ) : null}
     </SafeAreaView>
   );
 }
@@ -291,6 +462,35 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     marginBottom: 16,
   },
+  segmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  controlsSpacer: { flex: 1 },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  filterDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: colors.borderSoft,
+    marginHorizontal: 2,
+  },
+  gridRow: {
+    gap: 12,
+    paddingHorizontal: 20,
+  },
+  gridContent: {
+    gap: 12,
+    paddingBottom: 32,
+    paddingTop: 4,
+  },
+  gridCellWrap: { flex: 1 },
   searchField: {
     height: 44,
     backgroundColor: colors.surface,

@@ -10,18 +10,20 @@ import { BOTTLE_STATUS_LABELS, formatMl } from '../lib/journal';
 type FragranceRowProps = {
   fragrance: Fragrance;
   onPress: () => void;
+  onLongPress?: () => void;
   withImage?: boolean;
   lastWornLabel?: string | null;
-  transitioning?: boolean;
+  justLogged?: boolean;
   onLayout?: ViewProps['onLayout'];
 };
 
 export function FragranceRow({
   fragrance,
   onPress,
+  onLongPress,
   withImage = false,
   lastWornLabel,
-  transitioning = false,
+  justLogged = false,
   onLayout,
 }: FragranceRowProps) {
   const rating = fragrance.rating != null ? fragrance.rating.toFixed(1) : '—';
@@ -34,13 +36,13 @@ export function FragranceRow({
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
       onLayout={onLayout}
       accessibilityRole="button"
       accessibilityLabel={`Open ${fragrance.brand} ${fragrance.name}`}
       style={({ pressed }) => [
         styles.row,
         pressed && { opacity: 0.75 },
-        transitioning && { opacity: 0 },
       ]}
     >
       {withImage && (
@@ -56,7 +58,11 @@ export function FragranceRow({
             {subline}
           </Text>
         ) : null}
-        {lastWornLabel ? (
+        {justLogged ? (
+          <Text style={styles.logged} numberOfLines={1}>
+            Logged today ✓
+          </Text>
+        ) : lastWornLabel ? (
           <Text style={styles.lastWorn} numberOfLines={1}>
             Last worn {lastWornLabel}
           </Text>
@@ -91,6 +97,12 @@ const styles = StyleSheet.create({
     ...typography.bodyDim,
     fontSize: 12,
     color: colors.textMuted,
+    marginTop: 4,
+  },
+  logged: {
+    ...typography.bodyDim,
+    fontSize: 12,
+    color: colors.accent,
     marginTop: 4,
   },
   meta: { alignItems: 'flex-end' },

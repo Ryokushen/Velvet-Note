@@ -1,8 +1,18 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { View } from 'react-native';
 import Collection from '../app/(tabs)/index';
 import Detail from '../app/fragrance/[id]';
-import { getMorphOrigin, setMorphOrigin } from '../lib/morphTransition';
+import { MorphOverlayHost } from '../components/MorphOverlayHost';
+import {
+  COLLECTION_DETAIL_MORPH_DURATION_MS,
+  COLLECTION_DETAIL_SETTLE_FADE_MS,
+  finishMorph,
+  getMorphState,
+  markMorphOpen,
+  openMorph,
+  releaseMorph,
+} from '../lib/morphTransition';
+import type { Fragrance } from '../types/fragrance';
 
 const mockPush = jest.fn();
 const mockBack = jest.fn();
@@ -53,7 +63,9 @@ const fragranceFixture = {
   catalog_perfumers: null,
   created_at: '2026-04-01T00:00:00Z',
   updated_at: '2026-04-01T00:00:00Z',
-};
+} as unknown as Fragrance;
+
+const rowRect = { x: 16, y: 156, width: 320, height: 96 };
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
@@ -87,6 +99,8 @@ jest.mock('../components/ui/Icon', () => {
   return {
     IconBook: MockIcon,
     IconChevronLeft: MockIcon,
+    IconGrid: MockIcon,
+    IconList: MockIcon,
     IconLogOut: MockIcon,
     IconSearch: MockIcon,
     IconTrash: MockIcon,
@@ -145,6 +159,11 @@ jest.mock('../hooks/useWears', () => ({
   }),
 }));
 
+function resetMorphState() {
+  finishMorph();
+  releaseMorph();
+}
+
 describe('collection/detail morph transition', () => {
   beforeEach(() => {
     jest.useFakeTimers();
@@ -161,45 +180,31 @@ describe('collection/detail morph transition', () => {
     });
     mockBeforeRemoveListener = null;
     mockParams = { id: 'fragrance-1', fromCollection: undefined };
-    setMorphOrigin(null);
+    act(() => {
+      resetMorphState();
+    });
     jest.spyOn(viewPrototype(), 'measureInWindow').mockImplementation((callback) => {
-      callback(16, 156, 320, 96);
+      callback(rowRect.x, rowRect.y, rowRect.width, rowRect.height);
     });
   });
 
   afterEach(() => {
     act(() => {
       jest.runOnlyPendingTimers();
+      resetMorphState();
     });
     jest.restoreAllMocks();
     jest.useRealTimers();
   });
 
-  it('holds navigation until the row morph duration completes', async () => {
-    const { getByLabelText, getByTestId } = render(<Collection />);
+  it('starts the morph and pushes the detail route immediately', () => {
+    const { getByLabelText } = render(<Collection />);
 
     fireEvent.press(getByLabelText('Open Serge Lutens Chergui'));
-    act(() => {
-      jest.advanceTimersByTime(0);
-    });
 
-    expect(getByLabelText('Opening Serge Lutens Chergui')).toBeTruthy();
-    expect(getByTestId('morph-hero-image')).toBeTruthy();
-    expect(getByTestId('bottle-art-176x228')).toBeTruthy();
-    expect(mockPush).not.toHaveBeenCalled();
-
-    act(() => {
-      jest.advanceTimersByTime(479);
-    });
-    expect(mockPush).not.toHaveBeenCalled();
-
-    act(() => {
-      jest.advanceTimersByTime(1);
-    });
-
-    await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/fragrance/fragrance-1?fromCollection=1');
-    });
+    expect(getMorphState().phase).toBe('opening');
+    expect(getMorphState().origin).toEqual(rowRect);
+    expect(mockPush).toHaveBeenCalledWith('/fragrance/fragrance-1?fromCollection=1');
   });
 
   it('waits for a fresh row window measurement before starting the opening morph', () => {
@@ -208,41 +213,92 @@ describe('collection/detail morph transition', () => {
       setTimeout(() => callback(freshRect.x, freshRect.y, freshRect.width, freshRect.height), 0);
     });
 
-    const { getByLabelText, queryByLabelText } = render(<Collection />);
+    const { getByLabelText } = render(<Collection />);
 
     fireEvent.press(getByLabelText('Open Serge Lutens Chergui'));
 
-    expect(queryByLabelText('Opening Serge Lutens Chergui')).toBeNull();
+    expect(getMorphState().phase).toBe('idle');
+    expect(mockPush).not.toHaveBeenCalled();
 
     act(() => {
       jest.advanceTimersByTime(0);
     });
 
-    expect(getByLabelText('Opening Serge Lutens Chergui')).toBeTruthy();
-    expect(getMorphOrigin()).toEqual(freshRect);
+    expect(getMorphState().phase).toBe('opening');
+    expect(getMorphState().origin).toEqual(freshRect);
+    expect(mockPush).toHaveBeenCalledWith('/fragrance/fragrance-1?fromCollection=1');
   });
 
-  it('delays detail content fade-in after the hero morph target appears', () => {
+  it('plays the opening morph in the overlay host, then settles and fades out', () => {
+    const { getByLabelText, getByTestId, queryByLabelText } = render(<MorphOverlayHost />);
+
+    act(() => {
+      openMorph(fragranceFixture, rowRect);
+    });
+    act(() => {
+      jest.advanceTimersByTime(0);
+    });
+
+    expect(getByLabelText('Opening Serge Lutens Chergui')).toBeTruthy();
+    expect(getByTestId('morph-hero-image')).toBeTruthy();
+    expect(getByTestId('bottle-art-176x228')).toBeTruthy();
+    expect(getMorphState().phase).toBe('opening');
+
+    act(() => {
+      jest.advanceTimersByTime(COLLECTION_DETAIL_MORPH_DURATION_MS);
+    });
+
+    expect(getMorphState().phase).toBe('open');
+
+    act(() => {
+      jest.advanceTimersByTime(COLLECTION_DETAIL_SETTLE_FADE_MS);
+    });
+
+    expect(queryByLabelText('Opening Serge Lutens Chergui')).toBeNull();
+    expect(getMorphState().phase).toBe('open');
+  });
+
+  it('keeps the detail screen hidden until the opening morph settles', () => {
     mockParams = { id: 'fragrance-1', fromCollection: '1' };
+    act(() => {
+      openMorph(fragranceFixture, rowRect);
+    });
 
     const { getByTestId } = render(<Detail />);
 
-    expect(getByTestId('detail-delayed-content')).toBeTruthy();
+    expect(getByTestId('detail-screen-body')).toHaveStyle({ opacity: 0 });
+
+    act(() => {
+      markMorphOpen();
+    });
+
+    expect(getByTestId('detail-screen-body')).not.toHaveStyle({ opacity: 0 });
   });
 
-  it('uses the same morph duration before navigating back from detail', () => {
+  it('shows the detail screen immediately when opened without a morph', () => {
+    mockParams = { id: 'fragrance-1', fromCollection: undefined };
+
+    const { getByTestId } = render(<Detail />);
+
+    expect(getByTestId('detail-screen-body')).not.toHaveStyle({ opacity: 0 });
+  });
+
+  it('starts the closing morph, then pops the route on the next frame', () => {
     mockParams = { id: 'fragrance-1', fromCollection: '1' };
-    const { getByLabelText, getByTestId } = render(<Detail />);
+    act(() => {
+      openMorph(fragranceFixture, rowRect);
+      markMorphOpen();
+    });
+
+    const { getByLabelText } = render(<Detail />);
 
     fireEvent.press(getByLabelText('Back to collection'));
 
-    expect(getByLabelText('Closing Serge Lutens Chergui')).toBeTruthy();
-    expect(getByTestId('morph-hero-image')).toBeTruthy();
-    expect(getByTestId('detail-hero-image')).toHaveStyle({ opacity: 0 });
+    expect(getMorphState().phase).toBe('closing');
     expect(mockBack).not.toHaveBeenCalled();
 
     act(() => {
-      jest.advanceTimersByTime(480);
+      jest.advanceTimersByTime(0);
     });
 
     expect(mockBack).toHaveBeenCalled();
@@ -250,9 +306,13 @@ describe('collection/detail morph transition', () => {
 
   it('uses the closing morph before dispatching gesture removals', () => {
     mockParams = { id: 'fragrance-1', fromCollection: '1' };
+    act(() => {
+      openMorph(fragranceFixture, rowRect);
+      markMorphOpen();
+    });
     const removalAction = { type: 'POP' };
     const preventDefault = jest.fn();
-    const { getByLabelText } = render(<Detail />);
+    render(<Detail />);
 
     act(() => {
       mockBeforeRemoveListener?.({
@@ -262,13 +322,26 @@ describe('collection/detail morph transition', () => {
     });
 
     expect(preventDefault).toHaveBeenCalled();
-    expect(getByLabelText('Closing Serge Lutens Chergui')).toBeTruthy();
+    expect(getMorphState().phase).toBe('closing');
     expect(mockNavigation().dispatch).not.toHaveBeenCalled();
 
     act(() => {
-      jest.advanceTimersByTime(480);
+      jest.advanceTimersByTime(0);
     });
 
     expect(mockNavigation().dispatch).toHaveBeenCalledWith(removalAction);
+  });
+
+  it('releases a settled morph when the detail screen unmounts without closing', () => {
+    mockParams = { id: 'fragrance-1', fromCollection: '1' };
+    act(() => {
+      openMorph(fragranceFixture, rowRect);
+      markMorphOpen();
+    });
+
+    const { unmount } = render(<Detail />);
+    unmount();
+
+    expect(getMorphState().phase).toBe('idle');
   });
 });

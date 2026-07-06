@@ -27,11 +27,13 @@ const HEADING_ROW_TOP = 20;
 const HEADING_DETAIL_LEFT = 24;
 const HEADING_DETAIL_TOP = 76;
 const HEADING_ROW_SCALE = 0.54;
+const MIN_SCALE = 0.0001;
 
 type Props = {
   fragrance: Fragrance;
   progress: SharedValue<number>;
   origin: MorphRect;
+  overlayOpacity?: SharedValue<number>;
   closing?: boolean;
 };
 
@@ -58,27 +60,61 @@ export function CollectionDetailMorph({
   fragrance,
   progress,
   origin,
+  overlayOpacity,
   closing = false,
 }: Props) {
   const from = closing ? fullScreenRect() : origin;
   const to = closing ? rowTargetRect(origin) : fullScreenRect();
 
-  const overlayStyle = useAnimatedStyle(() => {
+  // The card is laid out at full-screen size once and morphs purely via
+  // translate + scale so no frame ever triggers a layout pass.
+  const fromScaleX = Math.max(from.width / screen.width, MIN_SCALE);
+  const fromScaleY = Math.max(from.height / screen.height, MIN_SCALE);
+  const toScaleX = Math.max(to.width / screen.width, MIN_SCALE);
+  const toScaleY = Math.max(to.height / screen.height, MIN_SCALE);
+
+  const rootStyle = useAnimatedStyle(() => {
+    return {
+      opacity: overlayOpacity ? overlayOpacity.value : 1,
+    };
+  }, [overlayOpacity]);
+
+  const cardSurfaceStyle = useAnimatedStyle(() => {
+    return cardTransform(
+      progress.value,
+      from,
+      to,
+      fromScaleX,
+      fromScaleY,
+      toScaleX,
+      toScaleY,
+    );
+  }, [closing, from.height, from.width, from.x, from.y, to.height, to.width, to.x, to.y]);
+
+  const cardClipStyle = useAnimatedStyle(() => {
+    return cardTransform(
+      progress.value,
+      from,
+      to,
+      fromScaleX,
+      fromScaleY,
+      toScaleX,
+      toScaleY,
+    );
+  }, [closing, from.height, from.width, from.x, from.y, to.height, to.width, to.x, to.y]);
+
+  const contentCounterScaleStyle = useAnimatedStyle(() => {
     const p = progress.value;
+    const scaleX = interpolate(p, [0, 1], [fromScaleX, toScaleX], Extrapolation.CLAMP);
+    const scaleY = interpolate(p, [0, 1], [fromScaleY, toScaleY], Extrapolation.CLAMP);
 
     return {
-      top: interpolate(p, [0, 1], [from.y, to.y], Extrapolation.CLAMP),
-      left: interpolate(p, [0, 1], [from.x, to.x], Extrapolation.CLAMP),
-      width: interpolate(p, [0, 1], [from.width, to.width], Extrapolation.CLAMP),
-      height: interpolate(p, [0, 1], [from.height, to.height], Extrapolation.CLAMP),
-      borderRadius: interpolate(
-        p,
-        [0, 1],
-        closing ? [0, radius.sm] : [radius.sm, 0],
-        Extrapolation.CLAMP,
-      ),
+      transform: [
+        { scaleX: 1 / Math.max(scaleX, MIN_SCALE) },
+        { scaleY: 1 / Math.max(scaleY, MIN_SCALE) },
+      ],
     };
-  }, [closing, from.height, from.width, from.x, from.y, to.height, to.width, to.x, to.y]);
+  }, [closing, fromScaleX, fromScaleY, toScaleX, toScaleY]);
 
   const sharedHeadingStyle = useAnimatedStyle(() => {
     const phase = closing ? 1 - progress.value : progress.value;
@@ -135,42 +171,76 @@ export function CollectionDetailMorph({
     };
   }, [closing]);
 
+  const rowRect = closing ? to : from;
+
   return (
     <Animated.View
       pointerEvents="none"
       accessibilityLabel={`${closing ? 'Closing' : 'Opening'} ${fragrance.brand} ${fragrance.name}`}
-      style={[styles.overlay, overlayStyle]}
+      style={[styles.overlay, rootStyle]}
     >
-      <Animated.View style={[styles.rowLayer, rowLayerStyle]}>
-        <View style={styles.rowMeta}>
-          <Text style={styles.subline} numberOfLines={1}>
-            {[fragrance.concentration, formatAccordList(fragrance.accords.slice(0, 3))]
-              .filter(Boolean)
-              .join(' · ')}
-          </Text>
-          <Text style={styles.rating}>
-            {fragrance.rating != null ? fragrance.rating.toFixed(1) : '-'}
-          </Text>
-        </View>
-      </Animated.View>
+      <Animated.View style={[styles.cardSurface, cardSurfaceStyle]} />
+      <Animated.View style={[styles.cardClip, cardClipStyle]}>
+        <Animated.View style={[styles.contentScale, contentCounterScaleStyle]}>
+          <Animated.View
+            style={[
+              styles.rowLayer,
+              { width: rowRect.width, height: rowRect.height },
+              rowLayerStyle,
+            ]}
+          >
+            <View style={styles.rowMeta}>
+              <Text style={styles.subline} numberOfLines={1}>
+                {[fragrance.concentration, formatAccordList(fragrance.accords.slice(0, 3))]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </Text>
+              <Text style={styles.rating}>
+                {fragrance.rating != null ? fragrance.rating.toFixed(1) : '-'}
+              </Text>
+            </View>
+          </Animated.View>
 
-      <Animated.View style={[styles.detailLayer, detailLayerStyle]}>
-        <Animated.View
-          testID="morph-hero-image"
-          style={[styles.heroImage, heroImageStyle]}
-        >
-          <BottleArt imageUrl={fragrance.image_url} width={176} height={228} />
+          <Animated.View style={[styles.detailLayer, detailLayerStyle]}>
+            <Animated.View
+              testID="morph-hero-image"
+              style={[styles.heroImage, heroImageStyle]}
+            >
+              <BottleArt imageUrl={fragrance.image_url} width={176} height={228} />
+            </Animated.View>
+          </Animated.View>
+
+          <Animated.View style={[styles.sharedHeading, sharedHeadingStyle]}>
+            <Text style={styles.brand}>{fragrance.brand}</Text>
+            <Text style={styles.name} numberOfLines={2}>
+              {fragrance.name}
+            </Text>
+          </Animated.View>
         </Animated.View>
-      </Animated.View>
-
-      <Animated.View style={[styles.sharedHeading, sharedHeadingStyle]}>
-        <Text style={styles.brand}>{fragrance.brand}</Text>
-        <Text style={styles.name} numberOfLines={2}>
-          {fragrance.name}
-        </Text>
       </Animated.View>
     </Animated.View>
   );
+}
+
+function cardTransform(
+  p: number,
+  from: MorphRect,
+  to: MorphRect,
+  fromScaleX: number,
+  fromScaleY: number,
+  toScaleX: number,
+  toScaleY: number,
+) {
+  'worklet';
+
+  return {
+    transform: [
+      { translateX: interpolate(p, [0, 1], [from.x, to.x], Extrapolation.CLAMP) },
+      { translateY: interpolate(p, [0, 1], [from.y, to.y], Extrapolation.CLAMP) },
+      { scaleX: interpolate(p, [0, 1], [fromScaleX, toScaleX], Extrapolation.CLAMP) },
+      { scaleY: interpolate(p, [0, 1], [fromScaleY, toScaleY], Extrapolation.CLAMP) },
+    ],
+  };
 }
 
 export function fallbackRowRect(): MorphRect {
@@ -200,20 +270,50 @@ function rowTargetRect(origin: MorphRect): MorphRect {
 
 const styles = StyleSheet.create({
   overlay: {
-    position: 'absolute',
+    ...StyleSheet.absoluteFillObject,
     zIndex: 20,
-    elevation: 20,
-    overflow: 'hidden',
+  },
+  cardSurface: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: screen.width,
+    height: screen.height,
+    transformOrigin: 'top left',
+    borderRadius: radius.sm,
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.borderSoft,
+    elevation: 20,
     shadowColor: '#000',
     shadowOpacity: 0.28,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
   },
+  cardClip: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: screen.width,
+    height: screen.height,
+    transformOrigin: 'top left',
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+    elevation: 20,
+  },
+  contentScale: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: screen.width,
+    height: screen.height,
+    transformOrigin: 'top left',
+  },
   rowLayer: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
     paddingHorizontal: 20,
     paddingTop: 62,
   },
@@ -224,7 +324,11 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   detailLayer: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: screen.width,
+    height: screen.height,
     paddingTop: 164,
     paddingHorizontal: 24,
   },

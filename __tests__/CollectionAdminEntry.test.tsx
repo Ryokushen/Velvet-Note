@@ -23,6 +23,8 @@ jest.mock('../hooks/useFragrances', () => ({
 
 jest.mock('../hooks/useWears', () => ({
   useWearsQuery: () => mockUseWearsQuery(),
+  useCreateWear: () => ({ mutateAsync: jest.fn(), isPending: false }),
+  useSetActiveWear: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }));
 
 jest.mock('../lib/admin', () => ({

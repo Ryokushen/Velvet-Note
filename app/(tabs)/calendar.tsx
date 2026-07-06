@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/EmptyState';
+import { WearHeatmap } from '../../components/WearHeatmap';
 import { Caption, Serif } from '../../components/ui/text';
 import {
   IconChevronLeft,
@@ -36,7 +37,7 @@ import { FAMILY, type Family } from '../../theme/families';
 import { radius } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 
-type CalendarMode = 'month' | 'bottle';
+type CalendarMode = 'month' | 'bottle' | 'year';
 type WearBuckets = Map<string, Wear[]>;
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -77,6 +78,12 @@ export default function CalendarScreen() {
     [wears.data, visibleMonth],
   );
 
+  const visibleYear = visibleMonth.getFullYear();
+  const yearWears = useMemo(
+    () => (wears.data ?? []).filter((wear) => wear.worn_on.startsWith(`${visibleYear}-`)),
+    [wears.data, visibleYear],
+  );
+
   const wearBuckets = useMemo(() => groupWearsByDate(monthWears), [monthWears]);
   const bottleCount = useMemo(
     () => new Set(monthWears.map((wear) => wear.fragrance_id)).size,
@@ -94,6 +101,10 @@ export default function CalendarScreen() {
     setVisibleMonth(next);
     setSelectedDate(isSameMonth(new Date(), next) ? todayLocalDate() : '');
     resetWearEntry();
+  }
+
+  function changePeriod(delta: number) {
+    changeMonth(mode === 'year' ? delta * 12 : delta);
   }
 
   function selectDate(dateKey: string) {
@@ -218,21 +229,25 @@ export default function CalendarScreen() {
         <ScrollView contentContainerStyle={styles.scroll}>
           <View style={styles.titleBlock}>
             <View style={styles.monthRow}>
-              <Pressable onPress={() => changeMonth(-1)} style={styles.monthButton} hitSlop={8}>
+              <Pressable onPress={() => changePeriod(-1)} style={styles.monthButton} hitSlop={8}>
                 <IconChevronLeft size={18} color={colors.textMuted} />
               </Pressable>
               <View style={styles.monthTitle}>
-                <Serif size={28}>{formatMonthName(visibleMonth)}</Serif>
-                <Caption>{String(visibleMonth.getFullYear())}</Caption>
+                <Serif size={28}>
+                  {mode === 'year' ? String(visibleYear) : formatMonthName(visibleMonth)}
+                </Serif>
+                {mode !== 'year' && <Caption>{String(visibleYear)}</Caption>}
               </View>
-              <Pressable onPress={() => changeMonth(1)} style={styles.monthButton} hitSlop={8}>
+              <Pressable onPress={() => changePeriod(1)} style={styles.monthButton} hitSlop={8}>
                 <IconChevronRight size={18} color={colors.textMuted} />
               </Pressable>
             </View>
-            <Caption style={{ color: colors.textMuted }}>
-              {monthWears.length} {monthWears.length === 1 ? 'wear' : 'wears'} / {bottleCount}{' '}
-              {bottleCount === 1 ? 'bottle' : 'bottles'}
-            </Caption>
+            {mode !== 'year' && (
+              <Caption style={{ color: colors.textMuted }}>
+                {monthWears.length} {monthWears.length === 1 ? 'wear' : 'wears'} / {bottleCount}{' '}
+                {bottleCount === 1 ? 'bottle' : 'bottles'}
+              </Caption>
+            )}
             <SegmentedControl value={mode} onChange={setMode} />
           </View>
 
@@ -334,12 +349,18 @@ export default function CalendarScreen() {
                 />
               ) : null}
             </>
-          ) : (
+          ) : mode === 'bottle' ? (
             <ByBottleView
               fragrances={fragrances.data ?? []}
               wears={monthWears}
               visibleMonth={visibleMonth}
               onOpenFragrance={(fragranceId) => router.push(`/fragrance/${fragranceId}` as never)}
+            />
+          ) : (
+            <WearHeatmap
+              wears={yearWears}
+              year={visibleYear}
+              currentYear={visibleYear === new Date().getFullYear()}
             />
           )}
         </ScrollView>
@@ -357,7 +378,7 @@ function SegmentedControl({
 }) {
   return (
     <View style={styles.segmented}>
-      {(['month', 'bottle'] as CalendarMode[]).map((mode) => {
+      {(['month', 'bottle', 'year'] as CalendarMode[]).map((mode) => {
         const selected = value === mode;
         return (
           <Pressable
@@ -366,7 +387,7 @@ function SegmentedControl({
             style={[styles.segment, selected && styles.segmentSelected]}
           >
             <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>
-              {mode === 'month' ? 'Month' : 'By bottle'}
+              {mode === 'month' ? 'Month' : mode === 'bottle' ? 'By bottle' : 'Year'}
             </Text>
           </Pressable>
         );

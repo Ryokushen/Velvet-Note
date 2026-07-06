@@ -57,6 +57,8 @@ jest.mock('../components/ui/Icon', () => {
   const { Text } = require('react-native');
   return {
     IconChevronLeft: () => React.createElement(Text),
+    IconGrid: () => React.createElement(Text),
+    IconList: () => React.createElement(Text),
     IconLogOut: () => React.createElement(Text),
     IconSearch: () => React.createElement(Text),
     IconTrash: () => React.createElement(Text),

@@ -28,3 +28,5 @@ export const IconCalendar = makeIcon('calendar');
 export const IconCamera = makeIcon('camera');
 export const IconBarChart = makeIcon('bar-chart-2');
 export const IconZap = makeIcon('zap');
+export const IconGrid = makeIcon('grid');
+export const IconList = makeIcon('list');

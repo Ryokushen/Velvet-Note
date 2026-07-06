@@ -13,10 +13,14 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottleArt } from '../../components/BottleArt';
 import { EmptyState } from '../../components/EmptyState';
+import { SuggestionCard } from '../../components/SuggestionCard';
 import { GhostButton, PrimaryButton } from '../../components/ui/Button';
 import { Caption, Serif } from '../../components/ui/text';
 import { useFragrancesQuery } from '../../hooks/useFragrances';
+import { useQuickLogWear } from '../../hooks/useQuickLogWear';
 import { useSetActiveWear, useUpdateWear, useWearsQuery } from '../../hooks/useWears';
+import { tapLight } from '../../lib/haptics';
+import { suggestWears } from '../../lib/suggestion';
 import {
   clampComplimentCount,
   selectTodayWearState,
@@ -39,10 +43,24 @@ export default function Today() {
     [wears.data, fragrances.data, today],
   );
   const [journal, setJournal] = useState(todayState.active?.wear.notes ?? '');
+  const { quickLog, pendingFragranceId } = useQuickLogWear();
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
 
   useEffect(() => {
     setJournal(todayState.active?.wear.notes ?? '');
   }, [todayState.active?.wear.id, todayState.active?.wear.notes]);
+
+  const suggestions = useMemo(() => {
+    if (!fragrances.data || !wears.data) return [];
+    return suggestWears({
+      fragrances: fragrances.data,
+      wears: wears.data,
+      todayKey: today,
+      hour: new Date().getHours(),
+    });
+  }, [fragrances.data, wears.data, today]);
+  const suggestion =
+    suggestions.length > 0 ? suggestions[suggestionIndex % suggestions.length] : null;
 
   const loading = wears.isLoading || fragrances.isLoading;
   const error = wears.error || fragrances.error;
@@ -65,16 +83,40 @@ export default function Today() {
           hint={error instanceof Error ? error.message : 'Unknown error'}
         />
       ) : !todayState.active ? (
-        <View style={styles.emptyWrap}>
-          <EmptyState
-            title="Nothing logged today."
-            hint="Log a wear from your calendar or choose a bottle from your collection."
-          />
-          <View style={styles.emptyActions}>
-            <PrimaryButton onPress={() => router.push('/calendar')}>Open Wears</PrimaryButton>
-            <GhostButton onPress={() => router.push('/')}>Open Collection</GhostButton>
+        suggestion ? (
+          <ScrollView contentContainerStyle={styles.scroll}>
+            <SuggestionCard
+              suggestion={suggestion}
+              wearing={pendingFragranceId === suggestion.fragrance.id}
+              canShuffle={suggestions.length > 1}
+              onWear={() => {
+                quickLog(suggestion.fragrance).catch(() => undefined);
+              }}
+              onShuffle={() => {
+                tapLight();
+                setSuggestionIndex((current) => current + 1);
+              }}
+            />
+            <View style={styles.suggestionFootnote}>
+              <Caption>Or pick one yourself</Caption>
+            </View>
+            <View style={styles.suggestionActions}>
+              <PrimaryButton onPress={() => router.push('/calendar')}>Open Wears</PrimaryButton>
+              <GhostButton onPress={() => router.push('/')}>Open Collection</GhostButton>
+            </View>
+          </ScrollView>
+        ) : (
+          <View style={styles.emptyWrap}>
+            <EmptyState
+              title="Nothing logged today."
+              hint="Log a wear from your calendar or choose a bottle from your collection."
+            />
+            <View style={styles.emptyActions}>
+              <PrimaryButton onPress={() => router.push('/calendar')}>Open Wears</PrimaryButton>
+              <GhostButton onPress={() => router.push('/')}>Open Collection</GhostButton>
+            </View>
           </View>
-        </View>
+        )
       ) : (
         <ScrollView contentContainerStyle={styles.scroll}>
           <ActiveWearCard
@@ -353,6 +395,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
+  },
+  suggestionFootnote: {
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
+  suggestionActions: {
+    gap: spacing.sm,
   },
   scroll: {
     padding: spacing.lg,

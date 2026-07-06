@@ -63,18 +63,20 @@ npm test
 
 Shipped:
 - Auth: email/password
-- Collection list with search
+- Collection tab with search, Shelf/Wants/Past segments, list/grid view toggle, Top rated/Recent sort, In season/Neglected filters, and long-press one-tap wear logging
 - Five-tab personal journal shell: Collection, Wears, Today, Insights, Add
 - Add fragrance: Supabase catalog lookup/prefill, brand, name, concentration, curated/free-text accords, personal rating, optional bottle metadata, and ideal wear profile
-- Detail view with catalog/personal bottle art, notes, Bottle section, Wear Profile section, edit, and delete
+- Detail view with catalog/personal bottle art, notes, Bottle section (incl. cost per wear and estimated remaining ml), Wear Profile section, wishlist-to-owned conversion, edit, and delete
 - Wear logging from fragrance detail and selected Wears days, including optional season, day/night, occasion, compliment count, and compliment note
-- Wears tab with month grid, same-day wear counts, selected-day detail/edit/delete, and by-bottle view
-- Today tab for the active current-day wear, compliment stepper, journal note, and same-day wear stack
-- Insights tab with client-derived most worn, neglected bottles, compliment leaders, seasonal/day-night tendencies, and taste profile
+- Wears tab with month grid, same-day wear counts, selected-day detail/edit/delete, by-bottle view, and a year heatmap
+- Today tab for the active current-day wear, compliment stepper, journal note, same-day wear stack, and a scored "Today's pick" suggestion with shuffle and one-tap wear
+- Insights tab with client-derived most worn, neglected bottles, crowd-pleasers (compliments per wear), seasonal signatures, wear streaks, shelf economics, seasonal/day-night tendencies, and taste profile
+- Year in Review screen (per-year wear story: totals, fragrance of the year, champion, streaks, best value)
 - Shared Parfumo catalog in Supabase with brand/name/accord/note search ranking
 - Catalog image fallback and self-attached personal bottle photos
 - Barcode scanner flow with exact lookup, unknown-link submissions, admin review, and barcode import tooling
-- Online-only (offline is Phase 3)
+- Query cache persistence via AsyncStorage (instant shelf on cold start; full offline is Phase 3)
+- Haptic feedback on logging, filters, and key actions
 
 Deferred to Phase 2:
 - Live barcode scan/review smoke pass

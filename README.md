@@ -96,6 +96,6 @@ npm run import:barcodes -- path/to/barcode-linkages.csv
 
 Milestones:
 - `phase-1` tag: Phase 1 email/password collection MVP
-- `main`: Phase 1.5 Wears foundation plus Phase 2 shared catalog, imagery, barcode lookup, barcode review, personal journal foundation, and Android preview build setup
+- `main`: Phase 1.5 Wears foundation plus Phase 2 shared catalog, imagery, barcode lookup, barcode review, personal journal foundation, Android preview build setup, and the wear-intelligence slice (suggestions, economics, wishlist, grid, heatmap, Year in Review)
 
 See `docs/design-spec.md`, `docs/phase-1-plan.md`, `docs/phase-1.5-status.md`, `docs/parfumo-catalog-import.md`, `docs/catalog-barcode-import.md`, and `docs/barcode-live-smoke-test.md` for the full spec, roadmap, and catalog/barcode notes.

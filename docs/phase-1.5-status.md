@@ -14,6 +14,8 @@ Index: [[Fragrance App Index]]
 
 Phase 1.5 wear logging and the Wears UI are shipped on `main`. The route is still `app/(tabs)/calendar.tsx` to avoid route churn, but the product label is now Wears. Day-sheet logging for arbitrary selected dates and curated accord autocomplete were added after the initial Phase 1.5 shipment. Catalog lookup has moved beyond this phase: the local Kaggle lookup was superseded by the Phase 2 shared Supabase catalog search path, catalog image infrastructure is ready for scraper backfill, and self-attached personal photo upload is implemented locally. The personal journal roadmap slice is implemented and live-migrated, extending this phase with richer wear context, a new Today tab for the active current-day wear, plus a new Insights tab.
 
+The 2026-07-06 wear-intelligence slice (`c3c52ea`) builds on all of that with client-only features — no new migrations: a scored Today's-pick suggestion, bottle economics (cost per wear, estimated remaining ml, shelf value), Collection Shelf/Wants/Past segments with wishlist conversion, a persisted list/grid toggle, exposed sort plus In season/Neglected filters, long-press quick logging with haptics, a year wear heatmap on Wears, expanded Insights (streaks, seasonal signatures, crowd-pleasers, economics), a `/wrapped` Year in Review screen, and AsyncStorage-persisted query cache. The same commit rebuilt the Collection-to-Detail shared-element morph as a root-level overlay over an instant transparent-modal push.
+
 Shipped:
 
 - `wears` Supabase table with RLS, owner checks, indexes, and `updated_at` trigger.
@@ -36,6 +38,15 @@ Shipped:
 - Local Kaggle catalog import, retained as a lightweight image/source dataset.
 - Shared Supabase `catalog_fragrances` lookup and Add-screen prefill, still saved as user-owned `fragrances` rows with optional catalog metadata.
 - Velvet Note handoff checked in under `docs/design-handoff/velvet-note/`.
+- Today's-pick suggestion card with deterministic scoring, reasons, shuffle, and one-tap wear (`lib/suggestion.ts`, `components/SuggestionCard.tsx`).
+- Bottle economics: cost per wear and estimated remaining ml on Detail, shelf value and best value on Insights (`lib/bottleEconomics.ts`).
+- Collection Shelf/Wants/Past segments, persisted list/grid view toggle, Top rated/Recent sort chips, In season/Neglected filters, and long-press quick logging with haptic feedback.
+- Wishlist-to-owned conversion action on wishlist Detail pages.
+- Year wear heatmap segment on Wears with per-year navigation (`components/WearHeatmap.tsx`, `lib/wearAnalytics.ts`).
+- Insights: current/longest streaks, seasonal signatures, crowd-pleasers by compliments per wear, and shelf economics sections, plus a Year in Review entry card.
+- `/wrapped` Year in Review screen with per-year browsing.
+- TanStack Query cache persisted to AsyncStorage (7-day window) for instant cold-start shelf renders.
+- Root-overlay shared-element morph between Collection and Detail (instant push, transform-only animation, mid-open reversal).
 
 Key commits:
 
@@ -52,6 +63,8 @@ Key commits:
 - `eb1e752` - admin-only Collection entry for barcode review.
 - `49a5864` - CSV barcode linkage import tooling.
 - `b1c091c` - repeatable barcode live smoke-test checklist.
+- `2d326c3` / `820e09d` - green quality baseline (dependency realignment, jest-expo fixes).
+- `c3c52ea` - wear-intelligence slice and root-overlay morph transition.
 
 Live Supabase project:
 
@@ -76,7 +89,16 @@ Live Supabase project:
 
 ## Verification
 
-Static checks for the latest Wears, accord, catalog, and personal journal follow-ups:
+Static checks for the 2026-07-06 wear-intelligence slice (Linux, Darter Pro):
+
+```bash
+npx tsc --noEmit
+npm run lint
+npx jest --ci        # 39 suites, 216 tests
+EXPO_PUBLIC_SUPABASE_URL=... EXPO_PUBLIC_SUPABASE_ANON_KEY=... npx expo export --platform web
+```
+
+Historical Windows commands from the original Phase 1.5 verification:
 
 ```powershell
 npm.cmd test -- --runInBand
@@ -99,10 +121,11 @@ Temporary test users were removed from Supabase after verification.
 
 - Barcode scan/review still needs a recorded end-to-end live Supabase smoke pass: unknown scan submission -> review approval -> repeat scan resolves as a catalog match. The checklist is documented in `docs/barcode-live-smoke-test.md`.
 - The live `catalog_barcodes` table currently has no seeded barcode rows, so the known-barcode path cannot be meaningfully tested until a small trusted starter set is created from physical bottles/boxes or an approved linkage source.
-- Android preview APK needs an on-device smoke pass after install.
+- Android preview APK was rebuilt 2026-07-06 with the wear-intelligence slice (EAS build `22ccdcd7`, staged at `builds/velvet-note-preview-2026-07-06.apk`, gitignored) but still needs an on-device smoke pass — including the morph transition feel, suggestion scoring sanity, and haptic weights.
 - No dedicated E2E test suite yet; Playwright was used as an ad hoc smoke check.
 - Barcode mapping data still depends on external source/import feeds; the repo now has importer plumbing but not a populated barcode dataset.
+- The suggestion engine is season/time-based only; live weather needs `expo-location` (native rebuild) and is deferred.
 
 ## Next Good Slice
 
-Install the Android preview APK on a physical device and smoke auth, Add, Wears, Today, catalog search, and barcode permission against live Supabase. Defer the live barcode resolution loop until physical bottles/boxes or a vetted barcode linkage source are available; then seed a tiny starter set and run `docs/barcode-live-smoke-test.md`. The next good product slice while barcode data is blocked is either a dedicated E2E smoke suite or LLM fallback for unknown catalog entries.
+Install the freshly staged preview APK (`builds/velvet-note-preview-2026-07-06.apk`) on a physical device and smoke the full current surface against live Supabase: auth, Add, Collection segments/grid/quick-log, morph transition, Wears month + year heatmap, Today suggestion card, Insights, Year in Review, catalog search, and barcode permission. Tune the feel constants if needed (`SUGGESTION_WEIGHTS` in `lib/suggestion.ts`, `ML_PER_WEAR` in `lib/bottleEconomics.ts`, morph timing in `lib/morphTransition.ts`). Defer the live barcode resolution loop until physical bottles/boxes or a vetted barcode linkage source are available; then seed a tiny starter set and run `docs/barcode-live-smoke-test.md`. The next good product slices after device smoke: a dedicated E2E smoke suite, LLM fallback for unknown catalog entries, or weather-aware suggestions (needs `expo-location`).

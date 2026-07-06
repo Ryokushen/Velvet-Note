@@ -35,8 +35,19 @@ Run this checklist on a dev build before any demo or release.
 - [ ] Empty state shown when no fragrances
 - [ ] Pull to refresh works
 - [ ] Network off renders cached data when available, error state on hard refresh
+- [ ] Cold start renders the cached shelf immediately (persisted query cache), then refreshes
 - [ ] Bottles with wear history show a compact last-worn label in the row
 - [ ] Bottles with saved status/size show that metadata lightly in the row
+- [ ] Shelf / Wants / Past segments filter by bottle status; wishlist bottles appear only under Wants, sold/gifted only under Past
+- [ ] Wants and Past have their own empty states
+- [ ] Grid/list toggle switches layouts and the choice survives an app restart
+- [ ] Top rated / Recent sort chips reorder the list
+- [ ] In season filter keeps only bottles whose preferred seasons include the current season
+- [ ] Neglected filter keeps never-worn bottles and those unworn for 60+ days
+- [ ] Long-press on a shelf row or grid cell logs a wear: haptic fires, "Logged today ✓" appears, and the wear shows in Today/Wears
+- [ ] Long-press does nothing on Wants and Past segments
+- [ ] Opening a bottle plays the morph: card grows from the row/cell with no flash, blank frame, or double animation
+- [ ] Back from detail shrinks the card into the actual list row over the visible collection
 
 ## Add
 
@@ -71,6 +82,9 @@ Run this checklist on a dev build before any demo or release.
 - [ ] Edit Attach photo uploads a replacement personal bottle photo and persists it after Save
 - [ ] Edit cancel discards changes
 - [ ] Delete confirm removes row from Collection
+- [ ] Bottle section shows "Cost per wear" when purchase price and wears exist
+- [ ] Bottle section shows "Left (est.)" when bottle size and wears exist
+- [ ] Wishlist bottles show the "On your wishlist" panel; "Got it — mark as owned" moves the bottle to Shelf
 
 ## Wears
 
@@ -86,11 +100,17 @@ Run this checklist on a dev build before any demo or release.
 - [ ] Logged wear appears in the selected-day detail sheet
 - [ ] By bottle toggle shows last-worn status and sparkline markers
 - [ ] Month previous/next controls navigate without crashing
+- [ ] Year segment renders the heatmap with month labels and intensity legend
+- [ ] Heatmap cell intensity scales with wears per day; footer shows the year total
+- [ ] Year chevrons navigate between years; current year auto-scrolls to today
 
 ## Today
 
 - [ ] Today tab appears between Wears and Insights
-- [ ] Empty state renders when no wear exists today
+- [ ] With no wear today and a non-empty shelf, the "Today's pick" suggestion card renders with reasons
+- [ ] Shuffle cycles to a different candidate with a light haptic
+- [ ] "Wear it" logs the suggested bottle and swaps in the active-wear card
+- [ ] Empty state renders when no wear exists today and the shelf is empty
 - [ ] Logging a wear for today makes it active in Today
 - [ ] Logging a second wear for today switches active to the newest wear and keeps the earlier wear in Today's stack
 - [ ] Plus increments compliments for the active wear
@@ -104,9 +124,21 @@ Run this checklist on a dev build before any demo or release.
 - [ ] Empty state renders when no fragrance/wear data exists
 - [ ] Most worn section ranks bottles with logged wears
 - [ ] Neglected bottles includes unworn or oldest-worn bottles
-- [ ] Compliment leaders ranks bottles by total compliment count
+- [ ] Crowd-pleasers ranks bottles by compliments per wear
+- [ ] Current and longest streak tiles show consecutive-day wear runs
+- [ ] Seasonal signatures shows the most-worn bottle per season
+- [ ] Shelf economics shows shelf value and best cost-per-wear bottles
 - [ ] Seasonal favorites and Day / night sections aggregate wear context
 - [ ] Taste profile shows top accord families from ratings and wear counts
+- [ ] Year in review card opens `/wrapped`
+
+## Year in Review
+
+- [ ] Screen opens from the Insights card with a fade transition
+- [ ] Stat grid shows wears, bottles worn, ml sprayed, and compliments for the year
+- [ ] Fragrance of the year, compliment champion, season/month leaders, longest streak, and best value render when data exists
+- [ ] Year chevrons browse other years; a year with no wears shows the empty state
+- [ ] Back chevron returns to Insights
 
 ## Barcode Scan
 

@@ -280,7 +280,19 @@ Scope:
 - Compliment updates and journal notes write back to the active `wears` row so Wears and Insights stay consistent.
 - Insights v1 is client-derived from existing fragrance and wear query data. It calculates most worn, neglected bottles, compliment leaders, seasonal favorites, day/night tendencies, and taste profile.
 - Taste profile weights both personal rating and wear count so "what I like" and "what I actually wear" both matter.
-- Bottle amount tracking is intentionally out of scope.
+- Bottle amount tracking was originally out of scope; the 2026-07-06 wear-intelligence slice added a lightweight estimate (0.8 ml per wear) rather than per-spray tracking.
+
+Shipped extensions (2026-07-06 wear-intelligence slice) — all client-derived, no new migrations:
+
+- Today's-pick suggestion engine (`lib/suggestion.ts`): deterministic scoring over season match, preferred time of day, rest period, rating, and compliments-per-wear, surfaced as a card on the Today tab with reasons, shuffle, and one-tap wear.
+- Bottle economics (`lib/bottleEconomics.ts`): cost per wear and estimated remaining ml on Detail, shelf value and best-value rankings on Insights.
+- Collection segments (Shelf / Wants / Past) built on `bottle_status`, with wishlist-to-owned conversion on Detail, plus a persisted list/grid view toggle, exposed rating/recency sort, and In season / Neglected filters.
+- Long-press quick wear logging from Collection rows and grid cells, with haptic feedback (`lib/haptics.ts`).
+- Year wear heatmap as a third Wears segment (`lib/wearAnalytics.ts`, `components/WearHeatmap.tsx`).
+- Insights additions: current/longest wear streaks, seasonal signatures, crowd-pleasers ranked by compliments per wear, and shelf economics.
+- Year in Review route (`/wrapped`): per-year totals, fragrance of the year, compliment champion, season/month leaders, longest streak, best value, bottles added.
+- TanStack Query cache persisted to AsyncStorage (7-day window) — a stopgap toward Phase 3 offline, not a replacement.
+- The Collection-to-Detail shared-element morph runs as a root-level overlay over an instant transparent-modal push (transform-only animation).
 
 ### Phase 3 — Offline-First
 
@@ -323,7 +335,7 @@ CI is optional in Phase 1. GitHub Actions can run typecheck + Jest on PR; EAS CI
 ## Open Items / Deferred
 
 - **Barcode live smoke testing** — use `docs/barcode-live-smoke-test.md` before relying on the full unknown-scan -> review -> matched-scan loop
-- **Android device smoke** — install the EAS preview APK on a real Android phone and verify auth, Add, Wears, Today, barcode permission, and catalog search against live Supabase
+- **Android device smoke** — install the EAS preview APK (rebuilt 2026-07-06 with the wear-intelligence slice, staged at `builds/`) on a real Android phone and verify auth, Add, Wears, Today, suggestion card, quick logging, morph transition, barcode permission, and catalog search against live Supabase
 - **Dedicated E2E suite** — still deferred; current coverage is Jest plus manual/browser smoke checks
 - **LLM fallback prompt design** — Phase 2 follow-up
 - **Offline sync library choice** (WatermelonDB vs PowerSync vs custom) — Phase 3

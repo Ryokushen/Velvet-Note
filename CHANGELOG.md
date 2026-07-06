@@ -1,5 +1,72 @@
 # Changelog
 
+## 2026-05-11 - Restore green quality baseline
+
+### Summary
+
+Realigned dependencies and test tooling so typecheck, lint, and the full Jest suite run green again, and silenced the remaining quality noise.
+
+### Shipped
+
+- Realigned `package.json`/`package-lock.json` dependencies to a consistent Expo SDK 54 baseline.
+- Fixed jest-expo/Jest setup compatibility in `jest.setup.js` and removed the deprecated `@testing-library/jest-native` dependency.
+- Added npm `overrides` for `@tootallnate/once` and `postcss`.
+- Fixed lint/type noise in Wears, Today, and Detail (consolidated type imports, hook dependency arrays, string literals).
+- Simplified the admin-gate error handling on the Collection tab.
+- Registered the `expo-web-browser` plugin in `app.json` and refreshed barcode smoke-test and phase-status docs.
+
+### Verification
+
+- `npx tsc --noEmit && npm run lint && npx jest --ci`
+
+## 2026-05-11 - Fix collection morph row measurement
+
+### Summary
+
+Fixed the Collection row measurement used by the shared-element morph so the transition originates from the correct row geometry.
+
+### Shipped
+
+- Corrected row measurement handling on the Collection tab.
+- Extended the Collection detail transition test to cover the measurement path.
+
+### Verification
+
+- `npx jest --ci __tests__/CollectionDetailTransition.test.tsx`
+
+## 2026-04-26 - Polish collection transition and tab labels
+
+### Summary
+
+Brought the Collection-to-Detail shared-element transition in line with the design spec and kept the five tab labels from wrapping.
+
+### Shipped
+
+- Matched the Collection detail morph timing/geometry to the shared-element transition spec across the Collection tab, Detail screen, `CollectionDetailMorph`, and `lib/morphTransition`.
+- Constrained tab bar labels to a single line in the tab layout.
+
+### Verification
+
+- `npx jest --ci __tests__/CollectionDetailTransition.test.tsx`
+
+## 2026-04-25 - Prepare Android preview build
+
+### Summary
+
+Configured the project for an installable Android preview APK via EAS Build.
+
+### Shipped
+
+- Added `eas.json` with a preview APK build profile and linked the EAS project ID.
+- Set the app display name to "Velvet Note" and the Android package to `com.charlesdorfeuille.velvetnote`.
+- Declared the Android camera permission and `expo-camera` plugin config for barcode scanning.
+- Hardened the Today tab journal-save error handling and covered it in `TodayTab` tests.
+- Updated README, design spec, smoke tests, and status docs for the Android build path.
+
+### Verification
+
+- `npx jest --ci __tests__/TodayTab.test.tsx`
+
 ## 2026-04-25 - Add Today wear tab
 
 ### Summary

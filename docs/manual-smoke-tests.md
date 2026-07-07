@@ -110,6 +110,9 @@ Run this checklist on a dev build before any demo or release.
 - [ ] With no wear today and a non-empty shelf, the "Today's pick" suggestion card renders with reasons
 - [ ] Shuffle cycles to a different candidate with a light haptic
 - [ ] "Wear it" logs the suggested bottle and swaps in the active-wear card
+- [ ] Weather row under the card offers "Add your city" when unset; searching and picking a city saves it
+- [ ] With a city set, the row shows city and current temperature, and hot/cold/rain days surface weather reasons on the pick
+- [ ] Weather being unreachable (airplane mode) leaves suggestions working without weather reasons
 - [ ] Empty state renders when no wear exists today and the shelf is empty
 - [ ] Logging a wear for today makes it active in Today
 - [ ] Logging a second wear for today switches active to the newest wear and keeps the earlier wear in Today's stack

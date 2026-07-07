@@ -14,10 +14,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottleArt } from '../../components/BottleArt';
 import { EmptyState } from '../../components/EmptyState';
 import { SuggestionCard } from '../../components/SuggestionCard';
+import { WeatherCityRow } from '../../components/WeatherCityRow';
 import { GhostButton, PrimaryButton } from '../../components/ui/Button';
 import { Caption, Serif } from '../../components/ui/text';
 import { useFragrancesQuery } from '../../hooks/useFragrances';
 import { useQuickLogWear } from '../../hooks/useQuickLogWear';
+import { useWeather } from '../../hooks/useWeather';
 import { useSetActiveWear, useUpdateWear, useWearsQuery } from '../../hooks/useWears';
 import { tapLight } from '../../lib/haptics';
 import { suggestWears } from '../../lib/suggestion';
@@ -50,6 +52,8 @@ export default function Today() {
     setJournal(todayState.active?.wear.notes ?? '');
   }, [todayState.active?.wear.id, todayState.active?.wear.notes]);
 
+  const weather = useWeather();
+
   const suggestions = useMemo(() => {
     if (!fragrances.data || !wears.data) return [];
     return suggestWears({
@@ -57,8 +61,15 @@ export default function Today() {
       wears: wears.data,
       todayKey: today,
       hour: new Date().getHours(),
+      weather: weather.snapshot
+        ? {
+            tempC: weather.snapshot.tempC,
+            humidity: weather.snapshot.humidity,
+            precipitationMm: weather.snapshot.precipitationMm,
+          }
+        : null,
     });
-  }, [fragrances.data, wears.data, today]);
+  }, [fragrances.data, wears.data, today, weather.snapshot]);
   const suggestion =
     suggestions.length > 0 ? suggestions[suggestionIndex % suggestions.length] : null;
 
@@ -96,6 +107,11 @@ export default function Today() {
                 tapLight();
                 setSuggestionIndex((current) => current + 1);
               }}
+            />
+            <WeatherCityRow
+              city={weather.city}
+              snapshot={weather.snapshot}
+              onSelectCity={weather.selectCity}
             />
             <View style={styles.suggestionFootnote}>
               <Caption>Or pick one yourself</Caption>

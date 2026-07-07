@@ -38,6 +38,15 @@ jest.mock('../hooks/useFragrances', () => ({
   }),
 }));
 
+jest.mock('../hooks/useWeather', () => ({
+  useWeather: () => ({
+    city: null,
+    cityLoaded: true,
+    snapshot: null,
+    selectCity: jest.fn(),
+  }),
+}));
+
 jest.mock('../hooks/useWears', () => ({
   useWearsQuery: () => ({
     data: mockWearsData,

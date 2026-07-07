@@ -1,13 +1,22 @@
 import type { Fragrance } from '../types/fragrance';
 import type { Wear } from '../types/wear';
+import { climateAffinityForAccords } from './accordClimate';
 import { seasonForDate } from './journal';
 import { latestWearForFragrance } from './lastWorn';
+
+export type WeatherConditions = {
+  tempC: number;
+  humidity: number;
+  precipitationMm: number;
+};
 
 export type SuggestionContext = {
   fragrances: Fragrance[];
   wears: Wear[];
   todayKey: string;
   hour: number;
+  // Optional refinement: absent weather must leave scores untouched.
+  weather?: WeatherConditions | null;
 };
 
 export type WearSuggestion = {
@@ -36,6 +45,21 @@ export const SUGGESTION_WEIGHTS = {
   recentPenalty: -15,
   complimentBonus: 10,
   complimentRatioThreshold: 1,
+  // Weather refines but never outranks explicit preferred seasons (25 pts):
+  // the temperature axis tops out at 15 and rain at 6.
+  weatherHotC: 27,
+  weatherWarmC: 22,
+  weatherColdC: 8,
+  weatherCoolC: 14,
+  weatherTempPoints: 15,
+  weatherMildFactor: 0.5,
+  weatherRainMinMm: 0.2,
+  weatherRainPoints: 6,
+  weatherHumidThreshold: 75,
+  weatherHumidPenalty: -6,
+  weatherHumidHeavyAffinity: 0.5,
+  weatherTempReasonMin: 8,
+  weatherRainReasonMin: 4,
 } as const;
 
 const EXCLUDED_STATUSES = new Set(['wishlist', 'sold', 'gifted', 'empty']);
@@ -46,7 +70,7 @@ type ScoredReason = {
 };
 
 export function suggestWears(context: SuggestionContext): WearSuggestion[] {
-  const { fragrances, wears, todayKey, hour } = context;
+  const { fragrances, wears, todayKey, hour, weather } = context;
   const currentSlot: 'day' | 'night' = hour >= 6 && hour < 18 ? 'day' : 'night';
   const currentSeason = seasonForDate(todayKey);
 
@@ -133,6 +157,53 @@ export function suggestWears(context: SuggestionContext): WearSuggestion[] {
       if (ratio >= SUGGESTION_WEIGHTS.complimentRatioThreshold) {
         score += SUGGESTION_WEIGHTS.complimentBonus;
         reasons.push({ text: 'Crowd-pleaser', points: SUGGESTION_WEIGHTS.complimentBonus });
+      }
+    }
+
+    // Weather (optional). Scent-profile affinity comes from the accord
+    // climate table; the whole rule is a no-op without conditions.
+    if (weather) {
+      const affinity = climateAffinityForAccords(fragrance.accords);
+      if (affinity) {
+        let tempPoints = 0;
+        let tempReason: string | null = null;
+        if (weather.tempC >= SUGGESTION_WEIGHTS.weatherHotC) {
+          tempPoints = Math.round(SUGGESTION_WEIGHTS.weatherTempPoints * affinity.heat);
+          tempReason = 'Made for this heat';
+        } else if (weather.tempC >= SUGGESTION_WEIGHTS.weatherWarmC) {
+          tempPoints = Math.round(
+            SUGGESTION_WEIGHTS.weatherTempPoints * affinity.heat * SUGGESTION_WEIGHTS.weatherMildFactor,
+          );
+          tempReason = 'Made for this heat';
+        } else if (weather.tempC <= SUGGESTION_WEIGHTS.weatherColdC) {
+          tempPoints = Math.round(SUGGESTION_WEIGHTS.weatherTempPoints * affinity.cold);
+          tempReason = 'A cold-day comfort';
+        } else if (weather.tempC <= SUGGESTION_WEIGHTS.weatherCoolC) {
+          tempPoints = Math.round(
+            SUGGESTION_WEIGHTS.weatherTempPoints * affinity.cold * SUGGESTION_WEIGHTS.weatherMildFactor,
+          );
+          tempReason = 'A cold-day comfort';
+        }
+        score += tempPoints;
+        if (tempReason && tempPoints >= SUGGESTION_WEIGHTS.weatherTempReasonMin) {
+          reasons.push({ text: tempReason, points: tempPoints });
+        }
+
+        if (weather.precipitationMm >= SUGGESTION_WEIGHTS.weatherRainMinMm) {
+          const rainPoints = Math.round(SUGGESTION_WEIGHTS.weatherRainPoints * affinity.rain);
+          score += rainPoints;
+          if (rainPoints >= SUGGESTION_WEIGHTS.weatherRainReasonMin) {
+            reasons.push({ text: 'Right for the rain', points: rainPoints });
+          }
+        }
+
+        if (
+          weather.humidity >= SUGGESTION_WEIGHTS.weatherHumidThreshold &&
+          weather.tempC >= SUGGESTION_WEIGHTS.weatherWarmC &&
+          affinity.cold >= SUGGESTION_WEIGHTS.weatherHumidHeavyAffinity
+        ) {
+          score += SUGGESTION_WEIGHTS.weatherHumidPenalty;
+        }
       }
     }
 

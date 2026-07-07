@@ -285,6 +285,7 @@ Scope:
 Shipped extensions (2026-07-06 wear-intelligence slice) — all client-derived, no new migrations:
 
 - Today's-pick suggestion engine (`lib/suggestion.ts`): deterministic scoring over season match, preferred time of day, rest period, rating, and compliments-per-wear, surfaced as a card on the Today tab with reasons, shuffle, and one-tap wear.
+- Weather-aware suggestion refinement: a static accord-to-climate affinity table (`lib/accordClimate.ts`) scores each bottle's scent profile against current conditions from Open-Meteo (keyless, manual home city set on the Today tab, 1h cache). Temperature (max 15 pts) and rain (max 6 pts) stay below explicit season preferences (25 pts); absent weather is a strict no-op.
 - Bottle economics (`lib/bottleEconomics.ts`): cost per wear and estimated remaining ml on Detail, shelf value and best-value rankings on Insights.
 - Collection segments (Shelf / Wants / Past) built on `bottle_status`, with wishlist-to-owned conversion on Detail, plus a persisted list/grid view toggle, exposed rating/recency sort, and In season / Neglected filters.
 - Long-press quick wear logging from Collection rows and grid cells, with haptic feedback (`lib/haptics.ts`).

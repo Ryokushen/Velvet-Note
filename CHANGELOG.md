@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-07-06 - Weather-aware wear suggestions
+
+### Summary
+
+Today's pick now reads the sky: a static accord-to-climate affinity table scores each bottle's scent profile against live conditions for a manually set home city, refining the suggestion ranking without ever outranking explicit season preferences.
+
+### Shipped
+
+- `lib/accordClimate.ts`: accord-to-climate affinity table (heat/cold/rain axes) with per-accord overrides and family fallback via the existing accord vocabulary.
+- `lib/weather.ts`: keyless Open-Meteo client — city geocoding search, current conditions, 1-hour AsyncStorage cache, saved home city.
+- Weather scoring rule in `lib/suggestion.ts`: hot/warm days boost fresh profiles and penalize heavy ones (max ±15), cold reverses, rain nudges earthy/woody (max ±6), warm humidity penalizes heavy projectors (−6); reasons like "Made for this heat" and "Right for the rain". Absent weather is a strict no-op.
+- Home-city row on the Today tab under the suggestion card: search, pick, and change the city inline; shows city and current temperature once set.
+- Weather failures (offline, API down, no city) silently fall back to the existing season/time-based ranking.
+
+### Verification
+
+- `npx jest --ci __tests__/accordClimate.test.ts __tests__/suggestionWeather.test.ts __tests__/weather.test.ts __tests__/suggestion.test.ts __tests__/TodayTab.test.tsx`
+- `npx tsc --noEmit && npm run lint && npx jest --ci`
+
 ## 2026-07-06 - Wear intelligence, wishlist, grid view, and Year in Review
 
 ### Summary

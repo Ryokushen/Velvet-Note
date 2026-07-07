@@ -69,7 +69,7 @@ Shipped:
 - Detail view with catalog/personal bottle art, notes, Bottle section (incl. cost per wear and estimated remaining ml), Wear Profile section, wishlist-to-owned conversion, edit, and delete
 - Wear logging from fragrance detail and selected Wears days, including optional season, day/night, occasion, compliment count, and compliment note
 - Wears tab with month grid, same-day wear counts, selected-day detail/edit/delete, by-bottle view, and a year heatmap
-- Today tab for the active current-day wear, compliment stepper, journal note, same-day wear stack, and a scored "Today's pick" suggestion with shuffle and one-tap wear
+- Today tab for the active current-day wear, compliment stepper, journal note, same-day wear stack, and a scored "Today's pick" suggestion with shuffle, one-tap wear, and weather-aware refinement (manual home city, keyless Open-Meteo)
 - Insights tab with client-derived most worn, neglected bottles, crowd-pleasers (compliments per wear), seasonal signatures, wear streaks, shelf economics, seasonal/day-night tendencies, and taste profile
 - Year in Review screen (per-year wear story: totals, fragrance of the year, champion, streaks, best value)
 - Shared Parfumo catalog in Supabase with brand/name/accord/note search ranking

@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-07-07 - Velvet Note app icon
+
+### Summary
+
+The app finally looks like itself on the launcher: the default Expo template icons are replaced with "The Note" — an oxblood perfume drop resting as a note head on bone staff hairlines, drawn from the design-brief palette — with two alternate branded concepts kept in-repo for one-command swapping.
+
+### Shipped
+
+- New app icon set in `assets/images/`: iOS/general icon, Android adaptive foreground/background/monochrome (themed-icon ready), splash icon, and favicon, all rendered at 1024 px from SVG sources.
+- Three complete branded concepts under `assets/icon-concepts/` (`note`, `flacon`, `monogram`), each with PNG assets plus editable SVG sources; swap with `Copy-Item assets\icon-concepts\<name>\*.png assets\images\ -Force`.
+- `app.json`: Android adaptive-icon background moved from template blue `#E6F4FE` to brand dark `#0F0E0D`, and the splash screen now uses the brand-dark background in both light and dark modes so the bone glyph stays visible.
+
+### Verification
+
+- Rendered PNGs visually inspected at full size, adaptive-mask crop, and small sizes; `app.json` parse-checked.
+
 ## 2026-07-06 - Weather-aware wear suggestions
 
 ### Summary

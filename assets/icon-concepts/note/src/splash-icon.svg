@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><g transform="translate(0 0) scale(1)">
+  <defs>
+    <linearGradient id="dropGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8B3A3A"/>
+      <stop offset="1" stop-color="#5E2828"/>
+    </linearGradient>
+  </defs>
+  <line x1="232" y1="400" x2="792" y2="400" stroke="#EDE6DA" stroke-opacity="0.55" stroke-width="14" stroke-linecap="round"/>
+  <line x1="232" y1="512" x2="792" y2="512" stroke="#EDE6DA" stroke-opacity="0.55" stroke-width="14" stroke-linecap="round"/>
+  <line x1="232" y1="624" x2="792" y2="624" stroke="#EDE6DA" stroke-opacity="0.55" stroke-width="14" stroke-linecap="round"/>
+  <path d="M 600 300 C 600 300 468 460 468 560 A 132 132 0 1 0 732 560 C 732 460 600 300 600 300 Z" fill="url(#dropGrad)"/>
+  <ellipse cx="552" cy="556" rx="26" ry="52" transform="rotate(18 552 556)" fill="#EDE6DA" fill-opacity="0.28"/></g></svg>

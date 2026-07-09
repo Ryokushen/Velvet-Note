@@ -2,7 +2,7 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import { View } from 'react-native';
 import Collection from '../app/(tabs)/index';
 import Detail from '../app/fragrance/[id]';
-import { MorphOverlayHost } from '../components/MorphOverlayHost';
+import { MORPH_TARGETS_WAIT_MS, MorphOverlayHost } from '../components/MorphOverlayHost';
 import {
   COLLECTION_DETAIL_MORPH_DURATION_MS,
   COLLECTION_DETAIL_SETTLE_FADE_MS,
@@ -11,6 +11,8 @@ import {
   markMorphOpen,
   openMorph,
   releaseMorph,
+  setMorphTargets,
+  type MorphTargets,
 } from '../lib/morphTransition';
 import type { Fragrance } from '../types/fragrance';
 
@@ -67,6 +69,12 @@ const fragranceFixture = {
 
 const rowRect = { x: 16, y: 156, width: 320, height: 96 };
 
+const detailTargets: MorphTargets = {
+  card: { x: 0, y: 0, width: 390, height: 844 },
+  heading: { x: 24, y: 128, width: 320, height: 96 },
+  hero: { x: 24, y: 236, width: 342, height: 228 },
+};
+
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
   useRouter: () => ({
@@ -77,9 +85,19 @@ jest.mock('expo-router', () => ({
   }),
 }));
 
-jest.mock('react-native-safe-area-context', () => ({
-  SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
-}));
+jest.mock('react-native-safe-area-context', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    SafeAreaView: React.forwardRef(
+      (
+        { children, edges: _edges, ...props }: { children: React.ReactNode; edges?: string[] },
+        ref: React.Ref<unknown>,
+      ) => React.createElement(View, { ...props, ref }, children),
+    ),
+    useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+  };
+});
 
 jest.mock('../components/BottleArt', () => {
   const React = require('react');
@@ -234,6 +252,7 @@ describe('collection/detail morph transition', () => {
 
     act(() => {
       openMorph(fragranceFixture, rowRect);
+      setMorphTargets(detailTargets);
     });
     act(() => {
       jest.advanceTimersByTime(0);
@@ -255,6 +274,59 @@ describe('collection/detail morph transition', () => {
     });
 
     expect(queryByLabelText('Opening Serge Lutens Chergui')).toBeNull();
+    expect(getMorphState().phase).toBe('open');
+  });
+
+  it('holds the opening morph on its first frame until detail targets arrive', () => {
+    const { getByLabelText } = render(<MorphOverlayHost />);
+
+    act(() => {
+      openMorph(fragranceFixture, rowRect);
+    });
+    act(() => {
+      jest.advanceTimersByTime(0);
+    });
+
+    // The frozen first frame is visible over the tapped row while waiting.
+    expect(getByLabelText('Opening Serge Lutens Chergui')).toBeTruthy();
+
+    act(() => {
+      jest.advanceTimersByTime(100);
+    });
+    expect(getMorphState().phase).toBe('opening');
+
+    act(() => {
+      setMorphTargets(detailTargets);
+    });
+    act(() => {
+      jest.advanceTimersByTime(0);
+    });
+    act(() => {
+      jest.advanceTimersByTime(COLLECTION_DETAIL_MORPH_DURATION_MS + 50);
+    });
+
+    expect(getMorphState().phase).toBe('open');
+  });
+
+  it('starts the opening morph with fallback geometry when targets never arrive', () => {
+    render(<MorphOverlayHost />);
+
+    act(() => {
+      openMorph(fragranceFixture, rowRect);
+    });
+    act(() => {
+      jest.advanceTimersByTime(0);
+    });
+    act(() => {
+      jest.advanceTimersByTime(MORPH_TARGETS_WAIT_MS);
+    });
+    act(() => {
+      jest.advanceTimersByTime(0);
+    });
+    act(() => {
+      jest.advanceTimersByTime(COLLECTION_DETAIL_MORPH_DURATION_MS + 50);
+    });
+
     expect(getMorphState().phase).toBe('open');
   });
 
@@ -302,6 +374,29 @@ describe('collection/detail morph transition', () => {
     });
 
     expect(mockBack).toHaveBeenCalled();
+  });
+
+  it('re-measures detail targets before the closing morph starts', () => {
+    mockParams = { id: 'fragrance-1', fromCollection: '1' };
+    act(() => {
+      openMorph(fragranceFixture, rowRect);
+      markMorphOpen();
+    });
+
+    const { getByLabelText } = render(<Detail />);
+
+    expect(getMorphState().targets).toBeNull();
+
+    fireEvent.press(getByLabelText('Back to collection'));
+
+    expect(getMorphState().phase).toBe('closing');
+    // The global measureInWindow mock reports rowRect for every view, so the
+    // freshly measured card/heading/hero targets all carry that rect.
+    expect(getMorphState().targets).toEqual({
+      card: rowRect,
+      heading: rowRect,
+      hero: rowRect,
+    });
   });
 
   it('uses the closing morph before dispatching gesture removals', () => {

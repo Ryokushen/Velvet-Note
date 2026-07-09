@@ -13,13 +13,27 @@ export type MorphRect = {
 
 export type MorphPhase = 'idle' | 'opening' | 'open' | 'closing';
 
+// Destination rects measured from the mounted detail screen, in window
+// coordinates (the same space measureRowRect uses for the origin).
+export type MorphTargets = {
+  card: MorphRect;
+  heading: MorphRect;
+  hero: MorphRect;
+};
+
 export type MorphState = {
   phase: MorphPhase;
   fragrance: Fragrance | null;
   origin: MorphRect | null;
+  targets: MorphTargets | null;
 };
 
-const IDLE_STATE: MorphState = { phase: 'idle', fragrance: null, origin: null };
+const IDLE_STATE: MorphState = {
+  phase: 'idle',
+  fragrance: null,
+  origin: null,
+  targets: null,
+};
 
 let state: MorphState = IDLE_STATE;
 const listeners = new Set<(next: MorphState) => void>();
@@ -41,7 +55,14 @@ export function subscribeToMorph(listener: (next: MorphState) => void): () => vo
 }
 
 export function openMorph(fragrance: Fragrance, origin: MorphRect) {
-  setState({ phase: 'opening', fragrance, origin });
+  setState({ phase: 'opening', fragrance, origin, targets: null });
+}
+
+export function setMorphTargets(targets: MorphTargets) {
+  if (state.phase === 'idle') {
+    return;
+  }
+  setState({ ...state, targets });
 }
 
 export function markMorphOpen() {

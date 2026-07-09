@@ -8,6 +8,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Fragrance } from '../types/fragrance';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
@@ -18,14 +19,19 @@ import {
   COLLECTION_DETAIL_EASING,
   COLLECTION_DETAIL_MORPH_DURATION_MS,
   type MorphRect,
+  type MorphTargets,
 } from '../lib/morphTransition';
 
 export type { MorphRect };
 
 const HEADING_ROW_LEFT = 20;
 const HEADING_ROW_TOP = 20;
+// Fallback offsets below the safe-area inset, used only until the detail
+// screen reports its measured rects.
 const HEADING_DETAIL_LEFT = 24;
 const HEADING_DETAIL_TOP = 76;
+const HERO_DETAIL_TOP = 164;
+const HERO_HEIGHT = 228;
 const HEADING_ROW_SCALE = 0.54;
 const MIN_SCALE = 0.0001;
 
@@ -33,6 +39,7 @@ type Props = {
   fragrance: Fragrance;
   progress: SharedValue<number>;
   origin: MorphRect;
+  targets?: MorphTargets | null;
   overlayOpacity?: SharedValue<number>;
   closing?: boolean;
 };
@@ -60,11 +67,43 @@ export function CollectionDetailMorph({
   fragrance,
   progress,
   origin,
+  targets = null,
   overlayOpacity,
   closing = false,
 }: Props) {
-  const from = closing ? fullScreenRect() : origin;
-  const to = closing ? rowTargetRect(origin) : fullScreenRect();
+  const insets = useSafeAreaInsets();
+
+  // Destination geometry comes from the mounted detail screen (window
+  // coordinates, like the origin). Until it reports, approximate with the
+  // safe-area inset applied — the old hardcoded constants ignored it, which
+  // put every destination off by insets.top.
+  const card = targets?.card ?? fullScreenRect();
+  const headingRect = targets?.heading ?? {
+    x: card.x + HEADING_DETAIL_LEFT,
+    y: card.y + insets.top + HEADING_DETAIL_TOP,
+    width: 320,
+    height: 0,
+  };
+  const heroRect = targets?.hero ?? {
+    x: card.x,
+    y: card.y + insets.top + HERO_DETAIL_TOP,
+    width: card.width,
+    height: HERO_HEIGHT,
+  };
+
+  // Card-local positions (the card's content space maps 1:1 to window space
+  // once the counter-scale cancels the card scale).
+  const headingLeft = headingRect.x - card.x;
+  const headingTop = headingRect.y - card.y;
+  const heroLocal = {
+    left: heroRect.x - card.x,
+    top: heroRect.y - card.y,
+    width: heroRect.width,
+    height: heroRect.height,
+  };
+
+  const from = closing ? card : origin;
+  const to = closing ? rowTargetRect(origin) : card;
 
   // The card is laid out at full-screen size once and morphs purely via
   // translate + scale so no frame ever triggers a layout pass.
@@ -125,7 +164,7 @@ export function CollectionDetailMorph({
           translateX: interpolate(
             phase,
             [0, 1],
-            [HEADING_ROW_LEFT - HEADING_DETAIL_LEFT, 0],
+            [HEADING_ROW_LEFT - headingLeft, 0],
             Extrapolation.CLAMP,
           ),
         },
@@ -133,7 +172,7 @@ export function CollectionDetailMorph({
           translateY: interpolate(
             phase,
             [0, 1],
-            [HEADING_ROW_TOP - HEADING_DETAIL_TOP, 0],
+            [HEADING_ROW_TOP - headingTop, 0],
             Extrapolation.CLAMP,
           ),
         },
@@ -142,7 +181,7 @@ export function CollectionDetailMorph({
         },
       ],
     };
-  }, [closing]);
+  }, [closing, headingLeft, headingTop]);
 
   const rowLayerStyle = useAnimatedStyle(() => {
     const phase = closing ? 1 - progress.value : progress.value;
@@ -204,13 +243,19 @@ export function CollectionDetailMorph({
           <Animated.View style={[styles.detailLayer, detailLayerStyle]}>
             <Animated.View
               testID="morph-hero-image"
-              style={[styles.heroImage, heroImageStyle]}
+              style={[styles.heroImage, heroLocal, heroImageStyle]}
             >
               <BottleArt imageUrl={fragrance.image_url} width={176} height={228} />
             </Animated.View>
           </Animated.View>
 
-          <Animated.View style={[styles.sharedHeading, sharedHeadingStyle]}>
+          <Animated.View
+            style={[
+              styles.sharedHeading,
+              { left: headingLeft, top: headingTop },
+              sharedHeadingStyle,
+            ]}
+          >
             <Text style={styles.brand}>{fragrance.brand}</Text>
             <Text style={styles.name} numberOfLines={2}>
               {fragrance.name}
@@ -329,13 +374,9 @@ const styles = StyleSheet.create({
     left: 0,
     width: screen.width,
     height: screen.height,
-    paddingTop: 164,
-    paddingHorizontal: 24,
   },
   sharedHeading: {
     position: 'absolute',
-    left: HEADING_DETAIL_LEFT,
-    top: HEADING_DETAIL_TOP,
     maxWidth: 320,
     transformOrigin: 'left top',
   },
@@ -352,9 +393,9 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   heroImage: {
+    position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 18,
   },
   subline: {
     ...typography.bodyDim,

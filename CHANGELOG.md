@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-07-08 - Measure real morph destinations
+
+### Summary
+
+The Collection-to-Detail morph now animates to where the detail screen actually is instead of hardcoded coordinates that ignored the safe-area inset, removing the ~50px jump and doubled text that made the transition read as choppy on device.
+
+### Shipped
+
+- `lib/morphTransition.ts`: the store carries `MorphTargets` (card/heading/hero rects in window coordinates) reported via `setMorphTargets`.
+- Detail screen measures its container, heading block, and hero image after layout and reports them as morph targets; it re-measures right before the closing morph starts so the overlay's first closing frame matches what is on screen (including scroll position).
+- `CollectionDetailMorph` derives all destination geometry from the measured targets; the pre-measurement fallback now at least accounts for `insets.top`, which the old constants dropped.
+- `MorphOverlayHost` holds the opening morph on its frozen first frame (card exactly over the tapped row) until targets arrive — the RN equivalent of `postponeEnterTransition` — with a 250 ms fallback so it can never hang.
+
+### Verification
+
+- `npx tsc --noEmit && npm run lint && npx jest --ci` (42 suites, 237 tests; 3 new morph-target cases)
+- On-device recheck of the open/close morph via the rebuilt preview APK
+
 ## 2026-07-07 - Velvet Note app icon
 
 ### Summary

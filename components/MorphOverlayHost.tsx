@@ -17,13 +17,20 @@ const settleFadeTiming = {
   easing: Easing.bezier(...COLLECTION_DETAIL_EASING),
 } as const;
 
+// How long the opening morph waits for the detail screen to report its
+// measured target rects before falling back to approximate geometry.
+export const MORPH_TARGETS_WAIT_MS = 250;
+
 export function MorphOverlayHost() {
   const [morph, setMorph] = useState<MorphState>(getMorphState);
   const [visible, setVisible] = useState(false);
+  const [targetsWaitExpired, setTargetsWaitExpired] = useState(false);
   const progress = useSharedValue(0);
   const overlayOpacity = useSharedValue(1);
   const frame = useRef<number | null>(null);
+  const waitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevPhase = useRef<MorphPhase>(morph.phase);
+  const startedForPhase = useRef<MorphPhase | null>(null);
 
   useEffect(() => subscribeToMorph(setMorph), []);
 
@@ -31,6 +38,9 @@ export function MorphOverlayHost() {
     return () => {
       if (frame.current != null) {
         cancelAnimationFrame(frame.current);
+      }
+      if (waitTimer.current != null) {
+        clearTimeout(waitTimer.current);
       }
     };
   }, []);
@@ -44,8 +54,14 @@ export function MorphOverlayHost() {
         cancelAnimationFrame(frame.current);
         frame.current = null;
       }
+      if (waitTimer.current != null) {
+        clearTimeout(waitTimer.current);
+        waitTimer.current = null;
+      }
       cancelAnimation(progress);
       cancelAnimation(overlayOpacity);
+      startedForPhase.current = null;
+      setTargetsWaitExpired(false);
       setVisible(false);
       return;
     }
@@ -55,9 +71,39 @@ export function MorphOverlayHost() {
       return;
     }
 
+    // Target updates while this phase's animation is already running (e.g. a
+    // late re-measure) must not restart it.
+    if (startedForPhase.current === morph.phase) {
+      return;
+    }
+
+    // Hold the opening morph until the detail screen reports where the card,
+    // heading, and hero actually are. The overlay shows its frozen first frame
+    // (the card exactly over the tapped row) while it waits, so nothing
+    // flashes; if measurement never arrives, start anyway with approximate
+    // geometry rather than hang.
+    if (morph.phase === 'opening' && !morph.targets && !targetsWaitExpired) {
+      cancelAnimation(progress);
+      cancelAnimation(overlayOpacity);
+      progress.value = 0;
+      overlayOpacity.value = 1;
+      setVisible(true);
+      if (waitTimer.current == null) {
+        waitTimer.current = setTimeout(() => {
+          waitTimer.current = null;
+          setTargetsWaitExpired(true);
+        }, MORPH_TARGETS_WAIT_MS);
+      }
+      return;
+    }
+
     if (frame.current != null) {
       cancelAnimationFrame(frame.current);
       frame.current = null;
+    }
+    if (waitTimer.current != null) {
+      clearTimeout(waitTimer.current);
+      waitTimer.current = null;
     }
     cancelAnimation(progress);
     cancelAnimation(overlayOpacity);
@@ -65,6 +111,7 @@ export function MorphOverlayHost() {
     // Backing out mid-open reverses the card along the same path: the closing
     // rect at progress 1-p is identical to the opening rect at progress p.
     progress.value = morph.phase === 'closing' && wasOpening ? 1 - progress.value : 0;
+    startedForPhase.current = morph.phase;
     setVisible(true);
 
     frame.current = requestAnimationFrame(() => {
@@ -80,7 +127,7 @@ export function MorphOverlayHost() {
         });
       });
     });
-  }, [morph, overlayOpacity, progress]);
+  }, [morph, targetsWaitExpired, overlayOpacity, progress]);
 
   function handleSettleFadeComplete() {
     setVisible(false);
@@ -97,6 +144,7 @@ export function MorphOverlayHost() {
     <CollectionDetailMorph
       fragrance={morph.fragrance}
       origin={morph.origin}
+      targets={morph.targets}
       progress={progress}
       overlayOpacity={overlayOpacity}
       closing={morph.phase === 'closing'}

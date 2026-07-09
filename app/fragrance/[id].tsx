@@ -38,7 +38,9 @@ import {
   closeMorph,
   getMorphState,
   releaseMorph,
+  setMorphTargets,
   subscribeToMorph,
+  type MorphRect,
 } from '../../lib/morphTransition';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -118,19 +120,81 @@ export default function Detail() {
     return phase === 'idle' || phase === 'open';
   });
   const closeFrame = useRef<number | null>(null);
+  const closingStarted = useRef(false);
   const allowRouteRemoval = useRef(false);
+  const containerRef = useRef<View>(null);
+  const headingRef = useRef<View>(null);
+  const heroRef = useRef<View>(null);
+  const measureFrame = useRef<number | null>(null);
 
-  const startClosingMorph = useCallback((onReadyToRemove: () => void) => {
-    if (closeFrame.current != null) {
+  // Report where the card, heading, and hero actually sit (window
+  // coordinates) so the overlay morphs to the real screen instead of
+  // hardcoded approximations that ignored the safe-area inset.
+  const reportMorphTargets = useCallback(
+    (onDone?: () => void) => {
+      const phase = getMorphState().phase;
+      if (!cameFromCollection || (phase !== 'opening' && phase !== 'open')) {
+        onDone?.();
+        return;
+      }
+      const container = containerRef.current;
+      const heading = headingRef.current;
+      const hero = heroRef.current;
+      if (
+        !container?.measureInWindow ||
+        !heading?.measureInWindow ||
+        !hero?.measureInWindow
+      ) {
+        onDone?.();
+        return;
+      }
+      container.measureInWindow((cardX, cardY, cardWidth, cardHeight) => {
+        heading.measureInWindow((headingX, headingY, headingWidth, headingHeight) => {
+          hero.measureInWindow((heroX, heroY, heroWidth, heroHeight) => {
+            if (cardWidth > 0 && cardHeight > 0) {
+              setMorphTargets({
+                card: rect(cardX, cardY, cardWidth, cardHeight),
+                heading: rect(headingX, headingY, headingWidth, headingHeight),
+                hero: rect(heroX, heroY, heroWidth, heroHeight),
+              });
+            }
+            onDone?.();
+          });
+        });
+      });
+    },
+    [cameFromCollection],
+  );
+
+  const scheduleMorphTargetMeasurement = useCallback(() => {
+    if (!cameFromCollection || measureFrame.current != null) {
       return;
     }
-    closeMorph();
-    // Give the overlay one frame to cover the screen before the route pops.
-    closeFrame.current = requestAnimationFrame(() => {
-      closeFrame.current = null;
-      onReadyToRemove();
+    measureFrame.current = requestAnimationFrame(() => {
+      measureFrame.current = null;
+      reportMorphTargets();
     });
-  }, []);
+  }, [cameFromCollection, reportMorphTargets]);
+
+  const startClosingMorph = useCallback(
+    (onReadyToRemove: () => void) => {
+      if (closingStarted.current) {
+        return;
+      }
+      closingStarted.current = true;
+      // Re-measure first so the overlay's first closing frame matches what is
+      // actually on screen, then give it one frame to cover the screen before
+      // the route pops.
+      reportMorphTargets(() => {
+        closeMorph();
+        closeFrame.current = requestAnimationFrame(() => {
+          closeFrame.current = null;
+          onReadyToRemove();
+        });
+      });
+    },
+    [reportMorphTargets],
+  );
 
   useEffect(() => {
     if (!fragranceId) return;
@@ -163,6 +227,9 @@ export default function Detail() {
     return () => {
       if (closeFrame.current != null) {
         cancelAnimationFrame(closeFrame.current);
+      }
+      if (measureFrame.current != null) {
+        cancelAnimationFrame(measureFrame.current);
       }
       releaseMorph();
     };
@@ -481,6 +548,7 @@ export default function Detail() {
 
   return (
     <SafeAreaView
+      ref={containerRef}
       style={[styles.container, !revealed && styles.containerHidden]}
       edges={['top']}
     >
@@ -548,15 +616,27 @@ export default function Detail() {
           contentContainerStyle={styles.readScroll}
           keyboardShouldPersistTaps="handled"
         >
-          <Caption style={{ marginBottom: 10 }}>{fragrance.brand}</Caption>
-          <View style={styles.heroRow}>
-            <View style={styles.heroText}>
-              <Serif size={34} style={{ marginBottom: 14, lineHeight: 40 }}>
-                {fragrance.name}
-              </Serif>
+          <View
+            ref={headingRef}
+            collapsable={false}
+            onLayout={scheduleMorphTargetMeasurement}
+          >
+            <Caption style={{ marginBottom: 10 }}>{fragrance.brand}</Caption>
+            <View style={styles.heroRow}>
+              <View style={styles.heroText}>
+                <Serif size={34} style={{ marginBottom: 14, lineHeight: 40 }}>
+                  {fragrance.name}
+                </Serif>
+              </View>
             </View>
           </View>
-          <View testID="detail-hero-image" style={styles.heroImage}>
+          <View
+            testID="detail-hero-image"
+            ref={heroRef}
+            collapsable={false}
+            onLayout={scheduleMorphTargetMeasurement}
+            style={styles.heroImage}
+          >
             <BottleArt imageUrl={fragrance.image_url} width={176} height={228} />
           </View>
           {fragrance.concentration ? (
@@ -890,6 +970,10 @@ function buildWearProfileRows(fragrance: {
         }
       : null,
   ].filter((row): row is { label: string; value: string } => Boolean(row));
+}
+
+function rect(x: number, y: number, width: number, height: number): MorphRect {
+  return { x, y, width, height };
 }
 
 function parseOptionalNumber(value: string): number | null | undefined {

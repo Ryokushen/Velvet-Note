@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { View } from 'react-native';
 import Collection from '../app/(tabs)/index';
@@ -11,6 +12,7 @@ import {
   markMorphOpen,
   openMorph,
   releaseMorph,
+  setMorphHostWindowOrigin,
   setMorphTargets,
   type MorphTargets,
 } from '../lib/morphTransition';
@@ -183,7 +185,10 @@ function resetMorphState() {
 }
 
 describe('collection/detail morph transition', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    // The grid-view test persists the view mode; clear it so later renders of
+    // Collection don't asynchronously flip to grid outside act().
+    await AsyncStorage.clear();
     jest.useFakeTimers();
     mockPush.mockReset();
     mockBack.mockReset();
@@ -215,6 +220,21 @@ describe('collection/detail morph transition', () => {
     jest.useRealTimers();
   });
 
+  it('converts measured window rects into overlay-local coordinates', () => {
+    setMorphHostWindowOrigin(0, 42);
+    try {
+      const { getByLabelText } = render(<Collection />);
+
+      fireEvent.press(getByLabelText('Open Serge Lutens Chergui'));
+
+      // The global measureInWindow mock reports rowRect in window space; the
+      // stored origin must be shifted by the host's own window position.
+      expect(getMorphState().origin).toEqual({ ...rowRect, y: rowRect.y - 42 });
+    } finally {
+      setMorphHostWindowOrigin(0, 0);
+    }
+  });
+
   it('starts the morph and pushes the detail route immediately', () => {
     const { getByLabelText } = render(<Collection />);
 
@@ -222,6 +242,18 @@ describe('collection/detail morph transition', () => {
 
     expect(getMorphState().phase).toBe('opening');
     expect(getMorphState().origin).toEqual(rowRect);
+    expect(getMorphState().originKind).toBe('row');
+    expect(mockPush).toHaveBeenCalledWith('/fragrance/fragrance-1?fromCollection=1');
+  });
+
+  it('tags the morph origin as a grid cell when grid view is active', () => {
+    const { getByLabelText } = render(<Collection />);
+
+    fireEvent.press(getByLabelText('Switch to grid view'));
+    fireEvent.press(getByLabelText('Open Serge Lutens Chergui'));
+
+    expect(getMorphState().phase).toBe('opening');
+    expect(getMorphState().originKind).toBe('grid');
     expect(mockPush).toHaveBeenCalledWith('/fragrance/fragrance-1?fromCollection=1');
   });
 
@@ -275,6 +307,37 @@ describe('collection/detail morph transition', () => {
 
     expect(queryByLabelText('Opening Serge Lutens Chergui')).toBeNull();
     expect(getMorphState().phase).toBe('open');
+  });
+
+  it('renders a grid-cell-styled fade copy when the origin is a grid cell', () => {
+    const { getByLabelText, getByTestId } = render(<MorphOverlayHost />);
+
+    act(() => {
+      openMorph(fragranceFixture, rowRect, 'grid');
+      setMorphTargets(detailTargets);
+    });
+    act(() => {
+      jest.advanceTimersByTime(0);
+    });
+
+    expect(getByLabelText('Opening Serge Lutens Chergui')).toBeTruthy();
+    expect(getByTestId('morph-grid-copy')).toBeTruthy();
+    // The copy shows the cell's own bottle art (104x136), not just row text.
+    expect(getByTestId('bottle-art-104x136')).toBeTruthy();
+  });
+
+  it('renders the list-row fade copy for row origins', () => {
+    const { queryByTestId } = render(<MorphOverlayHost />);
+
+    act(() => {
+      openMorph(fragranceFixture, rowRect);
+      setMorphTargets(detailTargets);
+    });
+    act(() => {
+      jest.advanceTimersByTime(0);
+    });
+
+    expect(queryByTestId('morph-grid-copy')).toBeNull();
   });
 
   it('holds the opening morph on its first frame until detail targets arrive', () => {

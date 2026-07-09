@@ -18,6 +18,7 @@ import { formatAccordList } from '../lib/accordDisplay';
 import {
   COLLECTION_DETAIL_EASING,
   COLLECTION_DETAIL_MORPH_DURATION_MS,
+  type MorphOriginKind,
   type MorphRect,
   type MorphTargets,
 } from '../lib/morphTransition';
@@ -26,6 +27,12 @@ export type { MorphRect };
 
 const HEADING_ROW_LEFT = 20;
 const HEADING_ROW_TOP = 20;
+// Grid-cell geometry mirrors FragranceGridCell: 16/12 padding, 104x136 art
+// with a 12 bottom margin, so the caption block starts at y=164.
+const HEADING_GRID_LEFT = 12;
+const HEADING_GRID_TOP = 164;
+const GRID_ART_WIDTH = 104;
+const GRID_ART_HEIGHT = 136;
 // Fallback offsets below the safe-area inset, used only until the detail
 // screen reports its measured rects.
 const HEADING_DETAIL_LEFT = 24;
@@ -33,12 +40,15 @@ const HEADING_DETAIL_TOP = 76;
 const HERO_DETAIL_TOP = 164;
 const HERO_HEIGHT = 228;
 const HEADING_ROW_SCALE = 0.54;
+// Grid cells set the name at 15pt vs the detail heading's 34pt.
+const HEADING_GRID_SCALE = 0.44;
 const MIN_SCALE = 0.0001;
 
 type Props = {
   fragrance: Fragrance;
   progress: SharedValue<number>;
   origin: MorphRect;
+  originKind?: MorphOriginKind;
   targets?: MorphTargets | null;
   overlayOpacity?: SharedValue<number>;
   closing?: boolean;
@@ -67,11 +77,18 @@ export function CollectionDetailMorph({
   fragrance,
   progress,
   origin,
+  originKind = 'row',
   targets = null,
   overlayOpacity,
   closing = false,
 }: Props) {
   const insets = useSafeAreaInsets();
+
+  // Where the brand/name block sits inside the origin, so the shared heading
+  // starts (and, on close, lands) on the layout the user is actually seeing.
+  const headingFromLeft = originKind === 'grid' ? HEADING_GRID_LEFT : HEADING_ROW_LEFT;
+  const headingFromTop = originKind === 'grid' ? HEADING_GRID_TOP : HEADING_ROW_TOP;
+  const headingFromScale = originKind === 'grid' ? HEADING_GRID_SCALE : HEADING_ROW_SCALE;
 
   // Destination geometry comes from the mounted detail screen (window
   // coordinates, like the origin). Until it reports, approximate with the
@@ -164,7 +181,7 @@ export function CollectionDetailMorph({
           translateX: interpolate(
             phase,
             [0, 1],
-            [HEADING_ROW_LEFT - headingLeft, 0],
+            [headingFromLeft - headingLeft, 0],
             Extrapolation.CLAMP,
           ),
         },
@@ -172,16 +189,16 @@ export function CollectionDetailMorph({
           translateY: interpolate(
             phase,
             [0, 1],
-            [HEADING_ROW_TOP - headingTop, 0],
+            [headingFromTop - headingTop, 0],
             Extrapolation.CLAMP,
           ),
         },
         {
-          scale: interpolate(phase, [0, 1], [HEADING_ROW_SCALE, 1], Extrapolation.CLAMP),
+          scale: interpolate(phase, [0, 1], [headingFromScale, 1], Extrapolation.CLAMP),
         },
       ],
     };
-  }, [closing, headingLeft, headingTop]);
+  }, [closing, headingFromLeft, headingFromScale, headingFromTop, headingLeft, headingTop]);
 
   const rowLayerStyle = useAnimatedStyle(() => {
     const phase = closing ? 1 - progress.value : progress.value;
@@ -221,24 +238,57 @@ export function CollectionDetailMorph({
       <Animated.View style={[styles.cardSurface, cardSurfaceStyle]} />
       <Animated.View style={[styles.cardClip, cardClipStyle]}>
         <Animated.View style={[styles.contentScale, contentCounterScaleStyle]}>
-          <Animated.View
-            style={[
-              styles.rowLayer,
-              { width: rowRect.width, height: rowRect.height },
-              rowLayerStyle,
-            ]}
-          >
-            <View style={styles.rowMeta}>
-              <Text style={styles.subline} numberOfLines={1}>
-                {[fragrance.concentration, formatAccordList(fragrance.accords.slice(0, 3))]
-                  .filter(Boolean)
-                  .join(' · ')}
+          {originKind === 'grid' ? (
+            <Animated.View
+              testID="morph-grid-copy"
+              style={[
+                styles.gridLayer,
+                { width: rowRect.width, height: rowRect.height },
+                rowLayerStyle,
+              ]}
+            >
+              <View style={styles.gridArt}>
+                <BottleArt
+                  imageUrl={fragrance.image_url}
+                  width={GRID_ART_WIDTH}
+                  height={GRID_ART_HEIGHT}
+                />
+              </View>
+              {/* Invisible brand/name keep the cell's natural flow so the meta
+                  row lands where the real cell draws it; the shared heading
+                  layer draws the visible text. */}
+              <Text style={[styles.gridBrand, styles.gridHiddenText]} numberOfLines={1}>
+                {fragrance.brand}
               </Text>
-              <Text style={styles.rating}>
-                {fragrance.rating != null ? fragrance.rating.toFixed(1) : '-'}
+              <Text style={[styles.gridName, styles.gridHiddenText]} numberOfLines={1}>
+                {fragrance.name}
               </Text>
-            </View>
-          </Animated.View>
+              <View style={styles.gridMeta}>
+                <Text style={styles.gridRating}>
+                  {fragrance.rating != null ? fragrance.rating.toFixed(1) : '—'}
+                </Text>
+              </View>
+            </Animated.View>
+          ) : (
+            <Animated.View
+              style={[
+                styles.rowLayer,
+                { width: rowRect.width, height: rowRect.height },
+                rowLayerStyle,
+              ]}
+            >
+              <View style={styles.rowMeta}>
+                <Text style={styles.subline} numberOfLines={1}>
+                  {[fragrance.concentration, formatAccordList(fragrance.accords.slice(0, 3))]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
+                <Text style={styles.rating}>
+                  {fragrance.rating != null ? fragrance.rating.toFixed(1) : '-'}
+                </Text>
+              </View>
+            </Animated.View>
+          )}
 
           <Animated.View style={[styles.detailLayer, detailLayerStyle]}>
             <Animated.View
@@ -367,6 +417,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 14,
+  },
+  // Grid copy mirrors FragranceGridCell so the crossfade over a grid cell
+  // shows the same image-on-top/caption-below layout.
+  gridLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+  },
+  gridArt: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  gridBrand: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginBottom: 4,
+  },
+  gridName: {
+    fontFamily: typography.serif,
+    fontWeight: '400',
+    fontSize: 15,
+    lineHeight: 15 * 1.15,
+    letterSpacing: 0.2,
+    color: colors.text,
+    marginBottom: 8,
+  },
+  gridHiddenText: {
+    opacity: 0,
+  },
+  gridMeta: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  gridRating: {
+    fontFamily: typography.serif,
+    fontSize: 17,
+    color: colors.text,
   },
   detailLayer: {
     position: 'absolute',

@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-07-09 - Anchor morph coordinates to the overlay host
+
+### Summary
+
+Frame-by-frame analysis of a device screen recording showed every measured morph rect rendering one status-bar height too high: on Android edge-to-edge, `measureInWindow` reports positions offset from where the root overlay actually draws. All morph measurements are now converted into the overlay host's own coordinate space, so the card finally grows out of the exact cell you tap and settles without the drop. The grid-view crossfade copy also now mirrors the grid cell layout instead of the list row's. Transition polish is still in progress.
+
+### Shipped
+
+- `lib/morphTransition.ts`: the overlay host registers its own measured window origin (`setMorphHostWindowOrigin`) and `toMorphLocalRect` converts every `measureInWindow` result into overlay-local coordinates — cancelling any constant offset (status bar under edge-to-edge) by construction, a no-op on devices without one.
+- `MorphOverlayHost` is now an always-mounted, transparent measuring view that anchors that coordinate space.
+- Collection row/cell origin measurement and the detail screen's card/heading/hero target measurements all pass through the conversion.
+- Morph origins carry an `originKind` (`row`/`grid`) and the overlay's crossfade copy mirrors the grid cell layout (art above caption, grid heading scale) when opening from grid view.
+
+### Verification
+
+- `npx tsc --noEmit && npm run lint && npx jest --ci` (42 suites, 241 tests)
+- On-device screen recording decoded at true source frames (screenrecord is VFR — constant-fps resampling had masked the earlier offset): grid open now inflates from the tapped cell and closes back into it with no settle jump in either direction
+
 ## 2026-07-08 - Measure real morph destinations
 
 ### Summary

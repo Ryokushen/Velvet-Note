@@ -40,7 +40,7 @@ import {
   releaseMorph,
   setMorphTargets,
   subscribeToMorph,
-  type MorphRect,
+  toMorphLocalRect,
 } from '../../lib/morphTransition';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -127,9 +127,9 @@ export default function Detail() {
   const heroRef = useRef<View>(null);
   const measureFrame = useRef<number | null>(null);
 
-  // Report where the card, heading, and hero actually sit (window
-  // coordinates) so the overlay morphs to the real screen instead of
-  // hardcoded approximations that ignored the safe-area inset.
+  // Report where the card, heading, and hero actually sit (converted to
+  // overlay-local coordinates) so the overlay morphs to the real screen
+  // instead of hardcoded approximations that ignored the safe-area inset.
   const reportMorphTargets = useCallback(
     (onDone?: () => void) => {
       const phase = getMorphState().phase;
@@ -153,9 +153,9 @@ export default function Detail() {
           hero.measureInWindow((heroX, heroY, heroWidth, heroHeight) => {
             if (cardWidth > 0 && cardHeight > 0) {
               setMorphTargets({
-                card: rect(cardX, cardY, cardWidth, cardHeight),
-                heading: rect(headingX, headingY, headingWidth, headingHeight),
-                hero: rect(heroX, heroY, heroWidth, heroHeight),
+                card: toMorphLocalRect(cardX, cardY, cardWidth, cardHeight),
+                heading: toMorphLocalRect(headingX, headingY, headingWidth, headingHeight),
+                hero: toMorphLocalRect(heroX, heroY, heroWidth, heroHeight),
               });
             }
             onDone?.();
@@ -970,10 +970,6 @@ function buildWearProfileRows(fragrance: {
         }
       : null,
   ].filter((row): row is { label: string; value: string } => Boolean(row));
-}
-
-function rect(x: number, y: number, width: number, height: number): MorphRect {
-  return { x, y, width, height };
 }
 
 function parseOptionalNumber(value: string): number | null | undefined {

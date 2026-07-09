@@ -17,7 +17,7 @@ import { FragranceRow } from '../../components/FragranceRow';
 import { FragranceGridCell } from '../../components/FragranceGridCell';
 import { FilterChip } from '../../components/ui/FilterChip';
 import { fallbackRowRect } from '../../components/CollectionDetailMorph';
-import { openMorph, type MorphRect } from '../../lib/morphTransition';
+import { openMorph, toMorphLocalRect, type MorphRect } from '../../lib/morphTransition';
 import { EmptyState } from '../../components/EmptyState';
 import {
   applyCollectionFilters,
@@ -134,7 +134,7 @@ export default function Collection() {
     measureRowRect(fragrance.id, (origin) => {
       // The morph overlay covers the detail screen while it mounts, so the
       // push happens immediately and the heavy mount hides behind the card.
-      openMorph(fragrance, origin);
+      openMorph(fragrance, origin, viewMode === 'grid' ? 'grid' : 'row');
       router.push(`/fragrance/${fragrance.id}?fromCollection=1` as never);
     });
   }
@@ -192,7 +192,7 @@ export default function Collection() {
     node.measureInWindow((x, y, width, height) => {
       const rect =
         width > 0 && height > 0
-          ? { x, y, width, height }
+          ? toMorphLocalRect(x, y, width, height)
           : fallback;
       if (width > 0 && height > 0) {
         rowRects.current[id] = rect;

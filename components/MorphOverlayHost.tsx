@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Easing, cancelAnimation, runOnJS, useSharedValue, withTiming } from 'react-native-reanimated';
 import { CollectionDetailMorph, runCollectionDetailMorph } from './CollectionDetailMorph';
 import {
@@ -7,6 +8,7 @@ import {
   finishMorph,
   getMorphState,
   markMorphOpen,
+  setMorphHostWindowOrigin,
   subscribeToMorph,
   type MorphPhase,
   type MorphState,
@@ -31,8 +33,21 @@ export function MorphOverlayHost() {
   const waitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevPhase = useRef<MorphPhase>(morph.phase);
   const startedForPhase = useRef<MorphPhase | null>(null);
+  const hostRef = useRef<View>(null);
 
   useEffect(() => subscribeToMorph(setMorph), []);
+
+  // Anchor the morph coordinate space: measureInWindow results elsewhere are
+  // converted relative to this view's own window position, cancelling any
+  // constant offset (e.g. the status bar under Android edge-to-edge) between
+  // window coordinates and where this overlay actually draws.
+  function handleHostLayout() {
+    hostRef.current?.measureInWindow((x, y) => {
+      if (Number.isFinite(x) && Number.isFinite(y)) {
+        setMorphHostWindowOrigin(x, y);
+      }
+    });
+  }
 
   useEffect(() => {
     return () => {
@@ -136,18 +151,31 @@ export function MorphOverlayHost() {
     }
   }
 
-  if (!visible || !morph.fragrance || !morph.origin) {
-    return null;
-  }
-
   return (
-    <CollectionDetailMorph
-      fragrance={morph.fragrance}
-      origin={morph.origin}
-      targets={morph.targets}
-      progress={progress}
-      overlayOpacity={overlayOpacity}
-      closing={morph.phase === 'closing'}
-    />
+    <View
+      ref={hostRef}
+      pointerEvents="none"
+      style={styles.host}
+      onLayout={handleHostLayout}
+    >
+      {visible && morph.fragrance && morph.origin ? (
+        <CollectionDetailMorph
+          fragrance={morph.fragrance}
+          origin={morph.origin}
+          originKind={morph.originKind}
+          targets={morph.targets}
+          progress={progress}
+          overlayOpacity={overlayOpacity}
+          closing={morph.phase === 'closing'}
+        />
+      ) : null}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  host: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
+  },
+});

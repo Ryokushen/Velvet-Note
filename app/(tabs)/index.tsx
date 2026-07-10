@@ -16,8 +16,6 @@ import { useQuickLogWear } from '../../hooks/useQuickLogWear';
 import { FragranceRow } from '../../components/FragranceRow';
 import { FragranceGridCell } from '../../components/FragranceGridCell';
 import { FilterChip } from '../../components/ui/FilterChip';
-import { fallbackRowRect } from '../../components/CollectionDetailMorph';
-import { openMorph, toMorphLocalRect, type MorphRect } from '../../lib/morphTransition';
 import { EmptyState } from '../../components/EmptyState';
 import {
   applyCollectionFilters,
@@ -68,8 +66,6 @@ export default function Collection() {
   const [showBarcodeReview, setShowBarcodeReview] = useState(false);
   const [justLoggedId, setJustLoggedId] = useState<string | null>(null);
   const justLoggedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const rowRefs = useRef<Record<string, View | null>>({});
-  const rowRects = useRef<Record<string, MorphRect>>({});
   const router = useRouter();
 
   useEffect(() => {
@@ -131,12 +127,8 @@ export default function Collection() {
   const isEmpty = !isLoading && !error && count === 0;
 
   function openFragrance(fragrance: Fragrance) {
-    measureRowRect(fragrance.id, (origin) => {
-      // The morph overlay covers the detail screen while it mounts, so the
-      // push happens immediately and the heavy mount hides behind the card.
-      openMorph(fragrance, origin, viewMode === 'grid' ? 'grid' : 'row');
-      router.push(`/fragrance/${fragrance.id}?fromCollection=1` as never);
-    });
+    tapLight();
+    router.push(`/fragrance/${fragrance.id}` as never);
   }
 
   async function handleQuickLog(fragrance: Fragrance) {
@@ -179,26 +171,6 @@ export default function Collection() {
     tapLight();
     setViewMode(next);
     AsyncStorage.setItem(VIEW_MODE_STORAGE_KEY, next).catch(() => undefined);
-  }
-
-  function measureRowRect(id: string, onMeasured?: (rect: MorphRect) => void) {
-    const node = rowRefs.current[id];
-    const cached = rowRects.current[id];
-    const fallback = cached ?? fallbackRowRect();
-    if (!node || typeof node.measureInWindow !== 'function') {
-      onMeasured?.(fallback);
-      return;
-    }
-    node.measureInWindow((x, y, width, height) => {
-      const rect =
-        width > 0 && height > 0
-          ? toMorphLocalRect(x, y, width, height)
-          : fallback;
-      if (width > 0 && height > 0) {
-        rowRects.current[id] = rect;
-      }
-      onMeasured?.(rect);
-    });
   }
 
   const titleText =
@@ -353,12 +325,6 @@ export default function Collection() {
               }
               renderItem={({ item }) => (
                 <View
-                  ref={(node) => {
-                    if (node) rowRefs.current[item.id] = node;
-                    else delete rowRefs.current[item.id];
-                  }}
-                  collapsable={false}
-                  onLayout={() => measureRowRect(item.id)}
                   style={viewMode === 'grid' ? styles.gridCellWrap : undefined}
                 >
                   {viewMode === 'grid' ? (

@@ -7,7 +7,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../hooks/useAuth';
-import { MorphOverlayHost } from '../components/MorphOverlayHost';
 import { colors } from '../theme/colors';
 
 const CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
@@ -25,6 +24,20 @@ const queryPersister = createAsyncStoragePersister({
   storage: AsyncStorage,
   key: 'velvet-note-query-cache',
 });
+
+// Keep the collection-to-detail handoff entirely on the native stack. The
+// previous shared-element overlay depended on JS measurements and route-mount
+// timing, which made the same transition land differently across frames and
+// devices. This animation is composited by react-native-screens and reverses
+// naturally for both the header button and the system back gesture.
+export const fragranceScreenOptions = {
+  headerShown: false,
+  animation: 'fade_from_bottom' as const,
+  animationDuration: 280,
+  presentation: 'card' as const,
+  contentStyle: { backgroundColor: colors.background },
+  gestureEnabled: true,
+};
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -72,14 +85,7 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen
                 name="fragrance/[id]"
-                options={{
-                  headerShown: false,
-                  animation: 'fade',
-                  animationDuration: 220,
-                  presentation: 'transparentModal',
-                  contentStyle: { backgroundColor: 'transparent' },
-                  gestureEnabled: false,
-                }}
+                options={fragranceScreenOptions}
               />
               <Stack.Screen name="scan" options={{ headerShown: false }} />
               <Stack.Screen name="barcode-review" options={{ headerShown: false }} />
@@ -88,7 +94,6 @@ export default function RootLayout() {
                 options={{ headerShown: false, animation: 'fade', animationDuration: 220 }}
               />
             </Stack>
-            <MorphOverlayHost />
           </AuthGate>
         </SafeAreaProvider>
       </AuthProvider>

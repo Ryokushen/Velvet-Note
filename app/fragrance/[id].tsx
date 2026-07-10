@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -12,7 +12,6 @@ import {
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   useFragrancesQuery,
@@ -34,14 +33,6 @@ import { pickPersonalFragrancePhoto, uploadPersonalFragrancePhoto } from '../../
 import { costPerWear, estimatedRemainingMl, formatCostPerWear } from '../../lib/bottleEconomics';
 import { notifySuccess } from '../../lib/haptics';
 import { formatLastWornLong, latestWearForFragrance } from '../../lib/lastWorn';
-import {
-  closeMorph,
-  getMorphState,
-  releaseMorph,
-  setMorphTargets,
-  subscribeToMorph,
-  toMorphLocalRect,
-} from '../../lib/morphTransition';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { radius } from '../../theme/spacing';
@@ -67,9 +58,8 @@ import {
 } from '../../lib/journal';
 
 export default function Detail() {
-  const { id, fromCollection } = useLocalSearchParams<{ id: string; fromCollection?: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const navigation = useNavigation();
   const { data } = useFragrancesQuery();
   const fragrance = useMemo(() => data?.find((f) => f.id === id), [data, id]);
   const fragranceId = fragrance?.id;
@@ -111,90 +101,6 @@ export default function Detail() {
   const [complimentCount, setComplimentCount] = useState(0);
   const [complimentNote, setComplimentNote] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const cameFromCollection = fromCollection === '1';
-  // While the shared-element morph is still playing over this screen, stay
-  // invisible so the collection shows through the transparent route.
-  const [revealed, setRevealed] = useState(() => {
-    if (!cameFromCollection) return true;
-    const phase = getMorphState().phase;
-    return phase === 'idle' || phase === 'open';
-  });
-  const closeFrame = useRef<number | null>(null);
-  const closingStarted = useRef(false);
-  const allowRouteRemoval = useRef(false);
-  const containerRef = useRef<View>(null);
-  const headingRef = useRef<View>(null);
-  const heroRef = useRef<View>(null);
-  const measureFrame = useRef<number | null>(null);
-
-  // Report where the card, heading, and hero actually sit (converted to
-  // overlay-local coordinates) so the overlay morphs to the real screen
-  // instead of hardcoded approximations that ignored the safe-area inset.
-  const reportMorphTargets = useCallback(
-    (onDone?: () => void) => {
-      const phase = getMorphState().phase;
-      if (!cameFromCollection || (phase !== 'opening' && phase !== 'open')) {
-        onDone?.();
-        return;
-      }
-      const container = containerRef.current;
-      const heading = headingRef.current;
-      const hero = heroRef.current;
-      if (
-        !container?.measureInWindow ||
-        !heading?.measureInWindow ||
-        !hero?.measureInWindow
-      ) {
-        onDone?.();
-        return;
-      }
-      container.measureInWindow((cardX, cardY, cardWidth, cardHeight) => {
-        heading.measureInWindow((headingX, headingY, headingWidth, headingHeight) => {
-          hero.measureInWindow((heroX, heroY, heroWidth, heroHeight) => {
-            if (cardWidth > 0 && cardHeight > 0) {
-              setMorphTargets({
-                card: toMorphLocalRect(cardX, cardY, cardWidth, cardHeight),
-                heading: toMorphLocalRect(headingX, headingY, headingWidth, headingHeight),
-                hero: toMorphLocalRect(heroX, heroY, heroWidth, heroHeight),
-              });
-            }
-            onDone?.();
-          });
-        });
-      });
-    },
-    [cameFromCollection],
-  );
-
-  const scheduleMorphTargetMeasurement = useCallback(() => {
-    if (!cameFromCollection || measureFrame.current != null) {
-      return;
-    }
-    measureFrame.current = requestAnimationFrame(() => {
-      measureFrame.current = null;
-      reportMorphTargets();
-    });
-  }, [cameFromCollection, reportMorphTargets]);
-
-  const startClosingMorph = useCallback(
-    (onReadyToRemove: () => void) => {
-      if (closingStarted.current) {
-        return;
-      }
-      closingStarted.current = true;
-      // Re-measure first so the overlay's first closing frame matches what is
-      // actually on screen, then give it one frame to cover the screen before
-      // the route pops.
-      reportMorphTargets(() => {
-        closeMorph();
-        closeFrame.current = requestAnimationFrame(() => {
-          closeFrame.current = null;
-          onReadyToRemove();
-        });
-      });
-    },
-    [reportMorphTargets],
-  );
 
   useEffect(() => {
     if (!fragranceId) return;
@@ -222,47 +128,6 @@ export default function Detail() {
     fragrancePersonalImageUrl,
     fragrance,
   ]);
-
-  useEffect(() => {
-    return () => {
-      if (closeFrame.current != null) {
-        cancelAnimationFrame(closeFrame.current);
-      }
-      if (measureFrame.current != null) {
-        cancelAnimationFrame(measureFrame.current);
-      }
-      releaseMorph();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!cameFromCollection) return undefined;
-
-    return subscribeToMorph((state) => {
-      if (state.phase === 'open' || state.phase === 'idle') {
-        setRevealed(true);
-      }
-    });
-  }, [cameFromCollection]);
-
-  useEffect(() => {
-    if (!cameFromCollection) return undefined;
-
-    const unsubscribe = navigation.addListener('beforeRemove', (event) => {
-      const phase = getMorphState().phase;
-      if (allowRouteRemoval.current || editing || (phase !== 'open' && phase !== 'opening')) {
-        return;
-      }
-
-      event.preventDefault();
-      startClosingMorph(() => {
-        allowRouteRemoval.current = true;
-        navigation.dispatch(event.data.action);
-      });
-    });
-
-    return unsubscribe;
-  }, [cameFromCollection, editing, navigation, startClosingMorph]);
 
   if (!fragrance) {
     return (
@@ -339,18 +204,6 @@ export default function Detail() {
   }
 
   function goBackToCollection() {
-    const phase = getMorphState().phase;
-    if (cameFromCollection && (phase === 'open' || phase === 'opening')) {
-      startClosingMorph(() => {
-        allowRouteRemoval.current = true;
-        finishBackToCollection();
-      });
-      return;
-    }
-    finishBackToCollection();
-  }
-
-  function finishBackToCollection() {
     if (typeof router.canGoBack === 'function' && router.canGoBack()) {
       router.back();
       return;
@@ -547,16 +400,8 @@ export default function Detail() {
   const lastWear = latestWearForFragrance(wears.data, fragrance.id);
 
   return (
-    <SafeAreaView
-      ref={containerRef}
-      style={[styles.container, !revealed && styles.containerHidden]}
-      edges={['top']}
-    >
-      <View
-        testID="detail-screen-body"
-        style={[styles.body, !revealed && styles.bodyHidden]}
-        pointerEvents={revealed ? 'auto' : 'none'}
-      >
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View testID="detail-screen-body" style={styles.body}>
       <View style={styles.header}>
         <Pressable
           onPress={goBackToCollection}
@@ -616,11 +461,7 @@ export default function Detail() {
           contentContainerStyle={styles.readScroll}
           keyboardShouldPersistTaps="handled"
         >
-          <View
-            ref={headingRef}
-            collapsable={false}
-            onLayout={scheduleMorphTargetMeasurement}
-          >
+          <View>
             <Caption style={{ marginBottom: 10 }}>{fragrance.brand}</Caption>
             <View style={styles.heroRow}>
               <View style={styles.heroText}>
@@ -632,9 +473,6 @@ export default function Detail() {
           </View>
           <View
             testID="detail-hero-image"
-            ref={heroRef}
-            collapsable={false}
-            onLayout={scheduleMorphTargetMeasurement}
             style={styles.heroImage}
           >
             <BottleArt imageUrl={fragrance.image_url} width={176} height={228} />
@@ -1181,9 +1019,7 @@ function wearSummary(count: number): string {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  containerHidden: { backgroundColor: 'transparent' },
   body: { flex: 1 },
-  bodyHidden: { opacity: 0 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background },
   header: {
     height: 52,

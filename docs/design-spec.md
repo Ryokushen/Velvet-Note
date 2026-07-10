@@ -293,7 +293,7 @@ Shipped extensions (2026-07-06 wear-intelligence slice) — all client-derived, 
 - Insights additions: current/longest wear streaks, seasonal signatures, crowd-pleasers ranked by compliments per wear, and shelf economics.
 - Year in Review route (`/wrapped`): per-year totals, fragrance of the year, compliment champion, season/month leaders, longest streak, best value, bottles added.
 - TanStack Query cache persisted to AsyncStorage (7-day window) — a stopgap toward Phase 3 offline, not a replacement.
-- The Collection-to-Detail shared-element morph runs as a root-level overlay over an instant transparent-modal push (transform-only animation).
+- Collection-to-Detail navigation uses an opaque native-stack `fade_from_bottom` card transition. Selection is immediate from both list and grid, and native back navigation reverses the same compositor-owned transition without JS layout measurement.
 
 ### Phase 3 — Offline-First
 

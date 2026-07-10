@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-07-10 - Rebuild Collection-to-Detail navigation on the native stack
+
+### Summary
+
+The custom shared-element morph was removed after repeated device work showed that its smoothness depended on JS measurement, detail-screen mount timing, and a transparent route transition landing on the same frame. Collection selection now uses one native-stack dissolve-and-lift transition, giving list and grid entries the same immediate, consistently composited handoff and a native reverse on back.
+
+### Shipped
+
+- The fragrance route is an opaque native-stack card using `fade_from_bottom`, with the platform transition handling both open and close.
+- Collection entries push directly after light haptic feedback; they no longer wait for `measureInWindow` before navigating.
+- Detail content renders immediately and back navigation delegates directly to the stack, restoring the native back gesture instead of intercepting route removal.
+- Removed the root overlay host, duplicated morph renderer, global morph state machine, target-measurement wait, coordinate conversion, and settle crossfade.
+- Replaced the measurement-heavy transition suite with focused coverage for immediate list/grid navigation, native back delegation, and the no-history fallback.
+
+### Verification
+
+- `npx tsc --noEmit`
+- `npm run lint`
+- `npx jest --ci --runInBand` (42 suites, 230 tests)
+
 ## 2026-07-09 - Anchor morph coordinates to the overlay host
 
 ### Summary

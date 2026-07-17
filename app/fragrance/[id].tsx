@@ -33,6 +33,8 @@ import { IconChevronLeft, IconTrash } from '../../components/ui/Icon';
 import { BottleArt } from '../../components/BottleArt';
 import { pickPersonalFragrancePhoto, uploadPersonalFragrancePhoto } from '../../lib/fragrancePhotos';
 import { costPerWear, estimatedRemainingMl, formatCostPerWear } from '../../lib/bottleEconomics';
+import { parseDateKeyLocal } from '../../lib/dateKey';
+import { todayLocalDate } from '../../lib/todayWear';
 import { notifySuccess, notifyWarning } from '../../lib/haptics';
 import { durations, easeOut, useReducedMotion } from '../../lib/motion';
 import { formatLastWornLong, latestWearForFragrance } from '../../lib/lastWorn';
@@ -1058,16 +1060,8 @@ function formatMonthYear(iso: string): string {
   return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
 }
 
-function todayLocalDate(): string {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
 function formatWearDate(value: string): string {
-  const d = new Date(`${value}T00:00:00`);
+  const d = parseDateKeyLocal(value);
   if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }

@@ -1,6 +1,7 @@
 import type { Fragrance } from '../types/fragrance';
 import type { Wear } from '../types/wear';
 import { climateAffinityForAccords } from './accordClimate';
+import { diffInDays } from './dateKey';
 import { seasonForDate } from './journal';
 import { latestWearForFragrance } from './lastWorn';
 
@@ -231,9 +232,7 @@ function compareRatingDesc(a: number | null, b: number | null): number {
 }
 
 function daysBetween(fromKey: string, toKey: string): number {
-  const from = new Date(`${fromKey}T00:00:00Z`).getTime();
-  const to = new Date(`${toKey}T00:00:00Z`).getTime();
-  return Math.floor((to - from) / (1000 * 60 * 60 * 24));
+  return diffInDays(fromKey, toKey);
 }
 
 export function describeSuggestion(suggestion: WearSuggestion): string {

@@ -1,5 +1,6 @@
 import type { Fragrance } from '../types/fragrance';
 import type { Wear } from '../types/wear';
+import { diffInDays } from './dateKey';
 import { seasonForDate } from './journal';
 import { latestWearForFragrance } from './lastWorn';
 
@@ -8,8 +9,6 @@ export type CollectionSegment = 'shelf' | 'wants' | 'past';
 export type CollectionFilter = 'in-season' | 'neglected';
 
 export const NEGLECTED_AFTER_DAYS = 60;
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function segmentFragrances(list: Fragrance[], segment: CollectionSegment): Fragrance[] {
   return list.filter((f) => {
@@ -27,10 +26,9 @@ export function daysSinceWorn(
 ): number | null {
   const latest = latestWearForFragrance(wears, fragranceId);
   if (!latest) return null;
-  const today = new Date(`${todayKey}T00:00:00Z`).getTime();
-  const worn = new Date(`${latest.worn_on}T00:00:00Z`).getTime();
-  if (!Number.isFinite(today) || !Number.isFinite(worn)) return null;
-  return Math.max(0, Math.floor((today - worn) / DAY_MS));
+  const diff = diffInDays(latest.worn_on, todayKey);
+  if (!Number.isFinite(diff)) return null;
+  return Math.max(0, diff);
 }
 
 export function applyCollectionFilters(

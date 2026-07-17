@@ -1,4 +1,5 @@
 import type { Wear } from '../types/wear';
+import { parseDateKeyLocal } from './dateKey';
 
 export function latestWearForFragrance(
   wears: Wear[] | undefined,
@@ -31,7 +32,7 @@ function formatWearDate(
   value: string,
   options: Intl.DateTimeFormatOptions,
 ): string {
-  const d = new Date(`${value}T00:00:00`);
+  const d = parseDateKeyLocal(value);
   if (Number.isNaN(d.getTime())) {
     return value;
   }

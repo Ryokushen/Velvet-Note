@@ -2,26 +2,10 @@ import type { Fragrance, Season } from '../types/fragrance';
 import { SEASONS } from '../types/fragrance';
 import type { Wear } from '../types/wear';
 import { costPerWear, estimatedMlUsed, isOwnedStatus } from './bottleEconomics';
+import { addDaysToKey, dayOfWeekOfKey, diffInDays, makeDateKey } from './dateKey';
 import { seasonForDate } from './journal';
 
 export type HeatmapDay = { date: string; count: number };
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function parseDateKey(dateKey: string): Date {
-  return new Date(dateKey + 'T00:00:00Z');
-}
-
-function formatDateKey(date: Date): string {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function addDays(date: Date, amount: number): Date {
-  return new Date(date.getTime() + amount * DAY_MS);
-}
 
 function wearSeason(wear: Wear): Season | null {
   return wear.season ?? seasonForDate(wear.worn_on);
@@ -41,21 +25,20 @@ export function buildYearHeatmap(
     counts.set(wear.worn_on, (counts.get(wear.worn_on) ?? 0) + 1);
   });
 
-  const jan1 = new Date(Date.UTC(year, 0, 1));
-  const dec31 = new Date(Date.UTC(year, 11, 31));
-  const startDow = jan1.getUTCDay();
-  const endDow = dec31.getUTCDay();
+  const jan1Key = makeDateKey(year, 1, 1);
+  const dec31Key = makeDateKey(year, 12, 31);
+  const startDow = dayOfWeekOfKey(jan1Key);
+  const endDow = dayOfWeekOfKey(dec31Key);
 
   const days: (HeatmapDay | null)[] = [];
   for (let i = 0; i < startDow; i += 1) {
     days.push(null);
   }
 
-  let cursor = jan1;
-  while (cursor.getTime() <= dec31.getTime()) {
-    const key = formatDateKey(cursor);
-    days.push({ date: key, count: counts.get(key) ?? 0 });
-    cursor = addDays(cursor, 1);
+  let cursor = jan1Key;
+  while (cursor <= dec31Key) {
+    days.push({ date: cursor, count: counts.get(cursor) ?? 0 });
+    cursor = addDaysToKey(cursor, 1);
   }
 
   for (let i = endDow; i < 6; i += 1) {
@@ -78,21 +61,20 @@ export function buildYearHeatmap(
 export function currentStreak(wears: Wear[], todayKey: string): number {
   const wornDates = new Set(wears.map((wear) => wear.worn_on));
 
-  let anchor: Date;
+  let anchor: string;
   if (wornDates.has(todayKey)) {
-    anchor = parseDateKey(todayKey);
+    anchor = todayKey;
   } else {
-    const yesterday = addDays(parseDateKey(todayKey), -1);
-    const yesterdayKey = formatDateKey(yesterday);
+    const yesterdayKey = addDaysToKey(todayKey, -1);
     if (!wornDates.has(yesterdayKey)) return 0;
-    anchor = yesterday;
+    anchor = yesterdayKey;
   }
 
   let streak = 0;
   let cursor = anchor;
-  while (wornDates.has(formatDateKey(cursor))) {
+  while (wornDates.has(cursor)) {
     streak += 1;
-    cursor = addDays(cursor, -1);
+    cursor = addDaysToKey(cursor, -1);
   }
   return streak;
 }
@@ -104,8 +86,7 @@ export function longestStreak(wears: Wear[]): number {
   let longest = 1;
   let current = 1;
   for (let i = 1; i < uniqueDates.length; i += 1) {
-    const diffDays = (parseDateKey(uniqueDates[i]).getTime() - parseDateKey(uniqueDates[i - 1]).getTime()) / DAY_MS;
-    if (diffDays === 1) {
+    if (diffInDays(uniqueDates[i - 1], uniqueDates[i]) === 1) {
       current += 1;
     } else {
       current = 1;

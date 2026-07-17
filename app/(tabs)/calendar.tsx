@@ -33,6 +33,12 @@ import {
 import { SEASONS, type Fragrance, type Season } from '../../types/fragrance';
 import type { Wear, WearTimeOfDay } from '../../types/wear';
 import { SEASON_LABELS, WEAR_TIME_LABELS, seasonForDate } from '../../lib/journal';
+import {
+  diffInDays,
+  formatDateKey,
+  parseDateKeyLocal as parseWearDate,
+} from '../../lib/dateKey';
+import { todayLocalDate } from '../../lib/todayWear';
 import { tapLight } from '../../lib/haptics';
 import { durations, easeOut, useReducedMotion } from '../../lib/motion';
 import { colors } from '../../theme/colors';
@@ -910,21 +916,6 @@ function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
-function todayLocalDate(): string {
-  return formatDateKey(new Date());
-}
-
-function formatDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function parseWearDate(value: string): Date {
-  return new Date(`${value}T00:00:00`);
-}
-
 function isSameMonth(date: Date, month: Date): boolean {
   return date.getFullYear() === month.getFullYear() && date.getMonth() === month.getMonth();
 }
@@ -944,8 +935,7 @@ function formatMonthDay(date: Date): string {
 function formatLastWorn(dateKey: string, visibleMonth: Date): string {
   const date = parseWearDate(dateKey);
   if (isSameMonth(new Date(), visibleMonth)) {
-    const today = parseWearDate(todayLocalDate());
-    const diff = Math.round((today.getTime() - date.getTime()) / 86_400_000);
+    const diff = diffInDays(dateKey, todayLocalDate());
     if (diff === 0) return 'Today';
     if (diff === 1) return 'Yesterday';
     if (diff > 1) return `${diff} days ago`;

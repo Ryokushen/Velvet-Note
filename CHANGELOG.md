@@ -15,12 +15,13 @@ A four-surface design audit (core screens, add/scan flow, data surfaces, system 
 - **Today**: pull-to-refresh, single primary action, weather readout promoted over its edit affordance, suggestion shuffle crossfade.
 - **Calendar/insights/wrapped**: day dots colored by the fragrance's real accord family (hash-based pseudo-colors removed, woody/spicy now distinguishable); "Today" jump + persistent today ring; year heatmap days are tappable; taste profile shows proportion bars instead of raw scores; locked insight sections collapse to one hint; Wrapped got staggered reveals and a Share action.
 - **Accessibility/legibility**: roles, labels, and selected states on buttons, chips, rating dots, tabs, and form fields; sub-11px `textMuted` metadata raised to legible sizes and tones; 44pt effective touch targets across pills, chips, and steppers; auth errors mapped to on-brand recovery copy.
+- **Date-key unification**: one canonical `lib/dateKey.ts` replaces five hand-rolled key↔Date implementations split across two conventions (`T00:00:00` local vs `T00:00:00Z` UTC). The local timezone now enters exactly once (deciding "today"); all day arithmetic is DST-proof UTC calendar math; the three duplicate `todayLocalDate` copies collapse to one. Removes the latent class of off-by-one-day bugs for non-UTC users.
 
 ### Verification
 
 - `npx tsc --noEmit` (0 errors)
 - `npx expo lint` (0 errors, 1 pre-existing warning)
-- `npm test` (49 suites, 256 tests — includes new coverage for the scan lock, duplicate detection, wear guard, Stepper, family dots, auth error mapping, locked-insights hint, and collection actions)
+- `npm test` (50 suites, 267 tests — includes new coverage for the scan lock, duplicate detection, wear guard, Stepper, family dots, auth error mapping, locked-insights hint, collection actions, and date-key arithmetic across DST/leap/year boundaries)
 
 ## 2026-07-10 - Rebuild Collection-to-Detail navigation on the native stack
 

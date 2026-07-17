@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottleArt } from '../components/BottleArt';
@@ -8,8 +9,10 @@ import { Caption, Serif } from '../components/ui/text';
 import { IconChevronLeft, IconChevronRight } from '../components/ui/Icon';
 import { useFragrancesQuery } from '../hooks/useFragrances';
 import { useWearsQuery } from '../hooks/useWears';
-import { buildWrapped } from '../lib/wearAnalytics';
+import { buildWrapped, type WrappedStats } from '../lib/wearAnalytics';
 import { formatCostPerWear } from '../lib/bottleEconomics';
+import { tapLight } from '../lib/haptics';
+import { durations, easeOut, useReducedMotion } from '../lib/motion';
 import { SEASON_LABELS } from '../lib/journal';
 import { todayLocalDate } from '../lib/todayWear';
 import { colors } from '../theme/colors';
@@ -47,6 +50,26 @@ export default function Wrapped() {
     const years = (wears.data ?? []).map((wear) => Number(wear.worn_on.slice(0, 4)));
     return years.length > 0 ? Math.min(...years) : currentYear;
   }, [wears.data, currentYear]);
+
+  const reduceMotion = useReducedMotion();
+  // Staggered reveal per section so the screen lands like a wrapped story
+  // rather than appearing all at once. Fully disabled under reduced motion.
+  const reveal = (index: number) =>
+    reduceMotion
+      ? undefined
+      : FadeInDown.duration(durations.base)
+          .delay(index * 70)
+          .easing(easeOut);
+
+  async function handleShare() {
+    if (!stats) return;
+    tapLight();
+    try {
+      await Share.share({ message: buildShareMessage(stats, year) });
+    } catch {
+      // A dismissed or failed share sheet is not an error worth surfacing.
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -99,7 +122,7 @@ export default function Wrapped() {
           />
         ) : (
           <>
-            <View style={styles.statGrid}>
+            <Animated.View key={`stat-grid-${year}`} entering={reveal(0)} style={styles.statGrid}>
               <BigStat value={String(stats.totalWears)} label={stats.totalWears === 1 ? 'wear' : 'wears'} />
               <BigStat
                 value={String(stats.distinctFragranceCount)}
@@ -110,10 +133,10 @@ export default function Wrapped() {
                 value={String(stats.totalCompliments)}
                 label={stats.totalCompliments === 1 ? 'compliment' : 'compliments'}
               />
-            </View>
+            </Animated.View>
 
             {stats.mostWorn ? (
-              <View style={styles.featureCard}>
+              <Animated.View key={`feature-${year}`} entering={reveal(1)} style={styles.featureCard}>
                 <Caption style={{ marginBottom: 12 }}>Fragrance of the year</Caption>
                 <View style={styles.featureRow}>
                   <View style={{ flex: 1, minWidth: 0 }}>
@@ -129,10 +152,10 @@ export default function Wrapped() {
                     height={114}
                   />
                 </View>
-              </View>
+              </Animated.View>
             ) : null}
 
-            <View style={styles.detailList}>
+            <Animated.View key={`detail-${year}`} entering={reveal(2)} style={styles.detailList}>
               {stats.complimentChampion ? (
                 <DetailRow
                   label="Compliment champion"
@@ -180,12 +203,50 @@ export default function Wrapped() {
                   metric={`added in ${year}`}
                 />
               ) : null}
-            </View>
+            </Animated.View>
+
+            <Animated.View key={`share-${year}`} entering={reveal(3)}>
+              <Pressable
+                onPress={handleShare}
+                accessibilityRole="button"
+                accessibilityLabel="Share your year in scent"
+                style={({ pressed }) => [styles.shareButton, pressed && { opacity: 0.75 }]}
+              >
+                <Text style={styles.shareButtonText}>— Share your year</Text>
+              </Pressable>
+            </Animated.View>
           </>
         )}
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function buildShareMessage(stats: WrappedStats, year: number): string {
+  const lines: string[] = [`The Note — my ${year} in scent.`];
+  lines.push(
+    `${stats.totalWears} ${stats.totalWears === 1 ? 'wear' : 'wears'} across ${
+      stats.distinctFragranceCount
+    } ${stats.distinctFragranceCount === 1 ? 'bottle' : 'bottles'}.`,
+  );
+  if (stats.mostWorn) {
+    lines.push(
+      `Fragrance of the year — ${stats.mostWorn.fragrance.brand} ${stats.mostWorn.fragrance.name} (${
+        stats.mostWorn.count
+      } ${stats.mostWorn.count === 1 ? 'wear' : 'wears'}).`,
+    );
+  }
+  if (stats.topSeason) {
+    lines.push(`Worn most in ${SEASON_LABELS[stats.topSeason.season].toLowerCase()}.`);
+  }
+  if (stats.totalCompliments > 0) {
+    lines.push(
+      `${stats.totalCompliments} ${
+        stats.totalCompliments === 1 ? 'compliment' : 'compliments'
+      } earned along the way.`,
+    );
+  }
+  return lines.join('\n');
 }
 
 function BigStat({ value, label }: { value: string; label: string }) {
@@ -311,5 +372,18 @@ const styles = StyleSheet.create({
     ...typography.bodyDim,
     color: colors.textDim,
     fontSize: 12,
+  },
+  shareButton: {
+    marginTop: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  shareButtonText: {
+    ...typography.caption,
+    color: colors.text,
   },
 });

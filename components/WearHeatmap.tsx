@@ -1,6 +1,7 @@
 import { useRef } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { buildYearHeatmap } from '../lib/wearAnalytics';
+import { tapLight } from '../lib/haptics';
 import type { Wear } from '../types/wear';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
@@ -15,9 +16,10 @@ type WearHeatmapProps = {
   wears: Wear[];
   year: number;
   currentYear?: boolean;
+  onSelectDate?: (date: string) => void;
 };
 
-export function WearHeatmap({ wears, year, currentYear = false }: WearHeatmapProps) {
+export function WearHeatmap({ wears, year, currentYear = false, onSelectDate }: WearHeatmapProps) {
   const scrollRef = useRef<ScrollView>(null);
   const { weeks, maxCount, totalWears } = buildYearHeatmap(wears, year);
 
@@ -59,12 +61,35 @@ export function WearHeatmap({ wears, year, currentYear = false }: WearHeatmapPro
           <View style={styles.grid}>
             {weeks.map((week, columnIndex) => (
               <View key={`week-${columnIndex}`} style={styles.weekColumn}>
-                {week.map((day, dayIndex) => (
-                  <View
-                    key={day ? day.date : `pad-${columnIndex}-${dayIndex}`}
-                    style={[styles.cell, day ? cellStyle(day.count, maxCount) : styles.cellPad]}
-                  />
-                ))}
+                {week.map((day, dayIndex) => {
+                  const cellStyles = [
+                    styles.cell,
+                    day ? cellStyle(day.count, maxCount) : styles.cellPad,
+                  ];
+                  if (day && onSelectDate) {
+                    return (
+                      <Pressable
+                        key={day.date}
+                        onPress={() => {
+                          tapLight();
+                          onSelectDate(day.date);
+                        }}
+                        hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${day.date} — ${day.count} ${
+                          day.count === 1 ? 'wear' : 'wears'
+                        }`}
+                        style={cellStyles}
+                      />
+                    );
+                  }
+                  return (
+                    <View
+                      key={day ? day.date : `pad-${columnIndex}-${dayIndex}`}
+                      style={cellStyles}
+                    />
+                  );
+                })}
               </View>
             ))}
           </View>
@@ -128,8 +153,8 @@ const styles = StyleSheet.create({
   },
   monthLabel: {
     ...typography.bodyDim,
-    fontSize: 9,
-    color: colors.textMuted,
+    fontSize: 10,
+    color: colors.textDim,
     width: COLUMN_WIDTH * 4,
   },
   grid: {
@@ -165,8 +190,8 @@ const styles = StyleSheet.create({
   },
   legendLabel: {
     ...typography.bodyDim,
-    fontSize: 10,
-    color: colors.textMuted,
+    fontSize: 11,
+    color: colors.textDim,
     marginHorizontal: 4,
   },
 });

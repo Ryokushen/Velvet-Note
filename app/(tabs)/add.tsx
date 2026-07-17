@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   View,
   Text,
@@ -12,13 +13,14 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useCreateFragrance } from '../../hooks/useFragrances';
+import { useCreateFragrance, useFragrancesQuery } from '../../hooks/useFragrances';
 import {
   findSupabaseCatalogByBarcode,
   notesToAccords,
   searchSupabaseCatalog,
   type CatalogFragrance,
 } from '../../lib/catalog';
+import { notifySuccess, notifyWarning, tapLight } from '../../lib/haptics';
 import { AccordChips } from '../../components/AccordChips';
 import { ConcentrationPicker } from '../../components/ConcentrationPicker';
 import { RatingDots } from '../../components/ui/RatingDots';
@@ -33,6 +35,7 @@ import {
   SEASONS,
   type BottleStatus,
   type Concentration,
+  type Fragrance,
   type PreferredTimeOfDay,
   type Season,
 } from '../../types/fragrance';
@@ -46,16 +49,28 @@ import { typography } from '../../theme/typography';
 import { radius } from '../../theme/spacing';
 import { formatAccordList } from '../../lib/accordDisplay';
 
+type SearchStatus = 'idle' | 'searching' | 'done' | 'error';
+
+type FieldErrors = {
+  brand?: string;
+  name?: string;
+  bottleSizeMl?: string;
+  purchasePrice?: string;
+  purchaseDate?: string;
+};
+
 export default function Add() {
   const router = useRouter();
   const params = useLocalSearchParams<{ barcode?: string | string[] }>();
   const create = useCreateFragrance();
+  const shelf = useFragrancesQuery();
   const [brand, setBrand] = useState('');
   const [name, setName] = useState('');
   const [concentration, setConcentration] = useState<Concentration | null>(null);
   const [accords, setAccords] = useState<string[]>([]);
   const [rating, setRating] = useState(0);
   const [photoUrl, setPhotoUrl] = useState('');
+  const [showPhotoUrl, setShowPhotoUrl] = useState(false);
   const [bottleStatus, setBottleStatus] = useState<BottleStatus | null>(null);
   const [bottleSizeMl, setBottleSizeMl] = useState('');
   const [purchaseDate, setPurchaseDate] = useState('');
@@ -68,33 +83,50 @@ export default function Add() {
   const [catalogQuery, setCatalogQuery] = useState('');
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogFragrance | null>(null);
   const [catalogResults, setCatalogResults] = useState<CatalogFragrance[]>([]);
+  const [searchStatus, setSearchStatus] = useState<SearchStatus>('idle');
+  const [searchNonce, setSearchNonce] = useState(0);
+  const [errors, setErrors] = useState<FieldErrors>({});
   const resolvedBarcodeRef = useRef('');
   const barcodeParam = firstParam(params.barcode);
+
+  const nameRef = useRef<TextInput>(null);
+  const bottleSizeRef = useRef<TextInput>(null);
+  const purchaseDateRef = useRef<TextInput>(null);
+  const purchaseSourceRef = useRef<TextInput>(null);
+  const purchasePriceRef = useRef<TextInput>(null);
+  const currencyRef = useRef<TextInput>(null);
 
   useEffect(() => {
     let cancelled = false;
     const query = catalogQuery.trim();
     if (query.length < 2) {
       setCatalogResults([]);
+      setSearchStatus('idle');
       return undefined;
     }
 
-    searchSupabaseCatalog(query, 20)
-      .then((results) => {
-        if (!cancelled) {
-          setCatalogResults(results);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setCatalogResults([]);
-        }
-      });
+    setSearchStatus('searching');
+    const handle = setTimeout(() => {
+      searchSupabaseCatalog(query, 20)
+        .then((results) => {
+          if (!cancelled) {
+            setCatalogResults(results);
+            setSearchStatus('done');
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setCatalogResults([]);
+            setSearchStatus('error');
+          }
+        });
+    }, 250);
 
     return () => {
       cancelled = true;
+      clearTimeout(handle);
     };
-  }, [catalogQuery]);
+  }, [catalogQuery, searchNonce]);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,6 +149,7 @@ export default function Add() {
   }, [barcodeParam]);
 
   function applyCatalogEntry(entry: CatalogFragrance) {
+    tapLight();
     setSelectedCatalog(entry);
     setBrand(entry.brand);
     setName(entry.name);
@@ -124,6 +157,19 @@ export default function Add() {
     setAccords(notesToAccords(entry.notes));
     setPhotoUrl('');
     setCatalogQuery('');
+    setCatalogResults([]);
+    setSearchStatus('idle');
+    clearError('brand');
+    clearError('name');
+  }
+
+  function clearError(key: keyof FieldErrors) {
+    setErrors((current) => {
+      if (!current[key]) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
   }
 
   async function attachPhoto() {
@@ -142,19 +188,70 @@ export default function Add() {
     }
   }
 
+  function findDuplicate(): Fragrance | undefined {
+    const shelfList = shelf.data ?? [];
+    const b = brand.trim().toLowerCase();
+    const n = name.trim().toLowerCase();
+    return shelfList.find((entry) => {
+      if (selectedCatalog?.id && entry.catalog_id === selectedCatalog.id) {
+        return true;
+      }
+      return (
+        entry.brand.trim().toLowerCase() === b && entry.name.trim().toLowerCase() === n
+      );
+    });
+  }
+
   async function submit() {
-    if (!brand.trim() || !name.trim()) {
-      Alert.alert('Missing fields', 'Brand and name are required.');
-      return;
-    }
+    const nextErrors: FieldErrors = {};
+    if (!brand.trim()) nextErrors.brand = 'Brand is required.';
+    if (!name.trim()) nextErrors.name = 'Name is required.';
+
     const parsedBottleSize = parseOptionalNumber(bottleSizeMl);
     const parsedPurchasePrice = parseOptionalNumber(purchasePrice);
-    if (parsedBottleSize === undefined || parsedPurchasePrice === undefined) {
-      Alert.alert('Check numbers', 'Bottle size and purchase price must be valid numbers.');
+    if (parsedBottleSize === undefined) nextErrors.bottleSizeMl = 'Enter a valid number.';
+    if (parsedPurchasePrice === undefined) nextErrors.purchasePrice = 'Enter a valid number.';
+
+    const trimmedDate = purchaseDate.trim();
+    if (trimmedDate && !isValidIsoDate(trimmedDate)) {
+      nextErrors.purchaseDate = 'Use a real date, YYYY-MM-DD.';
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      notifyWarning();
       return;
     }
+    setErrors({});
+
+    const duplicate = findDuplicate();
+    if (duplicate) {
+      Alert.alert(
+        'Already on your shelf',
+        `${duplicate.brand} — ${duplicate.name} is already saved. Add it again anyway?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Add anyway',
+            style: 'destructive',
+            onPress: () => {
+              void performCreate(parsedBottleSize as number | null, parsedPurchasePrice as number | null);
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    await performCreate(parsedBottleSize as number | null, parsedPurchasePrice as number | null);
+  }
+
+  async function performCreate(
+    parsedBottleSize: number | null,
+    parsedPurchasePrice: number | null,
+  ) {
     try {
-      await create.mutateAsync({
+      const created = await create.mutateAsync({
         brand: brand.trim(),
         name: name.trim(),
         concentration,
@@ -178,6 +275,8 @@ export default function Add() {
         preferred_seasons: preferredSeasons.length > 0 ? preferredSeasons : null,
         preferred_time_of_day: preferredTimeOfDay,
       });
+      notifySuccess();
+      const newId = (created as Fragrance | undefined)?.id;
       // Reset in case user comes back to this screen.
       setBrand('');
       setName('');
@@ -185,6 +284,7 @@ export default function Add() {
       setAccords([]);
       setRating(0);
       setPhotoUrl('');
+      setShowPhotoUrl(false);
       setSelectedCatalog(null);
       setBottleStatus(null);
       setBottleSizeMl('');
@@ -194,7 +294,8 @@ export default function Add() {
       setPurchaseCurrency('USD');
       setPreferredSeasons([]);
       setPreferredTimeOfDay(null);
-      router.replace('/' as never);
+      setErrors({});
+      router.replace((newId ? `/fragrance/${newId}` : '/') as never);
     } catch (e: any) {
       Alert.alert('Could not save', e.message ?? 'Unknown error');
     }
@@ -238,17 +339,36 @@ export default function Add() {
               autoCorrect={false}
               style={styles.input}
             />
+            {searchStatus === 'searching' ? (
+              <View style={styles.searchStatusRow}>
+                <ActivityIndicator size="small" color={colors.accent} />
+                <Text style={styles.searchStatusText}>Searching catalog</Text>
+              </View>
+            ) : null}
+            {searchStatus === 'error' ? (
+              <View style={styles.searchStatusRow}>
+                <Text style={styles.searchErrorText}>— Catalog search stalled.</Text>
+                <Pressable
+                  onPress={() => setSearchNonce((n) => n + 1)}
+                  accessibilityRole="button"
+                  hitSlop={10}
+                >
+                  <Text style={styles.retryText}>Retry</Text>
+                </Pressable>
+              </View>
+            ) : null}
+            {searchStatus === 'done' && catalogResults.length === 0 ? (
+              <Text style={styles.emptyStateText}>
+                — No catalog match. Add it by hand below.
+              </Text>
+            ) : null}
             {catalogResults.length > 0 ? (
-              <ScrollView
-                nestedScrollEnabled
-                keyboardShouldPersistTaps="handled"
-                style={styles.catalogResults}
-                contentContainerStyle={styles.catalogResultsContent}
-              >
+              <View style={styles.catalogResultsContent}>
                 {catalogResults.map((entry) => (
                   <Pressable
                     key={entry.id}
                     onPress={() => applyCatalogEntry(entry)}
+                    accessibilityRole="button"
                     style={({ pressed }) => [
                       styles.catalogResult,
                       pressed && { opacity: 0.75 },
@@ -267,7 +387,7 @@ export default function Add() {
                     </View>
                   </Pressable>
                 ))}
-              </ScrollView>
+              </View>
             ) : null}
             {selectedCatalog ? (
               <View style={styles.selectedCatalog}>
@@ -286,16 +406,31 @@ export default function Add() {
           <Field
             label="Brand"
             value={brand}
-            onChangeText={setBrand}
+            onChangeText={(text) => {
+              setBrand(text);
+              clearError('brand');
+            }}
             placeholder="Who made it"
             autoCapitalize="words"
+            error={errors.brand}
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => nameRef.current?.focus()}
           />
           <Field
+            ref={nameRef}
             label="Name"
             value={name}
-            onChangeText={setName}
+            onChangeText={(text) => {
+              setName(text);
+              clearError('name');
+            }}
             placeholder="What it's called"
             autoCapitalize="words"
+            error={errors.name}
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => bottleSizeRef.current?.focus()}
           />
           <View style={styles.photoEditRow}>
             <BottleArt imageUrl={photoUrl.trim() || null} width={64} height={82} />
@@ -307,15 +442,26 @@ export default function Add() {
               >
                 Attach photo
               </GhostButton>
-              <Field
-                label="Photo URL"
-                value={photoUrl}
-                onChangeText={setPhotoUrl}
-                placeholder="Paste an image link"
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-              />
+              {showPhotoUrl ? (
+                <Field
+                  label="Photo URL"
+                  value={photoUrl}
+                  onChangeText={setPhotoUrl}
+                  placeholder="Paste an image link"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                />
+              ) : (
+                <Pressable
+                  onPress={() => setShowPhotoUrl(true)}
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  style={styles.disclosure}
+                >
+                  <Text style={styles.disclosureText}>— Add image by URL</Text>
+                </Pressable>
+              )}
             </View>
           </View>
           <ConcentrationPicker value={concentration} onChange={setConcentration} />
@@ -333,42 +479,72 @@ export default function Add() {
               onSelect={(value) => setBottleStatus(value === bottleStatus ? null : value)}
             />
             <Field
+              ref={bottleSizeRef}
               label="Bottle size (ml)"
               value={bottleSizeMl}
-              onChangeText={setBottleSizeMl}
+              onChangeText={(text) => {
+                setBottleSizeMl(text);
+                clearError('bottleSizeMl');
+              }}
               placeholder="100"
               keyboardType="decimal-pad"
+              error={errors.bottleSizeMl}
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => purchaseDateRef.current?.focus()}
             />
             <Field
+              ref={purchaseDateRef}
               label="Purchase date"
               value={purchaseDate}
-              onChangeText={setPurchaseDate}
+              onChangeText={(text) => {
+                setPurchaseDate(text);
+                clearError('purchaseDate');
+              }}
               placeholder="YYYY-MM-DD"
               keyboardType="numbers-and-punctuation"
+              error={errors.purchaseDate}
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => purchaseSourceRef.current?.focus()}
             />
             <Field
+              ref={purchaseSourceRef}
               label="Purchase source"
               value={purchaseSource}
               onChangeText={setPurchaseSource}
               placeholder="Store, seller, or gift"
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onSubmitEditing={() => purchasePriceRef.current?.focus()}
             />
             <View style={styles.priceRow}>
               <View style={{ flex: 1 }}>
                 <Field
+                  ref={purchasePriceRef}
                   label="Purchase price"
                   value={purchasePrice}
-                  onChangeText={setPurchasePrice}
+                  onChangeText={(text) => {
+                    setPurchasePrice(text);
+                    clearError('purchasePrice');
+                  }}
                   placeholder="125"
                   keyboardType="decimal-pad"
+                  error={errors.purchasePrice}
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onSubmitEditing={() => currencyRef.current?.focus()}
                 />
               </View>
               <View style={styles.currencyField}>
                 <Field
+                  ref={currencyRef}
                   label="Currency"
                   value={purchaseCurrency}
                   onChangeText={setPurchaseCurrency}
                   autoCapitalize="characters"
                   maxLength={3}
+                  returnKeyType="done"
                 />
               </View>
             </View>
@@ -424,22 +600,24 @@ function firstParam(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0] ?? '' : value ?? '';
 }
 
-function Field({
-  label,
-  ...rest
-}: { label: string } & React.ComponentProps<typeof TextInput>) {
+const Field = forwardRef<
+  TextInput,
+  { label: string; error?: string } & React.ComponentProps<typeof TextInput>
+>(function Field({ label, error, ...rest }, ref) {
   return (
     <View>
       <Caption style={{ marginBottom: 8 }}>{label}</Caption>
       <TextInput
+        ref={ref}
         {...rest}
         accessibilityLabel={label}
         placeholderTextColor={colors.textMuted}
-        style={styles.input}
+        style={[styles.input, error ? styles.inputError : null]}
       />
+      {error ? <Text style={styles.fieldError}>{error}</Text> : null}
     </View>
   );
-}
+});
 
 function OptionPills<T extends string>({
   values,
@@ -459,7 +637,13 @@ function OptionPills<T extends string>({
         return (
           <Pressable
             key={value}
-            onPress={() => onSelect(value)}
+            onPress={() => {
+              tapLight();
+              onSelect(value);
+            }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            hitSlop={10}
             style={[styles.optionPill, active && styles.optionPillActive]}
           >
             <Text style={[styles.optionPillText, active && styles.optionPillTextActive]}>
@@ -490,7 +674,13 @@ function MultiOptionPills<T extends string>({
         return (
           <Pressable
             key={value}
-            onPress={() => onToggle(value)}
+            onPress={() => {
+              tapLight();
+              onToggle(value);
+            }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            hitSlop={10}
             style={[styles.optionPill, active && styles.optionPillActive]}
           >
             <Text style={[styles.optionPillText, active && styles.optionPillTextActive]}>
@@ -508,6 +698,21 @@ function parseOptionalNumber(value: string): number | null | undefined {
   if (!trimmed) return null;
   const parsed = Number(trimmed);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function isValidIsoDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+  );
 }
 
 const styles = StyleSheet.create({
@@ -536,6 +741,15 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontFamily: typography.serif,
   },
+  inputError: {
+    borderColor: colors.error,
+  },
+  fieldError: {
+    ...typography.bodyDim,
+    color: colors.error,
+    fontSize: 12,
+    marginTop: 6,
+  },
   scanButton: {
     height: 44,
     flexDirection: 'row',
@@ -548,17 +762,39 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   scanButtonText: {
+    ...typography.caption,
     fontSize: 12,
     color: colors.text,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
     fontWeight: '600',
   },
-  catalogResults: {
+  searchStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     marginTop: 10,
-    maxHeight: 430,
+  },
+  searchStatusText: {
+    ...typography.bodyDim,
+    color: colors.textDim,
+    fontSize: 13,
+  },
+  searchErrorText: {
+    ...typography.bodyDim,
+    color: colors.error,
+    fontSize: 13,
+  },
+  retryText: {
+    ...typography.caption,
+    color: colors.text,
+  },
+  emptyStateText: {
+    ...typography.bodyDim,
+    color: colors.textMuted,
+    fontSize: 13,
+    marginTop: 10,
   },
   catalogResultsContent: {
+    marginTop: 10,
     gap: 8,
   },
   catalogResult: {
@@ -617,6 +853,15 @@ const styles = StyleSheet.create({
     height: 44,
     marginBottom: 10,
   },
+  disclosure: {
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  disclosureText: {
+    ...typography.bodyDim,
+    color: colors.textMuted,
+    fontSize: 13,
+  },
   fieldGroup: {
     gap: 12,
   },
@@ -646,10 +891,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
   },
   optionPillText: {
-    fontSize: 11,
+    ...typography.caption,
     color: colors.textMuted,
     letterSpacing: 0.8,
-    textTransform: 'uppercase',
     fontWeight: '600',
   },
   optionPillTextActive: {

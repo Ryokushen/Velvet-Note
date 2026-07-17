@@ -11,11 +11,41 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { colors } from '../../theme/colors';
+import { colors, withAlpha } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { radius } from '../../theme/spacing';
 import { Caption, Serif } from '../../components/ui/text';
 import { PrimaryButton } from '../../components/ui/Button';
+
+// Supabase surfaces raw, developer-facing strings ("Invalid login
+// credentials", "AuthRetryableFetchError", …). Map the common cases to
+// on-brand copy with a way forward; anything unrecognised falls back to a
+// calm generic line rather than leaking internals.
+export function mapAuthError(rawMessage: string, mode: 'signin' | 'signup'): string {
+  const message = rawMessage.toLowerCase();
+
+  if (message.includes('invalid login') || message.includes('invalid credentials')) {
+    return 'That email and password don’t match — check them, or create an account below.';
+  }
+  if (message.includes('email not confirmed') || message.includes('not confirmed')) {
+    return 'This email hasn’t been confirmed yet — open the link we sent, then sign in.';
+  }
+  if (message.includes('already registered') || message.includes('already exists') || message.includes('already in use')) {
+    return 'An account already exists for this email — sign in instead.';
+  }
+  if (message.includes('password') && (message.includes('at least') || message.includes('should be') || message.includes('weak'))) {
+    return 'That password is too short — use at least six characters.';
+  }
+  if (message.includes('rate') || message.includes('too many')) {
+    return 'Too many attempts — wait a moment, then try again.';
+  }
+  if (message.includes('network') || message.includes('fetch') || message.includes('timeout') || message.includes('connection')) {
+    return 'Couldn’t reach the server — check your connection and try again.';
+  }
+  return mode === 'signin'
+    ? 'Something went wrong signing in — try again in a moment.'
+    : 'Something went wrong creating your account — try again in a moment.';
+}
 
 export default function SignIn() {
   const router = useRouter();
@@ -42,7 +72,7 @@ export default function SignIn() {
           : await supabase.auth.signUp({ email: trimmedEmail, password });
 
       if (error) {
-        setErrorMsg(error.message);
+        setErrorMsg(mapAuthError(error.message, mode));
         return;
       }
       if (mode === 'signup' && data.user && !data.session) {
@@ -54,7 +84,7 @@ export default function SignIn() {
         router.replace('/' as never);
       }
     } catch (e: any) {
-      setErrorMsg(`Unexpected: ${e?.message ?? String(e)}`);
+      setErrorMsg(mapAuthError(e?.message ?? String(e), mode));
     } finally {
       setLoading(false);
     }
@@ -63,7 +93,7 @@ export default function SignIn() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
         contentContainerStyle={styles.inner}
@@ -106,7 +136,9 @@ export default function SignIn() {
 
         {errorMsg ? (
           <View style={styles.errorBox}>
-            <Caption tone="dim" style={styles.errorLabel}>— Could not sign in</Caption>
+            <Caption tone="dim" style={styles.errorLabel}>
+              {mode === 'signin' ? '— Could not sign in' : '— Could not create account'}
+            </Caption>
             <Text style={styles.errorText}>{errorMsg}</Text>
           </View>
         ) : notice ? (
@@ -143,6 +175,7 @@ function Field({
       <Caption style={{ marginBottom: 8 }}>{label}</Caption>
       <TextInput
         {...rest}
+        accessibilityLabel={label}
         placeholderTextColor={colors.textMuted}
         style={styles.input}
       />
@@ -167,7 +200,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.error,
     borderRadius: radius.sm,
-    backgroundColor: 'rgba(196,89,79,0.08)',
+    backgroundColor: withAlpha(colors.error, 0.08),
   },
   noticeBox: {
     marginTop: 20,

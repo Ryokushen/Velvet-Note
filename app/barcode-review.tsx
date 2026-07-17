@@ -28,7 +28,8 @@ export default function BarcodeReview() {
   const [submissions, setSubmissions] = useState<CatalogBarcodeSubmission[]>([]);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState('');
+  const [busy, setBusy] = useState<{ id: string; action: 'approve' | 'reject' } | null>(null);
+  const [pendingReject, setPendingReject] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export default function BarcodeReview() {
   async function loadSubmissions() {
     setLoading(true);
     setError('');
+    setPendingReject('');
     try {
       const next = await listPendingCatalogBarcodeSubmissions(50);
       setSubmissions(next);
@@ -53,7 +55,17 @@ export default function BarcodeReview() {
     submission: CatalogBarcodeSubmission,
     action: 'approve' | 'reject',
   ) {
-    setBusyId(submission.id);
+    // Reject is a two-tap confirm: the first tap arms the inline prompt,
+    // the second (while armed) actually rejects. Approving clears the prompt.
+    if (action === 'reject' && pendingReject !== submission.id) {
+      setPendingReject(submission.id);
+      return;
+    }
+    if (action === 'approve') {
+      setPendingReject('');
+    }
+
+    setBusy({ id: submission.id, action });
     setError('');
     const note = notes[submission.id]?.trim();
     try {
@@ -66,7 +78,7 @@ export default function BarcodeReview() {
     } catch (e: any) {
       setError(e.message ?? 'Unknown error');
     } finally {
-      setBusyId('');
+      setBusy(null);
     }
   }
 
@@ -131,7 +143,10 @@ export default function BarcodeReview() {
 
         {!error
           ? submissions.map((submission) => {
-              const busy = busyId === submission.id;
+              const anyBusy = busy?.id === submission.id;
+              const rejecting = anyBusy && busy?.action === 'reject';
+              const approving = anyBusy && busy?.action === 'approve';
+              const awaitingRejectConfirm = pendingReject === submission.id;
               return (
                 <View key={submission.id} style={styles.card}>
                   <View style={styles.cardHeader}>
@@ -162,16 +177,16 @@ export default function BarcodeReview() {
                   <View style={styles.actions}>
                     <GhostButton
                       danger
-                      disabled={busy}
-                      loading={busy}
+                      disabled={anyBusy}
+                      loading={rejecting}
                       onPress={() => reviewSubmission(submission, 'reject')}
                       style={styles.actionButton}
                     >
-                      Reject
+                      {awaitingRejectConfirm ? 'Tap again to confirm' : 'Reject'}
                     </GhostButton>
                     <PrimaryButton
-                      disabled={busy}
-                      loading={busy}
+                      disabled={anyBusy}
+                      loading={approving}
                       onPress={() => reviewSubmission(submission, 'approve')}
                       style={styles.actionButton}
                     >
@@ -226,10 +241,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   refreshText: {
-    fontSize: 11,
+    ...typography.caption,
     color: colors.text,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
     fontWeight: '600',
   },
   scroll: {

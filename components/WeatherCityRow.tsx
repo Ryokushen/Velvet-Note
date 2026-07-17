@@ -129,14 +129,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   summaryText: {
-    ...typography.bodyDim,
-    color: colors.textMuted,
-    fontSize: 12,
+    ...typography.body,
+    color: colors.textDim,
     flexShrink: 1,
   },
   summaryAction: {
     ...typography.caption,
-    color: colors.textDim,
+    color: colors.textMuted,
     fontSize: 11,
   },
   editPanel: {

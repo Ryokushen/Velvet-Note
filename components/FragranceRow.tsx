@@ -27,6 +27,8 @@ export function FragranceRow({
   onLayout,
 }: FragranceRowProps) {
   const rating = fragrance.rating != null ? fragrance.rating.toFixed(1) : '—';
+  const ratingA11y =
+    fragrance.rating != null ? `, rated ${fragrance.rating.toFixed(1)}` : '';
   const accordPreview = formatAccordList(fragrance.accords.slice(0, 3));
   const bottleMeta = [
     fragrance.bottle_status ? BOTTLE_STATUS_LABELS[fragrance.bottle_status] : null,
@@ -39,7 +41,7 @@ export function FragranceRow({
       onLongPress={onLongPress}
       onLayout={onLayout}
       accessibilityRole="button"
-      accessibilityLabel={`Open ${fragrance.brand} ${fragrance.name}`}
+      accessibilityLabel={`Open ${fragrance.brand} ${fragrance.name}${ratingA11y}`}
       style={({ pressed }) => [
         styles.row,
         pressed && { opacity: 0.75 },
@@ -70,7 +72,6 @@ export function FragranceRow({
       </View>
       <View style={styles.meta}>
         <Text style={styles.rating}>{rating}</Text>
-        <Caption style={styles.ratingLabel}>Rating</Caption>
       </View>
     </Pressable>
   );
@@ -112,5 +113,4 @@ const styles = StyleSheet.create({
     color: colors.text,
     lineHeight: 22,
   },
-  ratingLabel: { fontSize: 9, marginTop: 4 },
 });

@@ -1,14 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BottleArt } from '../../components/BottleArt';
@@ -16,12 +20,14 @@ import { EmptyState } from '../../components/EmptyState';
 import { SuggestionCard } from '../../components/SuggestionCard';
 import { WeatherCityRow } from '../../components/WeatherCityRow';
 import { GhostButton, PrimaryButton } from '../../components/ui/Button';
+import { Stepper } from '../../components/ui/Stepper';
 import { Caption, Serif } from '../../components/ui/text';
 import { useFragrancesQuery } from '../../hooks/useFragrances';
 import { useQuickLogWear } from '../../hooks/useQuickLogWear';
 import { useWeather } from '../../hooks/useWeather';
 import { useSetActiveWear, useUpdateWear, useWearsQuery } from '../../hooks/useWears';
 import { tapLight } from '../../lib/haptics';
+import { durations, easeOut, useReducedMotion } from '../../lib/motion';
 import { suggestWears } from '../../lib/suggestion';
 import {
   clampComplimentCount,
@@ -53,6 +59,32 @@ export default function Today() {
   }, [todayState.active?.wear.id, todayState.active?.wear.notes]);
 
   const weather = useWeather();
+  const reducedMotion = useReducedMotion();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const tasks: Promise<unknown>[] = [];
+      if (typeof wears.refetch === 'function') tasks.push(wears.refetch());
+      if (typeof fragrances.refetch === 'function') tasks.push(fragrances.refetch());
+      // Weather has no query cache; re-selecting the saved city refetches its snapshot.
+      if (weather.city) weather.selectCity(weather.city);
+      await Promise.all(tasks);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [wears, fragrances, weather]);
+
+  const refreshControl = (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      tintColor={colors.textDim}
+      colors={[colors.textDim]}
+      progressBackgroundColor={colors.background}
+    />
+  );
 
   const suggestions = useMemo(() => {
     if (!fragrances.data || !wears.data) return [];
@@ -95,19 +127,24 @@ export default function Today() {
         />
       ) : !todayState.active ? (
         suggestion ? (
-          <ScrollView contentContainerStyle={styles.scroll}>
-            <SuggestionCard
-              suggestion={suggestion}
-              wearing={pendingFragranceId === suggestion.fragrance.id}
-              canShuffle={suggestions.length > 1}
-              onWear={() => {
-                quickLog(suggestion.fragrance).catch(() => undefined);
-              }}
-              onShuffle={() => {
-                tapLight();
-                setSuggestionIndex((current) => current + 1);
-              }}
-            />
+          <ScrollView contentContainerStyle={styles.scroll} refreshControl={refreshControl}>
+            <Animated.View
+              key={suggestion.fragrance.id}
+              entering={reducedMotion ? undefined : FadeIn.duration(durations.base).easing(easeOut)}
+            >
+              <SuggestionCard
+                suggestion={suggestion}
+                wearing={pendingFragranceId === suggestion.fragrance.id}
+                canShuffle={suggestions.length > 1}
+                onWear={() => {
+                  quickLog(suggestion.fragrance).catch(() => undefined);
+                }}
+                onShuffle={() => {
+                  tapLight();
+                  setSuggestionIndex((current) => current + 1);
+                }}
+              />
+            </Animated.View>
             <WeatherCityRow
               city={weather.city}
               snapshot={weather.snapshot}
@@ -117,7 +154,7 @@ export default function Today() {
               <Caption>Or pick one yourself</Caption>
             </View>
             <View style={styles.suggestionActions}>
-              <PrimaryButton onPress={() => router.push('/calendar')}>Open Wears</PrimaryButton>
+              <GhostButton onPress={() => router.push('/calendar')}>Open Wears</GhostButton>
               <GhostButton onPress={() => router.push('/')}>Open Collection</GhostButton>
             </View>
           </ScrollView>
@@ -134,7 +171,18 @@ export default function Today() {
           </View>
         )
       ) : (
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={refreshControl}
+        >
+          <Animated.View
+            entering={reducedMotion ? undefined : FadeIn.duration(durations.base).easing(easeOut)}
+          >
           <ActiveWearCard
             row={todayState.active}
             journal={journal}
@@ -158,6 +206,7 @@ export default function Today() {
             }}
             saving={updateWear.isPending}
           />
+          </Animated.View>
 
           <View style={styles.section}>
             <Caption style={{ marginBottom: 12 }}>{"Today's stack"}</Caption>
@@ -177,6 +226,7 @@ export default function Today() {
             </View>
           </View>
         </ScrollView>
+        </KeyboardAvoidingView>
       )}
     </SafeAreaView>
   );
@@ -197,6 +247,7 @@ function ActiveWearCard({
   onSaveJournal: () => Promise<unknown>;
   saving?: boolean;
 }) {
+  const reducedMotion = useReducedMotion();
   const initialComplimentCount = clampComplimentCount(row.wear.compliment_count ?? 0);
   const [complimentCount, setComplimentCount] = useState(initialComplimentCount);
   const complimentCountRef = useRef(initialComplimentCount);
@@ -280,41 +331,30 @@ function ActiveWearCard({
   return (
     <View style={styles.activeCard}>
       <Caption style={{ marginBottom: 10 }}>Currently wearing</Caption>
-      <View style={styles.heroRow}>
+      <Animated.View
+        key={row.wear.id}
+        entering={reducedMotion ? undefined : FadeIn.duration(durations.base).easing(easeOut)}
+        style={styles.heroRow}
+      >
         <View style={styles.activeCopy}>
           <Caption style={{ marginBottom: 8 }}>{row.fragrance?.brand ?? 'Unknown'}</Caption>
           <Serif size={30}>{row.fragrance?.name ?? 'Unknown fragrance'}</Serif>
           {context ? <Text style={styles.context}>{context}</Text> : null}
         </View>
         <BottleArt imageUrl={row.fragrance?.image_url ?? null} width={104} height={136} />
-      </View>
+      </Animated.View>
 
       <View style={styles.complimentPanel}>
         <Caption>Compliments</Caption>
-        <View style={styles.counterRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Decrease compliment count"
-            disabled={complimentCount === 0}
-            onPress={() => updateComplimentCount(-1)}
-            style={({ pressed }) => [
-              styles.counterButton,
-              complimentCount === 0 && styles.disabled,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.counterButtonText}>-</Text>
-          </Pressable>
-          <Text style={styles.count}>{complimentCount}</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Increase compliment count"
-            onPress={() => updateComplimentCount(1)}
-            style={({ pressed }) => [styles.counterButton, pressed && styles.pressed]}
-          >
-            <Text style={styles.counterButtonText}>+</Text>
-          </Pressable>
-        </View>
+        <Stepper
+          variant="panel"
+          style={styles.counterRow}
+          value={complimentCount}
+          label="compliment count"
+          decrementDisabled={complimentCount === 0}
+          onDecrement={() => updateComplimentCount(-1)}
+          onIncrement={() => updateComplimentCount(1)}
+        />
       </View>
 
       <View style={styles.journalPanel}>
@@ -392,6 +432,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  flex: {
+    flex: 1,
+  },
   header: {
     height: 52,
     justifyContent: 'center',
@@ -453,33 +496,6 @@ const styles = StyleSheet.create({
   },
   counterRow: {
     marginTop: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  counterButton: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceElevated,
-  },
-  counterButtonText: {
-    color: colors.text,
-    fontSize: 24,
-    lineHeight: 28,
-  },
-  count: {
-    fontFamily: typography.serif,
-    color: colors.text,
-    fontSize: 54,
-    lineHeight: 62,
-  },
-  disabled: {
-    opacity: 0.45,
   },
   pressed: {
     opacity: 0.78,

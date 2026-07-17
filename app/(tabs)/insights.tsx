@@ -34,11 +34,14 @@ export default function Insights() {
   const wears = useWearsQuery();
   const loading = fragrances.isLoading || wears.isLoading;
   const error = fragrances.error || wears.error;
-  const insights = buildJournalInsights(fragrances.data ?? [], wears.data ?? []);
   const hasAnyData = (fragrances.data?.length ?? 0) > 0 || (wears.data?.length ?? 0) > 0;
 
   const wearData = useMemo(() => wears.data ?? [], [wears.data]);
   const fragranceData = useMemo(() => fragrances.data ?? [], [fragrances.data]);
+  const insights = useMemo(
+    () => buildJournalInsights(fragranceData, wearData),
+    [fragranceData, wearData],
+  );
   const todayKey = todayLocalDate();
   const wrappedYear = Number(todayKey.slice(0, 4));
 
@@ -71,6 +74,25 @@ export default function Insights() {
       .sort((a, b) => a.value - b.value)
       .slice(0, 3);
   }, [fragranceData, wearData]);
+
+  // Derive each unlockable section's rows once so we can both render only the
+  // sections that have content and collapse the rest into a single hint line.
+  const mostWornRows = insights.mostWorn.filter((row) => row.count > 0).slice(0, 5);
+  const neglectedRows = insights.neglected.slice(0, 5);
+  const seasonFavoriteRows = insights.favoriteSeasons.slice(0, 4);
+  const timeOfDayRows = insights.timeOfDay;
+  const tasteRows = insights.topAccords.slice(0, 8);
+  const tasteTopScore = tasteRows[0]?.score ?? 0;
+  const shelfEconomicsEmpty = shelfValue.length === 0 && bestValues.length === 0;
+  const anyLockedSection =
+    mostWornRows.length === 0 ||
+    neglectedRows.length === 0 ||
+    crowdPleasers.length === 0 ||
+    signatures.length === 0 ||
+    seasonFavoriteRows.length === 0 ||
+    timeOfDayRows.length === 0 ||
+    shelfEconomicsEmpty ||
+    tasteRows.length === 0;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -125,90 +147,116 @@ export default function Insights() {
             </InsightSection>
           </View>
 
-          <InsightSection title="Most worn">
-            {insights.mostWorn.filter((row) => row.count > 0).slice(0, 5).map((row) => (
-              <FragranceMetricRow
-                key={row.fragranceId}
-                brand={row.fragrance.brand}
-                name={row.fragrance.name}
-                metric={`${row.count} ${row.count === 1 ? 'wear' : 'wears'}`}
-              />
-            ))}
-          </InsightSection>
-
-          <InsightSection title="Neglected bottles">
-            {insights.neglected.slice(0, 5).map((row) => (
-              <FragranceMetricRow
-                key={row.fragranceId}
-                brand={row.fragrance.brand}
-                name={row.fragrance.name}
-                metric={row.lastWorn ? `Last ${formatShortDate(row.lastWorn)}` : 'Unworn'}
-              />
-            ))}
-          </InsightSection>
-
-          <InsightSection title="Crowd-pleasers">
-            {crowdPleasers.map((row) => (
-              <FragranceMetricRow
-                key={row.fragrance.id}
-                brand={row.fragrance.brand}
-                name={row.fragrance.name}
-                metric={`${row.complimentsPerWear.toFixed(1)}/wear · ${row.totalCompliments} total`}
-              />
-            ))}
-          </InsightSection>
-
-          <InsightSection title="Seasonal signatures">
-            {signatures.map((row) => (
-              <FragranceMetricRow
-                key={row.season}
-                brand={SEASON_LABELS[row.season]}
-                name={row.fragrance.name}
-                metric={`${row.wearCount} ${row.wearCount === 1 ? 'wear' : 'wears'}`}
-              />
-            ))}
-          </InsightSection>
-
-          <View style={styles.twoColumn}>
-            <InsightSection title="Seasonal favorites" compact>
-              {insights.favoriteSeasons.slice(0, 4).map((row) => (
-                <CountRow key={row.label} label={row.label} count={row.count} />
-              ))}
-            </InsightSection>
-            <InsightSection title="Day / night" compact>
-              {insights.timeOfDay.map((row) => (
-                <CountRow key={row.label} label={row.label} count={row.count} />
-              ))}
-            </InsightSection>
-          </View>
-
-          <InsightSection title="Shelf economics">
-            {[
-              ...shelfValue.map((row) => (
-                <CountLabelRow
-                  key={`value-${row.currency}`}
-                  label={`Shelf value (${row.count} ${row.count === 1 ? 'bottle' : 'bottles'})`}
-                  value={formatCurrency(row.total, row.currency) ?? String(row.total)}
-                />
-              )),
-              ...bestValues.map((row) => (
+          {mostWornRows.length > 0 ? (
+            <InsightSection title="Most worn">
+              {mostWornRows.map((row) => (
                 <FragranceMetricRow
-                  key={`best-${row.fragrance.id}`}
+                  key={row.fragranceId}
                   brand={row.fragrance.brand}
                   name={row.fragrance.name}
-                  metric={
-                    formatCostPerWear(row.value, row.fragrance.purchase_currency ?? 'USD') ?? ''
-                  }
+                  metric={`${row.count} ${row.count === 1 ? 'wear' : 'wears'}`}
                 />
-              )),
-            ]}
-          </InsightSection>
+              ))}
+            </InsightSection>
+          ) : null}
 
-          <InsightSection title="Taste profile">
-            {insights.topAccords.slice(0, 8).map((row) => (
-              <CountRow key={row.label} label={row.label} count={Math.round(row.score)} />
-            ))}
-          </InsightSection>
+          {neglectedRows.length > 0 ? (
+            <InsightSection title="Neglected bottles">
+              {neglectedRows.map((row) => (
+                <FragranceMetricRow
+                  key={row.fragranceId}
+                  brand={row.fragrance.brand}
+                  name={row.fragrance.name}
+                  metric={row.lastWorn ? `Last ${formatShortDate(row.lastWorn)}` : 'Unworn'}
+                />
+              ))}
+            </InsightSection>
+          ) : null}
+
+          {crowdPleasers.length > 0 ? (
+            <InsightSection title="Crowd-pleasers">
+              {crowdPleasers.map((row) => (
+                <FragranceMetricRow
+                  key={row.fragrance.id}
+                  brand={row.fragrance.brand}
+                  name={row.fragrance.name}
+                  metric={`${row.complimentsPerWear.toFixed(1)}/wear / ${row.totalCompliments} total`}
+                />
+              ))}
+            </InsightSection>
+          ) : null}
+
+          {signatures.length > 0 ? (
+            <InsightSection title="Seasonal signatures">
+              {signatures.map((row) => (
+                <FragranceMetricRow
+                  key={row.season}
+                  brand={SEASON_LABELS[row.season]}
+                  name={row.fragrance.name}
+                  metric={`${row.wearCount} ${row.wearCount === 1 ? 'wear' : 'wears'}`}
+                />
+              ))}
+            </InsightSection>
+          ) : null}
+
+          {seasonFavoriteRows.length > 0 || timeOfDayRows.length > 0 ? (
+            <View style={styles.twoColumn}>
+              {seasonFavoriteRows.length > 0 ? (
+                <InsightSection title="Seasonal favorites" compact>
+                  {seasonFavoriteRows.map((row) => (
+                    <CountRow key={row.label} label={row.label} count={row.count} />
+                  ))}
+                </InsightSection>
+              ) : null}
+              {timeOfDayRows.length > 0 ? (
+                <InsightSection title="Day / night" compact>
+                  {timeOfDayRows.map((row) => (
+                    <CountRow key={row.label} label={row.label} count={row.count} />
+                  ))}
+                </InsightSection>
+              ) : null}
+            </View>
+          ) : null}
+
+          {!shelfEconomicsEmpty ? (
+            <InsightSection title="Shelf economics">
+              {[
+                ...shelfValue.map((row) => (
+                  <CountLabelRow
+                    key={`value-${row.currency}`}
+                    label={`Shelf value (${row.count} ${row.count === 1 ? 'bottle' : 'bottles'})`}
+                    value={formatCurrency(row.total, row.currency) ?? String(row.total)}
+                  />
+                )),
+                ...bestValues.map((row) => (
+                  <FragranceMetricRow
+                    key={`best-${row.fragrance.id}`}
+                    brand={row.fragrance.brand}
+                    name={row.fragrance.name}
+                    metric={
+                      formatCostPerWear(row.value, row.fragrance.purchase_currency ?? 'USD') ?? ''
+                    }
+                  />
+                )),
+              ]}
+            </InsightSection>
+          ) : null}
+
+          {tasteRows.length > 0 ? (
+            <InsightSection title="Taste profile">
+              {tasteRows.map((row) => (
+                <ProportionRow
+                  key={row.label}
+                  label={row.label}
+                  ratio={tasteTopScore > 0 ? row.score / tasteTopScore : 0}
+                />
+              ))}
+            </InsightSection>
+          ) : null}
+
+          {anyLockedSection ? (
+            <Text style={styles.lockedHint}>— More views unlock as you log wears</Text>
+          ) : null}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -225,15 +273,25 @@ function InsightSection({
   children: ReactNode;
 }) {
   const childArray = Array.isArray(children) ? children.filter(Boolean) : children;
-  const isEmpty = Array.isArray(childArray) ? childArray.length === 0 : !childArray;
   return (
     <View style={[styles.section, compact && styles.sectionCompact]}>
       <Caption style={{ marginBottom: 12 }}>{title}</Caption>
-      {isEmpty ? (
-        <Text style={styles.emptyText}>Log more wears to unlock this view.</Text>
-      ) : (
-        <View style={styles.rowStack}>{childArray}</View>
-      )}
+      <View style={styles.rowStack}>{childArray}</View>
+    </View>
+  );
+}
+
+function ProportionRow({ label, ratio }: { label: string; ratio: number }) {
+  const percent = Math.round(ratio * 100);
+  return (
+    <View style={styles.proportionRow}>
+      <View style={styles.proportionHeader}>
+        <Text style={styles.countLabel}>{label}</Text>
+        <Text style={styles.proportionPercent}>{percent}%</Text>
+      </View>
+      <View style={styles.proportionTrack}>
+        <View style={[styles.proportionFill, { width: `${Math.max(2, percent)}%` }]} />
+      </View>
     </View>
   );
 }
@@ -402,9 +460,37 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 18,
   },
-  emptyText: {
+  lockedHint: {
     ...typography.bodyDim,
     color: colors.textMuted,
     fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  proportionRow: {
+    gap: 6,
+  },
+  proportionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    gap: 12,
+  },
+  proportionPercent: {
+    ...typography.bodyDim,
+    color: colors.textDim,
+    fontSize: 12,
+    fontVariant: ['tabular-nums'],
+  },
+  proportionTrack: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.borderSoft,
+    overflow: 'hidden',
+  },
+  proportionFill: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.accent,
   },
 });

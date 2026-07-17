@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-07-17 - App-wide UI/UX pass: brand serif, flow fixes, motion, accessibility
+
+### Summary
+
+A four-surface design audit (core screens, add/scan flow, data surfaces, system layer) turned into a full implementation pass. The brand serif is now a bundled Fraunces instead of iOS-only Georgia, the dead Expo-template light theme is gone, the worst flow traps (scanner re-fire, silent search failures, permission dead ends, unconfirmed sign-out, off-screen delete confirms, duplicate logging) are fixed, and the app gained a consistent motion, haptic, and accessibility baseline.
+
+### Shipped
+
+- **Typography**: Fraunces 400 + italic bundled and loaded behind the splash screen; all serif sizing routed through `serifStyle()`; Android no longer falls back to the system serif.
+- **System**: deleted the 12-file Expo-template cluster carrying an off-brand light theme; `userInterfaceStyle` locked to dark; tab bar haptics wired on both platforms; reduced motion honored in stack transitions and every new animation.
+- **Add/scan**: scanned barcodes lock until "Scan again"; catalog search debounced with distinct searching/empty/error states; permanently-denied camera permission now routes to system settings; duplicate shelf detection; inline field validation; keyboard focus chaining; camera reticle with scrim, corner brackets, and a match flash.
+- **Collection & detail**: sign-out asks first; empty states got real actions (clear filters, add first bottle); delete confirmation appears next to its trigger (and scrolls into view from the header shortcut); same-day wear logging is guarded with an explicit "Log again" path; one shared 44pt Stepper replaces two divergent compliment counters.
+- **Today**: pull-to-refresh, single primary action, weather readout promoted over its edit affordance, suggestion shuffle crossfade.
+- **Calendar/insights/wrapped**: day dots colored by the fragrance's real accord family (hash-based pseudo-colors removed, woody/spicy now distinguishable); "Today" jump + persistent today ring; year heatmap days are tappable; taste profile shows proportion bars instead of raw scores; locked insight sections collapse to one hint; Wrapped got staggered reveals and a Share action.
+- **Accessibility/legibility**: roles, labels, and selected states on buttons, chips, rating dots, tabs, and form fields; sub-11px `textMuted` metadata raised to legible sizes and tones; 44pt effective touch targets across pills, chips, and steppers; auth errors mapped to on-brand recovery copy.
+
+### Verification
+
+- `npx tsc --noEmit` (0 errors)
+- `npx expo lint` (0 errors, 1 pre-existing warning)
+- `npm test` (49 suites, 256 tests — includes new coverage for the scan lock, duplicate detection, wear guard, Stepper, family dots, auth error mapping, locked-insights hint, and collection actions)
+
 ## 2026-07-10 - Rebuild Collection-to-Detail navigation on the native stack
 
 ### Summary

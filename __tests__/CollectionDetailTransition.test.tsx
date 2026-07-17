@@ -127,7 +127,7 @@ describe('collection/detail native transition handoff', () => {
   it('pushes the detail route immediately from list view', () => {
     const { getByLabelText } = render(<Collection />);
 
-    fireEvent.press(getByLabelText('Open Serge Lutens Chergui'));
+    fireEvent.press(getByLabelText(/Open Serge Lutens Chergui/));
 
     expect(mockPush).toHaveBeenCalledWith('/fragrance/fragrance-1');
   });
@@ -136,7 +136,7 @@ describe('collection/detail native transition handoff', () => {
     const { getByLabelText } = render(<Collection />);
 
     fireEvent.press(getByLabelText('Switch to grid view'));
-    fireEvent.press(getByLabelText('Open Serge Lutens Chergui'));
+    fireEvent.press(getByLabelText(/Open Serge Lutens Chergui/));
 
     expect(mockPush).toHaveBeenCalledWith('/fragrance/fragrance-1');
   });

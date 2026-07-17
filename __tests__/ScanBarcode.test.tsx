@@ -124,6 +124,51 @@ describe('Scan barcode screen', () => {
     });
   });
 
+  it('locks a resolved barcode so camera re-fires do not reset linking', async () => {
+    jest.mocked(findSupabaseCatalogByBarcode).mockResolvedValue(null);
+
+    const { getByLabelText, getByDisplayValue, getByPlaceholderText, getByText } = render(<Scan />);
+
+    fireEvent.press(getByLabelText('Mock camera scanner'));
+
+    await waitFor(() => {
+      expect(getByText('No catalog match yet')).toBeTruthy();
+    });
+
+    fireEvent.changeText(
+      getByPlaceholderText('Search catalog to link this barcode'),
+      'sauvage',
+    );
+
+    // The camera keeps firing the same code every frame while it is in view.
+    fireEvent.press(getByLabelText('Mock camera scanner'));
+    fireEvent.press(getByLabelText('Mock camera scanner'));
+
+    // The resolved barcode is processed exactly once and in-progress input survives.
+    expect(findSupabaseCatalogByBarcode).toHaveBeenCalledTimes(1);
+    expect(getByDisplayValue('sauvage')).toBeTruthy();
+    expect(getByText('No catalog match yet')).toBeTruthy();
+  });
+
+  it('reprocesses a barcode after the user taps Scan again', async () => {
+    jest.mocked(findSupabaseCatalogByBarcode).mockResolvedValue(null);
+
+    const { getByLabelText, getByText } = render(<Scan />);
+
+    fireEvent.press(getByLabelText('Mock camera scanner'));
+
+    await waitFor(() => {
+      expect(getByText('No catalog match yet')).toBeTruthy();
+    });
+
+    fireEvent.press(getByText('Scan again'));
+    fireEvent.press(getByLabelText('Mock camera scanner'));
+
+    await waitFor(() => {
+      expect(findSupabaseCatalogByBarcode).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it('submits a pending catalog link for an unknown scanned barcode', async () => {
     jest.mocked(findSupabaseCatalogByBarcode).mockResolvedValue(null);
     jest.mocked(searchSupabaseCatalog).mockResolvedValue([

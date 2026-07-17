@@ -24,6 +24,7 @@ jest.mock('../hooks/useFragrances', () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
   }),
+  useFragrancesQuery: () => ({ data: [] }),
 }));
 
 jest.mock('../lib/catalog', () => ({
@@ -44,6 +45,7 @@ describe('Add photo URL', () => {
 
     fireEvent.changeText(getByLabelText('Brand'), 'Chanel');
     fireEvent.changeText(getByLabelText('Name'), 'Bleu');
+    fireEvent.press(getByText('— Add image by URL'));
     fireEvent.changeText(getByLabelText('Photo URL'), '  https://images.example/bleu.jpg  ');
     fireEvent.press(getByText('Save to shelf'));
 

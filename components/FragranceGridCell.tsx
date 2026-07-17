@@ -1,8 +1,10 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import type { Fragrance } from '../types/fragrance';
 import { colors } from '../theme/colors';
 import { typography } from '../theme/typography';
 import { radius } from '../theme/spacing';
+import { durations, easeOut, useReducedMotion } from '../lib/motion';
 import { Caption, Serif } from './ui/text';
 import { BottleArt } from './BottleArt';
 
@@ -22,12 +24,15 @@ export function FragranceGridCell({
   justLogged = false,
 }: FragranceGridCellProps) {
   const rating = fragrance.rating != null ? fragrance.rating.toFixed(1) : '—';
+  const ratingA11y =
+    fragrance.rating != null ? `, rated ${fragrance.rating.toFixed(1)}` : '';
+  const reducedMotion = useReducedMotion();
   return (
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
       accessibilityRole="button"
-      accessibilityLabel={`Open ${fragrance.brand} ${fragrance.name}`}
+      accessibilityLabel={`Open ${fragrance.brand} ${fragrance.name}${ratingA11y}`}
       style={({ pressed }) => [styles.cell, pressed && { opacity: 0.75 }]}
     >
       <View style={styles.art}>
@@ -42,7 +47,16 @@ export function FragranceGridCell({
       <View style={styles.meta}>
         <Text style={styles.rating}>{rating}</Text>
         {justLogged ? (
-          <Text style={styles.logged}>Logged ✓</Text>
+          <Animated.Text
+            style={styles.logged}
+            entering={
+              reducedMotion
+                ? undefined
+                : FadeInUp.duration(durations.base).easing(easeOut)
+            }
+          >
+            Logged ✓
+          </Animated.Text>
         ) : lastWornLabel ? (
           <Text style={styles.lastWorn} numberOfLines={1}>
             {lastWornLabel}
@@ -86,13 +100,13 @@ const styles = StyleSheet.create({
   },
   lastWorn: {
     ...typography.bodyDim,
-    fontSize: 10,
-    color: colors.textMuted,
+    fontSize: 11,
+    color: colors.textDim,
     flexShrink: 1,
   },
   logged: {
     ...typography.bodyDim,
-    fontSize: 10,
+    fontSize: 11,
     color: colors.accent,
   },
 });

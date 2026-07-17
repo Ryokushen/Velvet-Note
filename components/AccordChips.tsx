@@ -3,6 +3,7 @@ import { Pressable, View, Text, TextInput, StyleSheet } from 'react-native';
 import { normalizeAccord, suggestAccords } from '../lib/accordVocabulary';
 import { formatAccordLabel } from '../lib/accordDisplay';
 import { colors } from '../theme/colors';
+import { tapLight } from '../lib/haptics';
 import { typography } from '../theme/typography';
 import { radius } from '../theme/spacing';
 import { Caption } from './ui/text';
@@ -24,6 +25,7 @@ export function AccordChips({
       setDraft('');
       return;
     }
+    tapLight();
     onChange([...value, a]);
     setDraft('');
   }
@@ -58,6 +60,9 @@ export function AccordChips({
             <Pressable
               key={suggestion}
               onPress={() => add(suggestion)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: false }}
+              hitSlop={10}
               style={styles.suggestion}
             >
               <Text style={styles.suggestionText}>{formatAccordLabel(suggestion)}</Text>
@@ -100,8 +105,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.sm,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: colors.surfaceElevated,
   },
   suggestionText: {

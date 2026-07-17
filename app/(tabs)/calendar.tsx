@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '../../components/EmptyState';
@@ -32,8 +33,10 @@ import {
 import { SEASONS, type Fragrance, type Season } from '../../types/fragrance';
 import type { Wear, WearTimeOfDay } from '../../types/wear';
 import { SEASON_LABELS, WEAR_TIME_LABELS, seasonForDate } from '../../lib/journal';
+import { tapLight } from '../../lib/haptics';
+import { durations, easeOut, useReducedMotion } from '../../lib/motion';
 import { colors } from '../../theme/colors';
-import { FAMILY, type Family } from '../../theme/families';
+import { FAMILY, familyFor } from '../../theme/families';
 import { radius } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 
@@ -41,7 +44,6 @@ type CalendarMode = 'month' | 'bottle' | 'year';
 type WearBuckets = Map<string, Wear[]>;
 
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-const FAMILIES: Family[] = ['woody', 'oriental', 'fresh', 'floral', 'spicy'];
 
 export default function CalendarScreen() {
   const router = useRouter();
@@ -95,6 +97,12 @@ export default function CalendarScreen() {
 
   const loading = wears.isLoading || fragrances.isLoading;
   const error = wears.error || fragrances.error;
+  const reduceMotion = useReducedMotion();
+
+  const viewingToday =
+    mode === 'year'
+      ? visibleYear === new Date().getFullYear()
+      : isSameMonth(new Date(), visibleMonth);
 
   function changeMonth(delta: number) {
     const next = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + delta, 1);
@@ -105,6 +113,13 @@ export default function CalendarScreen() {
 
   function changePeriod(delta: number) {
     changeMonth(mode === 'year' ? delta * 12 : delta);
+  }
+
+  function jumpToToday() {
+    tapLight();
+    setVisibleMonth(startOfMonth(new Date()));
+    setSelectedDate(todayLocalDate());
+    resetWearEntry();
   }
 
   function selectDate(dateKey: string) {
@@ -242,15 +257,34 @@ export default function CalendarScreen() {
                 <IconChevronRight size={18} color={colors.textMuted} />
               </Pressable>
             </View>
-            {mode !== 'year' && (
-              <Caption style={{ color: colors.textMuted }}>
-                {monthWears.length} {monthWears.length === 1 ? 'wear' : 'wears'} / {bottleCount}{' '}
-                {bottleCount === 1 ? 'bottle' : 'bottles'}
-              </Caption>
-            )}
+            <View style={styles.metaRow}>
+              {mode !== 'year' ? (
+                <Caption style={{ color: colors.textMuted }}>
+                  {monthWears.length} {monthWears.length === 1 ? 'wear' : 'wears'} / {bottleCount}{' '}
+                  {bottleCount === 1 ? 'bottle' : 'bottles'}
+                </Caption>
+              ) : (
+                <View />
+              )}
+              {!viewingToday ? (
+                <Pressable
+                  onPress={jumpToToday}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Jump to today"
+                  style={styles.todayJump}
+                >
+                  <Text style={styles.todayJumpText}>Today</Text>
+                </Pressable>
+              ) : null}
+            </View>
             <SegmentedControl value={mode} onChange={setMode} />
           </View>
 
+          <Animated.View
+            key={`${mode}-${visibleMonth.getFullYear()}-${visibleMonth.getMonth()}`}
+            entering={reduceMotion ? undefined : FadeIn.duration(durations.base)}
+          >
           {mode === 'month' ? (
             <>
               <View style={styles.weekdayRow}>
@@ -277,6 +311,7 @@ export default function CalendarScreen() {
                       style={[
                         styles.dayCell,
                         isSelected && styles.dayCellSelected,
+                        isToday && styles.dayCellToday,
                       ]}
                     >
                       <Text
@@ -293,7 +328,7 @@ export default function CalendarScreen() {
                           <View
                             style={[
                               styles.wearDot,
-                              { backgroundColor: accentFor(firstWear.fragrance_id) },
+                              { backgroundColor: dotForFragrance(fragranceById.get(firstWear.fragrance_id)) },
                             ]}
                           />
                           {dayWears.length > 1 ? (
@@ -314,6 +349,14 @@ export default function CalendarScreen() {
               </View>
 
               {selectedDateObj ? (
+                <Animated.View
+                  key={selectedDate}
+                  entering={
+                    reduceMotion
+                      ? undefined
+                      : FadeInDown.duration(durations.base).easing(easeOut)
+                  }
+                >
                 <DayDetail
                   date={selectedDateObj}
                   wears={selectedWears}
@@ -347,6 +390,7 @@ export default function CalendarScreen() {
                   onConfirmDeleteWear={deleteCalendarWear}
                   onOpenFragrance={(fragranceId) => router.push(`/fragrance/${fragranceId}` as never)}
                 />
+                </Animated.View>
               ) : null}
             </>
           ) : mode === 'bottle' ? (
@@ -361,8 +405,16 @@ export default function CalendarScreen() {
               wears={yearWears}
               year={visibleYear}
               currentYear={visibleYear === new Date().getFullYear()}
+              onSelectDate={(dateKey) => {
+                const picked = parseWearDate(dateKey);
+                setVisibleMonth(startOfMonth(picked));
+                setSelectedDate(dateKey);
+                setMode('month');
+                resetWearEntry();
+              }}
             />
           )}
+          </Animated.View>
         </ScrollView>
       )}
     </SafeAreaView>
@@ -383,7 +435,12 @@ function SegmentedControl({
         return (
           <Pressable
             key={mode}
-            onPress={() => onChange(mode)}
+            onPress={() => {
+              if (!selected) tapLight();
+              onChange(mode);
+            }}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
             style={[styles.segment, selected && styles.segmentSelected]}
           >
             <Text style={[styles.segmentText, selected && styles.segmentTextSelected]}>
@@ -490,7 +547,7 @@ function DayDetail({
                 <View
                   style={[
                     styles.dayWearAccent,
-                    { backgroundColor: accentFor(wear.fragrance_id) },
+                    { backgroundColor: dotForFragrance(fragranceById.get(wear.fragrance_id)) },
                   ]}
                 />
                 <Pressable
@@ -702,7 +759,7 @@ function ByBottleView({
           <View
             style={[
               styles.bottleAccent,
-              { backgroundColor: row.count > 0 ? accentFor(row.fragrance.id) : colors.border },
+              { backgroundColor: row.count > 0 ? dotForFragrance(row.fragrance) : colors.border },
             ]}
           />
           <View style={styles.bottleMain}>
@@ -722,7 +779,7 @@ function ByBottleView({
                 style={[
                   styles.spark,
                   {
-                    backgroundColor: worn ? accentFor(row.fragrance.id) : colors.border,
+                    backgroundColor: worn ? dotForFragrance(row.fragrance) : colors.border,
                     opacity: worn ? 1 : 0.5,
                   },
                 ]}
@@ -754,6 +811,8 @@ function OptionPills<T extends string>({
           <Pressable
             key={value}
             onPress={() => onSelect(value)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
             style={[styles.optionPill, active && styles.optionPillActive]}
           >
             <Text style={[styles.optionPillText, active && styles.optionPillTextActive]}>
@@ -914,12 +973,13 @@ function lastTenDaysInMonth(month: Date): string[] {
   return keys;
 }
 
-function accentFor(fragranceId: string): string {
-  let hash = 0;
-  for (let i = 0; i < fragranceId.length; i += 1) {
-    hash = (hash + fragranceId.charCodeAt(i)) % FAMILIES.length;
-  }
-  return FAMILY[FAMILIES[hash]].dot;
+// Colour a day-dot by the fragrance's real accord family rather than a hash of
+// its UUID — so the colour actually means something. First accord decides the
+// family; a bottle with no accords gets a neutral muted dot.
+export function dotForFragrance(fragrance: Fragrance | undefined): string {
+  const accord = fragrance?.accords?.[0];
+  if (!accord) return colors.textMuted;
+  return FAMILY[familyFor(accord)].dot;
 }
 
 const styles = StyleSheet.create({
@@ -963,6 +1023,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  todayJump: {
+    paddingVertical: 2,
+  },
+  todayJumpText: {
+    ...typography.caption,
+    color: colors.accent,
+  },
   segmented: {
     height: 40,
     marginTop: 18,
@@ -1000,8 +1073,8 @@ const styles = StyleSheet.create({
   weekday: {
     width: `${100 / 7}%`,
     textAlign: 'center',
-    fontSize: 10,
-    color: colors.textMuted,
+    fontSize: 11,
+    color: colors.textDim,
     letterSpacing: 1.2,
   },
   grid: {
@@ -1025,6 +1098,11 @@ const styles = StyleSheet.create({
   },
   dayCellSelected: {
     backgroundColor: colors.surfaceElevated,
+    borderColor: colors.accent,
+  },
+  // Persistent 1px accent ring on today's cell — survives selection styling
+  // because it is applied after the selected style in the cell style array.
+  dayCellToday: {
     borderColor: colors.accent,
   },
   dayText: {
@@ -1051,9 +1129,9 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   wearCount: {
-    fontSize: 9,
-    lineHeight: 11,
-    color: colors.textMuted,
+    fontSize: 10,
+    lineHeight: 12,
+    color: colors.textDim,
     fontWeight: '600',
   },
   wearDotPlaceholder: {

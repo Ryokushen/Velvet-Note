@@ -99,7 +99,7 @@ describe('Barcode review screen', () => {
     });
   });
 
-  it('rejects a pending barcode submission with a review note', async () => {
+  it('requires a second tap to confirm rejecting a submission', async () => {
     const { getByPlaceholderText, getByText } = render(<BarcodeReview />);
 
     await waitFor(() => {
@@ -107,7 +107,13 @@ describe('Barcode review screen', () => {
     });
 
     fireEvent.changeText(getByPlaceholderText('Review note'), 'Wrong flanker');
+
+    // First tap only arms the inline confirm; the RPC must not fire yet.
     fireEvent.press(getByText('Reject'));
+    expect(rejectCatalogBarcodeSubmission).not.toHaveBeenCalled();
+
+    // The button relabels to prompt confirmation.
+    fireEvent.press(getByText('Tap again to confirm'));
 
     await waitFor(() => {
       expect(rejectCatalogBarcodeSubmission).toHaveBeenCalledWith(

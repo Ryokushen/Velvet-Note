@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +13,11 @@ import { CameraView, type BarcodeScanningResult } from 'expo-camera';
 import { useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import {
   findSupabaseCatalogByBarcode,
   normalizeBarcode,
@@ -19,59 +25,87 @@ import {
   submitCatalogBarcodeSubmission,
   type CatalogFragrance,
 } from '../lib/catalog';
+import { notifySuccess, notifyWarning, tapLight } from '../lib/haptics';
+import { durations, easeOut, useReducedMotion } from '../lib/motion';
 import { BottleArt } from '../components/BottleArt';
 import { GhostButton, PrimaryButton } from '../components/ui/Button';
 import { Caption, Serif } from '../components/ui/text';
 import { IconChevronLeft } from '../components/ui/Icon';
-import { colors } from '../theme/colors';
+import { colors, withAlpha } from '../theme/colors';
 import { radius } from '../theme/spacing';
 import { typography } from '../theme/typography';
 
 type ScanStatus = 'idle' | 'looking' | 'matched' | 'not-found' | 'error';
+type LinkStatus = 'idle' | 'searching' | 'done' | 'error';
 
 export default function Scan() {
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
+  const reducedMotion = useReducedMotion();
   const [status, setStatus] = useState<ScanStatus>('idle');
   const [scannedBarcode, setScannedBarcode] = useState('');
   const [match, setMatch] = useState<CatalogFragrance | null>(null);
   const [message, setMessage] = useState('');
   const [linkQuery, setLinkQuery] = useState('');
   const [linkResults, setLinkResults] = useState<CatalogFragrance[]>([]);
+  const [linkStatus, setLinkStatus] = useState<LinkStatus>('idle');
+  const [linkSearchNonce, setLinkSearchNonce] = useState(0);
   const [selectedLink, setSelectedLink] = useState<CatalogFragrance | null>(null);
   const [linkSubmitting, setLinkSubmitting] = useState(false);
   const [linkSubmitted, setLinkSubmitted] = useState(false);
   const [linkError, setLinkError] = useState('');
+  // A resolved (or in-flight) barcode is locked until the user taps "Scan again",
+  // so the camera re-firing every frame does not wipe in-progress linking state.
+  const scanLockRef = useRef(false);
+  const flash = useSharedValue(0);
 
   useEffect(() => {
     let cancelled = false;
     const query = linkQuery.trim();
     if (status !== 'not-found' || linkSubmitted || query.length < 2) {
       setLinkResults([]);
+      setLinkStatus('idle');
       return undefined;
     }
 
-    searchSupabaseCatalog(query, 6)
-      .then((results) => {
-        if (!cancelled) {
-          setLinkResults(results);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setLinkResults([]);
-        }
-      });
+    setLinkStatus('searching');
+    const handle = setTimeout(() => {
+      searchSupabaseCatalog(query, 6)
+        .then((results) => {
+          if (!cancelled) {
+            setLinkResults(results);
+            setLinkStatus('done');
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setLinkResults([]);
+            setLinkStatus('error');
+          }
+        });
+    }, 250);
 
     return () => {
       cancelled = true;
+      clearTimeout(handle);
     };
-  }, [linkQuery, linkSubmitted, status]);
+  }, [linkQuery, linkSubmitted, status, linkSearchNonce]);
 
-  async function handleBarcodeScanned(result: BarcodeScanningResult) {
-    if (status === 'looking' || status === 'matched') {
+  useEffect(() => {
+    if (status !== 'matched' || reducedMotion) {
       return;
     }
+    flash.value = 1;
+    flash.value = withTiming(0, { duration: durations.base, easing: easeOut });
+  }, [status, reducedMotion, flash]);
+
+  const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
+
+  async function handleBarcodeScanned(result: BarcodeScanningResult) {
+    if (scanLockRef.current || status === 'looking' || status === 'matched') {
+      return;
+    }
+    scanLockRef.current = true;
 
     const barcode = normalizeBarcode(result.data);
     if (!barcode) {
@@ -79,6 +113,7 @@ export default function Scan() {
       setMatch(null);
       setMessage('That code is not a supported UPC/EAN/GTIN barcode.');
       setStatus('error');
+      notifyWarning();
       return;
     }
 
@@ -91,14 +126,22 @@ export default function Scan() {
     try {
       const catalogMatch = await findSupabaseCatalogByBarcode(barcode);
       setMatch(catalogMatch);
-      setStatus(catalogMatch ? 'matched' : 'not-found');
+      if (catalogMatch) {
+        setStatus('matched');
+        notifySuccess();
+      } else {
+        setStatus('not-found');
+        notifyWarning();
+      }
     } catch (error: any) {
       setMessage(error.message ?? 'Unknown error');
       setStatus('error');
+      notifyWarning();
     }
   }
 
   function resetScan() {
+    scanLockRef.current = false;
     setStatus('idle');
     setScannedBarcode('');
     setMatch(null);
@@ -109,6 +152,7 @@ export default function Scan() {
   function resetLinking() {
     setLinkQuery('');
     setLinkResults([]);
+    setLinkStatus('idle');
     setSelectedLink(null);
     setLinkSubmitting(false);
     setLinkSubmitted(false);
@@ -142,8 +186,11 @@ export default function Scan() {
       await submitCatalogBarcodeSubmission(scannedBarcode, selectedLink.id);
       setLinkSubmitted(true);
       setLinkResults([]);
+      setLinkStatus('idle');
+      notifySuccess();
     } catch (error: any) {
       setLinkError(error.message ?? 'Unknown error');
+      notifyWarning();
     } finally {
       setLinkSubmitting(false);
     }
@@ -158,15 +205,22 @@ export default function Scan() {
   }
 
   if (!permission.granted) {
+    const blocked = permission.canAskAgain === false;
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <Header onBack={goBackToAdd} />
         <View style={styles.permissionPanel}>
           <Serif size={24} style={{ marginBottom: 10 }}>Camera access</Serif>
           <Text style={styles.bodyText}>
-            Camera access is needed to scan barcode labels.
+            {blocked
+              ? 'Camera access is turned off for Velvet Note. Enable it in Settings to scan barcode labels.'
+              : 'Camera access is needed to scan barcode labels.'}
           </Text>
-          <PrimaryButton onPress={requestPermission}>Allow camera</PrimaryButton>
+          {blocked ? (
+            <PrimaryButton onPress={() => Linking.openSettings()}>Open Settings</PrimaryButton>
+          ) : (
+            <PrimaryButton onPress={requestPermission}>Allow camera</PrimaryButton>
+          )}
         </View>
       </SafeAreaView>
     );
@@ -184,8 +238,21 @@ export default function Scan() {
           }}
           onBarcodeScanned={handleBarcodeScanned}
         >
-          <View style={styles.scanOverlay}>
-            <View style={styles.scanBox} />
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            <View style={styles.scrimBlock} />
+            <View style={styles.scrimRow}>
+              <View style={styles.scrimBlock} />
+              <View style={styles.reticle}>
+                <View style={styles.reticleBorder} />
+                <View style={[styles.corner, styles.cornerTL]} />
+                <View style={[styles.corner, styles.cornerTR]} />
+                <View style={[styles.corner, styles.cornerBL]} />
+                <View style={[styles.corner, styles.cornerBR]} />
+                <Animated.View style={[styles.reticleFlash, flashStyle]} />
+              </View>
+              <View style={styles.scrimBlock} />
+            </View>
+            <View style={styles.scrimBlock} />
           </View>
         </CameraView>
       </View>
@@ -266,6 +333,29 @@ export default function Scan() {
                   autoCorrect={false}
                   style={styles.linkInput}
                 />
+                {linkStatus === 'searching' ? (
+                  <View style={styles.searchStatusRow}>
+                    <ActivityIndicator size="small" color={colors.accent} />
+                    <Text style={styles.searchStatusText}>Searching catalog</Text>
+                  </View>
+                ) : null}
+                {linkStatus === 'error' ? (
+                  <View style={styles.searchStatusRow}>
+                    <Text style={styles.searchErrorText}>— Catalog search stalled.</Text>
+                    <Pressable
+                      onPress={() => setLinkSearchNonce((n) => n + 1)}
+                      accessibilityRole="button"
+                      hitSlop={10}
+                    >
+                      <Text style={styles.retryText}>Retry</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+                {linkStatus === 'done' && linkResults.length === 0 ? (
+                  <Text style={styles.emptyStateText}>
+                    — No catalog match. Try another spelling.
+                  </Text>
+                ) : null}
                 {linkResults.length > 0 ? (
                   <View style={styles.linkResults}>
                     {linkResults.map((entry) => {
@@ -274,9 +364,12 @@ export default function Scan() {
                         <Pressable
                           key={entry.id}
                           onPress={() => {
+                            tapLight();
                             setSelectedLink(entry);
                             setLinkError('');
                           }}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
                           style={({ pressed }) => [
                             styles.linkResult,
                             selected && styles.linkResultSelected,
@@ -347,6 +440,8 @@ function Header({ onBack }: { onBack: () => void }) {
   );
 }
 
+const RETICLE_HEIGHT = 220;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -385,20 +480,40 @@ const styles = StyleSheet.create({
   camera: {
     flex: 1,
   },
-  scanOverlay: {
+  scrimBlock: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 28,
+    backgroundColor: withAlpha(colors.background, 0.55),
   },
-  scanBox: {
-    width: '86%',
+  scrimRow: {
+    height: RETICLE_HEIGHT,
+    flexDirection: 'row',
+  },
+  reticle: {
+    width: '78%',
     maxWidth: 420,
-    aspectRatio: 1.55,
+    height: RETICLE_HEIGHT,
+  },
+  reticleBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.accent, 0.4),
+    borderRadius: radius.sm,
+  },
+  corner: {
+    position: 'absolute',
+    width: 22,
+    height: 22,
+    borderColor: colors.accent,
+  },
+  cornerTL: { top: -1, left: -1, borderTopWidth: 3, borderLeftWidth: 3 },
+  cornerTR: { top: -1, right: -1, borderTopWidth: 3, borderRightWidth: 3 },
+  cornerBL: { bottom: -1, left: -1, borderBottomWidth: 3, borderLeftWidth: 3 },
+  cornerBR: { bottom: -1, right: -1, borderBottomWidth: 3, borderRightWidth: 3 },
+  reticleFlash: {
+    ...StyleSheet.absoluteFillObject,
     borderWidth: 2,
     borderColor: colors.accent,
     borderRadius: radius.sm,
-    backgroundColor: 'transparent',
   },
   resultPanel: {
     borderTopWidth: 1,
@@ -419,6 +534,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  searchStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+  },
+  searchStatusText: {
+    ...typography.bodyDim,
+    color: colors.textDim,
+    fontSize: 13,
+  },
+  searchErrorText: {
+    ...typography.bodyDim,
+    color: colors.error,
+    fontSize: 13,
+  },
+  retryText: {
+    ...typography.caption,
+    color: colors.text,
+  },
+  emptyStateText: {
+    ...typography.bodyDim,
+    color: colors.textMuted,
+    fontSize: 13,
+    marginTop: 12,
   },
   matchRow: {
     flexDirection: 'row',
@@ -456,6 +597,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    minHeight: 44,
     borderWidth: 1,
     borderColor: colors.borderSoft,
     borderRadius: radius.sm,

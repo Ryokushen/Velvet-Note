@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import {
   ScrollView,
   View,
@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -25,17 +26,19 @@ import { RatingDots } from '../../components/ui/RatingDots';
 import { RatingNumeral } from '../../components/ui/RatingNumeral';
 import { NotesRows } from '../../components/ui/NotesRows';
 import { GhostButton, PrimaryButton } from '../../components/ui/Button';
+import { Stepper } from '../../components/ui/Stepper';
 import { Caption, Serif } from '../../components/ui/text';
 import { SectionDivider } from '../../components/ui/SectionDivider';
 import { IconChevronLeft, IconTrash } from '../../components/ui/Icon';
 import { BottleArt } from '../../components/BottleArt';
 import { pickPersonalFragrancePhoto, uploadPersonalFragrancePhoto } from '../../lib/fragrancePhotos';
 import { costPerWear, estimatedRemainingMl, formatCostPerWear } from '../../lib/bottleEconomics';
-import { notifySuccess } from '../../lib/haptics';
+import { notifySuccess, notifyWarning } from '../../lib/haptics';
+import { durations, easeOut, useReducedMotion } from '../../lib/motion';
 import { formatLastWornLong, latestWearForFragrance } from '../../lib/lastWorn';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
-import { radius } from '../../theme/spacing';
+import { radius, spacing } from '../../theme/spacing';
 import { formatAccordList } from '../../lib/accordDisplay';
 import {
   BOTTLE_STATUSES,
@@ -101,6 +104,22 @@ export default function Detail() {
   const [complimentCount, setComplimentCount] = useState(0);
   const [complimentNote, setComplimentNote] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const readScrollRef = useRef<ScrollView>(null);
+  const [logFeedback, setLogFeedback] = useState<{ tone: 'success' | 'warning'; text: string } | null>(
+    null,
+  );
+  const reducedMotion = useReducedMotion();
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flashLogFeedback = (tone: 'success' | 'warning', text: string) => {
+    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+    setLogFeedback({ tone, text });
+    feedbackTimer.current = setTimeout(() => setLogFeedback(null), 2600);
+  };
+
+  useEffect(() => () => {
+    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+  }, []);
 
   useEffect(() => {
     if (!fragranceId) return;
@@ -168,6 +187,7 @@ export default function Detail() {
           preferred_time_of_day: preferredTimeOfDay,
         },
       });
+      notifySuccess();
       setEditing(false);
     } catch (e: any) {
       Alert.alert('Could not save', e.message ?? 'Unknown error');
@@ -215,6 +235,15 @@ export default function Detail() {
     setConfirmingDelete(true);
   }
 
+  // The confirmation card sits beside the bottom "Remove from shelf" trigger;
+  // the header shortcut has to bring it into view or nothing visibly happens.
+  function confirmDeleteFromHeader() {
+    setConfirmingDelete(true);
+    requestAnimationFrame(() => {
+      readScrollRef.current?.scrollToEnd({ animated: !reducedMotion });
+    });
+  }
+
   async function removeFromShelf() {
     try {
       await del.mutateAsync(fragrance!.id);
@@ -257,12 +286,14 @@ export default function Detail() {
       await setActiveWear.mutateAsync(createdWear.id);
     } catch {
       resetWearLogForm();
-      Alert.alert('Wear logged', 'The wear was saved, but could not be made current.');
+      notifyWarning();
+      flashLogFeedback('warning', '— Logged, but not set as current');
       return;
     }
 
     resetWearLogForm();
-    Alert.alert('Wear logged', `${fragrance!.brand} ${fragrance!.name} was added to today's wear history.`);
+    notifySuccess();
+    flashLogFeedback('success', '— Logged for today');
   }
 
   if (editing) {
@@ -398,6 +429,8 @@ export default function Detail() {
 
   const since = fragrance.created_at ? formatMonthYear(fragrance.created_at) : null;
   const lastWear = latestWearForFragrance(wears.data, fragrance.id);
+  const todayKey = todayLocalDate();
+  const alreadyLoggedToday = (wears.data ?? []).some((wear) => wear.worn_on === todayKey);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -415,7 +448,7 @@ export default function Detail() {
         <View />
         <View style={styles.headerActions}>
           <Pressable
-            onPress={confirmDelete}
+            onPress={confirmDeleteFromHeader}
             style={styles.iconHeaderAction}
             hitSlop={8}
             accessibilityRole="button"
@@ -428,36 +461,12 @@ export default function Detail() {
           </Pressable>
         </View>
       </View>
-      {confirmingDelete ? (
-        <View style={styles.deleteConfirm}>
-          <Text style={styles.deleteConfirmTitle}>Remove from shelf?</Text>
-          <Text style={styles.deleteConfirmBody}>
-            Remove {fragrance.brand} {fragrance.name}?
-          </Text>
-          <View style={styles.deleteConfirmActions}>
-            <GhostButton
-              onPress={() => setConfirmingDelete(false)}
-              disabled={del.isPending}
-              style={styles.deleteConfirmButton}
-            >
-              Cancel
-            </GhostButton>
-            <GhostButton
-              danger
-              onPress={removeFromShelf}
-              loading={del.isPending}
-              style={styles.deleteConfirmButton}
-            >
-              Remove
-            </GhostButton>
-          </View>
-        </View>
-      ) : null}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
+          ref={readScrollRef}
           contentContainerStyle={styles.readScroll}
           keyboardShouldPersistTaps="handled"
         >
@@ -598,23 +607,13 @@ export default function Detail() {
           />
           <View style={styles.complimentRow}>
             <Caption>Compliments</Caption>
-            <View style={styles.stepper}>
-              <Pressable
-                onPress={() => setComplimentCount((value) => Math.max(0, value - 1))}
-                style={styles.stepperButton}
-                accessibilityLabel="Decrease compliment count"
-              >
-                <Text style={styles.stepperText}>-</Text>
-              </Pressable>
-              <Text style={styles.stepperValue}>{complimentCount}</Text>
-              <Pressable
-                onPress={() => setComplimentCount((value) => value + 1)}
-                style={styles.stepperButton}
-                accessibilityLabel="Increase compliment count"
-              >
-                <Text style={styles.stepperText}>+</Text>
-              </Pressable>
-            </View>
+            <Stepper
+              variant="inline"
+              value={complimentCount}
+              label="compliment count"
+              onDecrement={() => setComplimentCount((value) => Math.max(0, value - 1))}
+              onIncrement={() => setComplimentCount((value) => value + 1)}
+            />
           </View>
           <TextInput
             value={complimentNote}
@@ -624,9 +623,42 @@ export default function Detail() {
             multiline
             style={styles.notesInput}
           />
-          <PrimaryButton loading={createWear.isPending || setActiveWear.isPending} onPress={logWearToday}>
-            Log today
-          </PrimaryButton>
+          {alreadyLoggedToday ? (
+            <Animated.View
+              entering={reducedMotion ? undefined : FadeIn.duration(durations.base).easing(easeOut)}
+              style={styles.alreadyLoggedRow}
+            >
+              <Text style={styles.alreadyLoggedText}>— Already logged today</Text>
+              <Pressable
+                onPress={logWearToday}
+                disabled={createWear.isPending || setActiveWear.isPending}
+                accessibilityRole="button"
+                accessibilityLabel={`Log ${fragrance.name} again today`}
+                hitSlop={8}
+                style={({ pressed }) => [styles.logAgainAction, pressed && { opacity: 0.7 }]}
+              >
+                <Text style={styles.logAgainText}>Log again</Text>
+              </Pressable>
+            </Animated.View>
+          ) : (
+            <PrimaryButton
+              loading={createWear.isPending || setActiveWear.isPending}
+              onPress={logWearToday}
+            >
+              Log today
+            </PrimaryButton>
+          )}
+          {logFeedback ? (
+            <Animated.Text
+              entering={reducedMotion ? undefined : FadeIn.duration(durations.fast).easing(easeOut)}
+              style={[
+                styles.logFeedback,
+                { color: logFeedback.tone === 'success' ? colors.success : colors.error },
+              ]}
+            >
+              {logFeedback.text}
+            </Animated.Text>
+          ) : null}
 
           <WearHistory
             loading={wears.isLoading}
@@ -642,10 +674,39 @@ export default function Detail() {
             </>
           ) : null}
 
-          <View style={{ paddingBottom: 48, marginTop: 32 }}>
-            <GhostButton danger onPress={confirmDelete} loading={del.isPending}>
-              Remove from shelf
-            </GhostButton>
+          <View style={styles.removeSection}>
+            {confirmingDelete ? (
+              <Animated.View
+                entering={reducedMotion ? undefined : FadeIn.duration(durations.base).easing(easeOut)}
+                style={styles.deleteConfirm}
+              >
+                <Text style={styles.deleteConfirmTitle}>Remove from shelf?</Text>
+                <Text style={styles.deleteConfirmBody}>
+                  Remove {fragrance.brand} {fragrance.name}?
+                </Text>
+                <View style={styles.deleteConfirmActions}>
+                  <GhostButton
+                    onPress={() => setConfirmingDelete(false)}
+                    disabled={del.isPending}
+                    style={styles.deleteConfirmButton}
+                  >
+                    Cancel
+                  </GhostButton>
+                  <GhostButton
+                    danger
+                    onPress={removeFromShelf}
+                    loading={del.isPending}
+                    style={styles.deleteConfirmButton}
+                  >
+                    Remove
+                  </GhostButton>
+                </View>
+              </Animated.View>
+            ) : (
+              <GhostButton danger onPress={confirmDelete} loading={del.isPending}>
+                Remove from shelf
+              </GhostButton>
+            )}
           </View>
           </View>
         </ScrollView>
@@ -1039,18 +1100,22 @@ const styles = StyleSheet.create({
   iconHeaderAction: {
     padding: 8,
   },
+  removeSection: {
+    paddingBottom: spacing.xxl,
+    marginTop: spacing.xl,
+  },
   deleteConfirm: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSoft,
+    borderWidth: 1,
+    borderColor: colors.border,
     backgroundColor: colors.surface,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    borderRadius: radius.sm,
+    padding: spacing.md,
   },
   deleteConfirmTitle: {
     fontFamily: typography.serif,
     fontSize: 20,
     color: colors.text,
-    marginBottom: 6,
+    marginBottom: spacing.xs,
   },
   deleteConfirmBody: {
     ...typography.bodyDim,
@@ -1064,6 +1129,31 @@ const styles = StyleSheet.create({
   deleteConfirmButton: {
     flex: 1,
     height: 44,
+  },
+  alreadyLoggedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    minHeight: 44,
+  },
+  alreadyLoggedText: {
+    ...typography.bodyDim,
+    color: colors.textDim,
+    flexShrink: 1,
+  },
+  logAgainAction: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  logAgainText: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.accent,
+  },
+  logFeedback: {
+    ...typography.bodyDim,
+    marginTop: spacing.md,
   },
   headerText: {
     color: colors.textDim,
@@ -1251,7 +1341,7 @@ const styles = StyleSheet.create({
   },
   wearContext: {
     ...typography.bodyDim,
-    color: colors.textMuted,
+    color: colors.textDim,
     fontSize: 12,
     marginBottom: 4,
   },
@@ -1327,31 +1417,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-  },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    overflow: 'hidden',
-    backgroundColor: colors.surface,
-  },
-  stepperButton: {
-    width: 38,
-    height: 34,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperText: {
-    color: colors.text,
-    fontSize: 18,
-  },
-  stepperValue: {
-    minWidth: 32,
-    textAlign: 'center',
-    color: colors.text,
-    fontFamily: typography.serif,
-    fontSize: 18,
   },
 });

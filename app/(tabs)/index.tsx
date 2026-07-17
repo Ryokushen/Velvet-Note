@@ -6,6 +6,7 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +18,7 @@ import { FragranceRow } from '../../components/FragranceRow';
 import { FragranceGridCell } from '../../components/FragranceGridCell';
 import { FilterChip } from '../../components/ui/FilterChip';
 import { EmptyState } from '../../components/EmptyState';
+import { GhostButton } from '../../components/ui/Button';
 import {
   applyCollectionFilters,
   filterFragrances,
@@ -33,6 +35,7 @@ import { isAppAdmin } from '../../lib/admin';
 import { supabase } from '../../lib/supabase';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { spacing, radius } from '../../theme/spacing';
 import { Caption, Serif } from '../../components/ui/text';
 import {
   IconSearch,
@@ -147,6 +150,30 @@ export default function Collection() {
     }
   }
 
+  function confirmSignOut() {
+    tapLight();
+    Alert.alert(
+      'Sign out?',
+      "You'll need to sign back in to reach your shelf.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign out',
+          style: 'destructive',
+          onPress: () => {
+            supabase.auth.signOut();
+          },
+        },
+      ],
+    );
+  }
+
+  function clearFilters() {
+    tapLight();
+    setQuery('');
+    setFilters([]);
+  }
+
   function switchSegment(next: CollectionSegment) {
     if (next === segment) return;
     tapLight();
@@ -201,8 +228,10 @@ export default function Collection() {
         </Serif>
         <View style={styles.headerSide}>
           <Pressable
-            onPress={() => supabase.auth.signOut()}
+            onPress={confirmSignOut}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Sign out"
             style={styles.iconButton}
           >
             <IconLogOut size={20} color={colors.textMuted} />
@@ -228,6 +257,13 @@ export default function Collection() {
             variant="shelf"
             title="Nothing yet."
             hint="Catalog the bottles on your shelf. Start with the one you reached for this morning."
+            action={{
+              label: 'Add your first bottle',
+              onPress: () => {
+                tapLight();
+                router.push('/add' as never);
+              },
+            }}
           />
         </View>
       ) : (
@@ -311,7 +347,15 @@ export default function Collection() {
                 hint="Bottles marked sold or gifted are archived here."
               />
             ) : (
-              <EmptyState title="No matches" hint="Clear the filters to see your shelf." />
+              <View style={styles.filteredEmpty}>
+                <EmptyState
+                  title="No matches"
+                  hint="No bottles on your shelf match these filters."
+                />
+                <GhostButton onPress={clearFilters} style={styles.clearFilters}>
+                  Clear filters
+                </GhostButton>
+              </View>
             )
           ) : (
             <FlatList
@@ -426,20 +470,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'baseline',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   segmentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
     marginTop: 12,
   },
   controlsSpacer: { flex: 1 },
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   filterDivider: {
     width: 1,
@@ -453,16 +497,21 @@ const styles = StyleSheet.create({
   },
   gridContent: {
     gap: 12,
-    paddingBottom: 32,
-    paddingTop: 4,
+    paddingBottom: spacing.xl,
+    paddingTop: spacing.xs,
   },
   gridCellWrap: { flex: 1 },
+  filteredEmpty: { flex: 1 },
+  clearFilters: {
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.xxl,
+  },
   searchField: {
     height: 44,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 4,
+    borderRadius: radius.sm,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -476,7 +525,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   searchFooter: {
-    paddingVertical: 24,
+    paddingVertical: spacing.lg,
     paddingHorizontal: 20,
     alignItems: 'center',
   },

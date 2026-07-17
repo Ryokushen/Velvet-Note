@@ -28,6 +28,7 @@ jest.mock('../hooks/useFragrances', () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
   }),
+  useFragrancesQuery: () => ({ data: [] }),
 }));
 
 jest.mock('../lib/catalog', () => ({

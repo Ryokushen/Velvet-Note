@@ -1,6 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { CONCENTRATIONS, type Concentration } from '../types/fragrance';
 import { colors } from '../theme/colors';
+import { tapLight } from '../lib/haptics';
 import { Caption } from './ui/text';
 
 export function ConcentrationPicker({
@@ -19,7 +20,13 @@ export function ConcentrationPicker({
           return (
             <Pressable
               key={c}
-              onPress={() => onChange(c)}
+              onPress={() => {
+                tapLight();
+                onChange(c);
+              }}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              hitSlop={8}
               style={[
                 styles.pill,
                 {
@@ -47,10 +54,13 @@ export function ConcentrationPicker({
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: {
+    minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 999,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: { fontSize: 12, letterSpacing: 0.6 },
 });

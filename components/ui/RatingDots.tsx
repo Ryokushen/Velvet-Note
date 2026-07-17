@@ -41,7 +41,12 @@ export function RatingDots({ value, onChange, label = 'out of ten' }: Props) {
             <Pressable
               key={i}
               onPress={() => onChange(value === pos ? pos - 0.5 : pos)}
-              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={`Rate ${pos} out of 10`}
+              accessibilityState={{ selected: value >= pos }}
+              // Vertical slop only reaches for the 44pt target; horizontal
+              // stays inside the 8px gap so neighboring dots don't overlap.
+              hitSlop={{ top: 15, bottom: 15, left: 4, right: 4 }}
             >
               {inner}
             </Pressable>
@@ -57,7 +62,7 @@ export function RatingDots({ value, onChange, label = 'out of ten' }: Props) {
             hitSlop={6}
             style={({ pressed }) => [styles.stepButton, pressed && { opacity: 0.75 }]}
           >
-            <Text style={styles.stepSymbol}>-</Text>
+            <Text style={styles.stepSymbol}>−</Text>
           </Pressable>
           <Caption style={styles.stepCaption}>0.5 steps</Caption>
           <Pressable
@@ -84,7 +89,6 @@ const styles = StyleSheet.create({
   numeral: {
     fontFamily: typography.serif,
     fontSize: 28,
-    fontWeight: '400',
     color: colors.text,
   },
   dots: { flexDirection: 'row', gap: 8 },
@@ -109,8 +113,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   stepButton: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 4,

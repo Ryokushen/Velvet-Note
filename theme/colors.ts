@@ -12,3 +12,12 @@ export const colors = {
   error: '#C4594F',
   success: '#6A8E5A',
 } as const;
+
+// Alpha variant of a token hex color — use instead of re-hardcoding rgba()
+// literals that silently drift when the token changes.
+export function withAlpha(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}

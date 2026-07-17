@@ -2,12 +2,14 @@ import { Tabs } from 'expo-router';
 import { Text, StyleSheet } from 'react-native';
 import { colors } from '../../theme/colors';
 import { IconBarChart, IconBook, IconCalendar, IconPlus, IconZap } from '../../components/ui/Icon';
+import { HapticTab } from '../../components/haptic-tab';
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarButton: (props) => <HapticTab {...props} />,
         tabBarStyle: {
           backgroundColor: colors.background,
           borderTopColor: colors.borderSoft,

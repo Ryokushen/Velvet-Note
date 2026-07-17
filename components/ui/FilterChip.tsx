@@ -17,7 +17,7 @@ export function FilterChip({ label, active = false, onPress, accessibilityLabel 
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       accessibilityLabel={accessibilityLabel ?? label}
-      hitSlop={4}
+      hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
       style={({ pressed }) => [
         styles.chip,
         active && styles.chipActive,

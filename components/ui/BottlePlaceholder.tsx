@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import { colors } from '../../theme/colors';
+import { colors, withAlpha } from '../../theme/colors';
 
 type Props = {
   width?: number;
@@ -18,8 +18,8 @@ export function BottlePlaceholder({
 }: Props) {
   const strokeCol = accent ? colors.accent : colors.textMuted;
   const tintCol = accent
-    ? `rgba(139,58,58,${tintOpacity})`
-    : `rgba(237,230,218,${tintOpacity * 0.4})`;
+    ? withAlpha(colors.accent, tintOpacity)
+    : withAlpha(colors.text, tintOpacity * 0.4);
   const capWidth = width * 0.23;
   const capHeight = height * 0.12;
   const neckWidth = width * 0.17;

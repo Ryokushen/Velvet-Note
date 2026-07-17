@@ -1,5 +1,5 @@
 import { Pressable, Text, StyleSheet, ActivityIndicator, PressableProps, StyleProp, ViewStyle } from 'react-native';
-import { colors } from '../../theme/colors';
+import { colors, withAlpha } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { radius } from '../../theme/spacing';
 
@@ -13,6 +13,9 @@ type Props = {
 export function PrimaryButton({ children, loading, style, disabled, ...rest }: Props) {
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={children}
+      accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
       {...rest}
       disabled={disabled || loading}
       style={({ pressed }) => [
@@ -35,6 +38,9 @@ export function PrimaryButton({ children, loading, style, disabled, ...rest }: P
 export function GhostButton({ children, loading, danger, style, disabled, ...rest }: Props) {
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={children}
+      accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
       {...rest}
       disabled={disabled || loading}
       style={({ pressed }) => [
@@ -43,6 +49,7 @@ export function GhostButton({ children, loading, danger, style, disabled, ...res
         { borderColor: danger ? colors.error : colors.border },
         (disabled || loading) && { opacity: 0.6 },
         pressed && { opacity: 0.85 },
+        pressed && danger && { backgroundColor: withAlpha(colors.error, 0.08) },
         style,
       ]}
     >

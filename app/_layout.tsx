@@ -6,8 +6,17 @@ import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persi
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import {
+  useFonts,
+  Fraunces_400Regular,
+  Fraunces_400Regular_Italic,
+} from '@expo-google-fonts/fraunces';
+import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider, useAuth } from '../hooks/useAuth';
 import { colors } from '../theme/colors';
+import { useReducedMotion } from '../lib/motion';
+
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 const CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
 
@@ -65,6 +74,24 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Fraunces_400Regular,
+    Fraunces_400Regular_Italic,
+  });
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync().catch(() => undefined);
+    }
+  }, [fontsLoaded, fontError]);
+
+  // Hold the splash until the brand serif is ready; on a font error, render
+  // anyway (system serif fallback beats a hang).
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
   return (
     <PersistQueryClientProvider
       client={queryClient}
@@ -79,19 +106,28 @@ export default function RootLayout() {
                 headerStyle: { backgroundColor: colors.background },
                 headerTintColor: colors.text,
                 contentStyle: { backgroundColor: colors.background },
+                animation: reduceMotion ? 'none' : 'default',
               }}
             >
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen
                 name="fragrance/[id]"
-                options={fragranceScreenOptions}
+                options={
+                  reduceMotion
+                    ? { ...fragranceScreenOptions, animation: 'none' }
+                    : fragranceScreenOptions
+                }
               />
               <Stack.Screen name="scan" options={{ headerShown: false }} />
               <Stack.Screen name="barcode-review" options={{ headerShown: false }} />
               <Stack.Screen
                 name="wrapped"
-                options={{ headerShown: false, animation: 'fade', animationDuration: 220 }}
+                options={{
+                  headerShown: false,
+                  animation: reduceMotion ? 'none' : 'fade',
+                  animationDuration: 220,
+                }}
               />
             </Stack>
           </AuthGate>

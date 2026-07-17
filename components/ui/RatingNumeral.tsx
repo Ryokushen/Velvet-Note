@@ -9,7 +9,7 @@ type Props = {
   showLabel?: boolean;
 };
 
-// Giant Georgia numeral. Oxblood decimal. "/10" in textMuted.
+// Giant serif numeral. Oxblood decimal. "/10" in textMuted.
 // This is the hero on the detail screen — type doing all the work.
 export function RatingNumeral({ value, size = 108, showLabel = true }: Props) {
   if (value == null) {
@@ -52,18 +52,15 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-end' },
   numeral: {
     fontFamily: typography.serif,
-    fontWeight: '400',
     color: colors.text,
     letterSpacing: -2,
   },
   fraction: {
     fontFamily: typography.serif,
-    fontWeight: '400',
     marginLeft: 2,
   },
   suffix: {
     fontFamily: typography.serif,
-    fontWeight: '400',
     marginLeft: 10,
     letterSpacing: 2,
   },

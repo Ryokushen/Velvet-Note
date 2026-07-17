@@ -1,6 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
+import { radius } from '../../theme/spacing';
 import { FAMILY, familyFor, type Family } from '../../theme/families';
 import { IconX } from './Icon';
 import { formatAccordLabel } from '../../lib/accordDisplay';
@@ -21,6 +22,13 @@ export function Chip({ label, family, size = 'md', onRemove }: ChipProps) {
   return (
     <Wrapper
       onPress={onRemove}
+      {...(onRemove
+        ? {
+            accessibilityRole: 'button' as const,
+            accessibilityLabel: `Remove ${displayLabel}`,
+            hitSlop: 8,
+          }
+        : null)}
       style={[
         styles.base,
         size === 'sm' ? styles.sm : styles.md,
@@ -35,11 +43,13 @@ export function Chip({ label, family, size = 'md', onRemove }: ChipProps) {
 }
 
 const styles = StyleSheet.create({
+  // radius.sm keeps chips in the app's rectilinear language; fully-round
+  // pills read as generic-app skin against it.
   base: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 999,
+    borderRadius: radius.sm,
     gap: 6,
   },
   sm: { paddingVertical: 5, paddingHorizontal: 10 },

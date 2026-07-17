@@ -1,6 +1,6 @@
 import { Text, TextProps, TextStyle, StyleProp } from 'react-native';
 import { colors } from '../../theme/colors';
-import { typography } from '../../theme/typography';
+import { serifStyle, typography } from '../../theme/typography';
 
 export function Caption({
   children,
@@ -33,20 +33,7 @@ export function Serif({
           ? colors.textMuted
           : colors.text;
   return (
-    <Text
-      style={[
-        {
-          fontFamily: typography.serif,
-          fontWeight: '400',
-          fontSize: size,
-          letterSpacing: 0.2,
-          lineHeight: size * 1.15,
-          color,
-        },
-        style,
-      ]}
-      {...rest}
-    >
+    <Text style={[serifStyle(size), { color }, style]} {...rest}>
       {children}
     </Text>
   );

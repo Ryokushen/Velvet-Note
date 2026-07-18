@@ -1,0 +1,17 @@
+{
+  "note": "Original image_url values before the 2026-07-17 bottle-art processing pass. Processed transparent PNGs live in the public Supabase storage bucket 'bottle-art'. To revert a row: UPDATE fragrances SET image_url = <original> WHERE id = <id>.",
+  "bucket": "bottle-art",
+  "processed_url_pattern": "https://aekzcttzqfwlxbsueqrf.supabase.co/storage/v1/object/public/bottle-art/<slug>.png",
+  "originals": [
+    { "id": "ad427fbb-0ae0-49ab-8d44-df1032314033", "brand": "Aaron Terence Hughes", "name": "Haze (blue)", "slug": "haze-blue", "original_url": "https://fimgs.net/mdimg/perfume-thumbs/dark-375x500.83711.2x.avif" },
+    { "id": "a8d4d678-1afc-47a3-abd9-977f2f8b3a4b", "brand": "Aaron Terence Hughes", "name": "Legend", "slug": "legend", "original_url": "https://fimgs.net/mdimg/perfume-thumbs/dark-375x500.71181.2x.avif" },
+    { "id": "0241c53a-7702-4344-8275-919cec8a15bf", "brand": "Aaron Terence Hughes", "name": "Tabac Tobacco, Oud & Vanilla", "slug": "tabac", "original_url": "https://fimgs.net/mdimg/perfume-thumbs/dark-375x500.113829.2x.avif" },
+    { "id": "2fb0039c-6f19-4e62-bedd-7b4e6876f0c3", "brand": "Creed", "name": "Aventus 10th Anniversary", "slug": "aventus10", "original_url": "https://fimgs.net/mdimg/perfume-thumbs/dark-375x500.62845.2x.avif" },
+    { "id": "0023803a-7eb9-4715-8dde-522b22c57b77", "brand": "Creed", "name": "Green Irish Tweed", "slug": "git", "original_url": "https://fimgs.net/mdimg/perfume-thumbs/dark-375x500.474.2x.avif" },
+    { "id": "6e80e6b2-1150-4ea9-b9ed-14d0671fc35d", "brand": "Dolce & Gabbana", "name": "Light Blue Forever", "slug": "light-blue-forever", "original_url": "https://fimgs.net/mdimg/perfume-thumbs/dark-375x500.66556.2x.avif" },
+    { "id": "f9e2f1e8-8f3d-4bc2-a212-1ab6e4b97a08", "brand": "Parfums de Marly", "name": "Herod", "slug": "herod", "original_url": "https://fimgs.net/mdimg/perfume-thumbs/dark-375x500.16939.2x.avif" },
+    { "id": "14121031-9eae-4467-9ee8-64be2a9ff27d", "brand": "Rasasi", "name": "Hawas for Him", "slug": "hawas", "original_url": "https://fimgs.net/mdimg/perfume-thumbs/dark-375x500.46890.2x.avif" },
+    { "id": "2a3ccfe7-03b2-4276-835f-4b93c1aebac4", "brand": "Simone Andreoli", "name": "Malibù - Party in the Bay", "slug": "malibu", "original_url": "https://fimgs.net/mdimg/perfume-thumbs/dark-375x500.49244.2x.avif" },
+    { "id": "d1d4bf2e-7d72-474c-b987-90392f6f97a3", "brand": "XerJoff", "name": "Casamorati - Mefisto", "slug": "mefisto", "original_url": "https://fimgs.net/mdimg/perfume-thumbs/dark-375x500.6310.2x.avif" }
+  ]
+}

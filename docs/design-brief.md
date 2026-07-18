@@ -37,7 +37,7 @@ One accent. Do not introduce a second brand color in Phase 1 without explicit sc
 
 ### Typography
 
-- **Display / Title:** Georgia, weight 400, letter-spacing 0.2. Editorial, not decorative.
+- **Display / Title:** Georgia, weight 400, letter-spacing 0.2. Editorial, not decorative. *(Superseded 2026-07-17: the shipped serif is bundled Fraunces 400 + italic via `@expo-google-fonts/fraunces`; Georgia only ever rendered on iOS.)*
 - **Body:** system sans, weight 400. No custom font files in Phase 1.
 - **Caption:** 12px, uppercase, letter-spacing 0.5 — use for labels, brand-above-name, metadata.
 - Custom-font swap is allowed only if it clearly elevates the collector feel. Defer to Phase 4.
@@ -86,7 +86,7 @@ Skip: barcode flow, shared catalog browsing, settings, paywall. Phase 2+.
 - **Premium, not ornate.** Every flourish is suspect. Restraint is the aesthetic.
 - **Phone-first composition.** Design at iPhone 15 Pro width (393pt). Test that a 2-thumb reach covers the primary actions.
 - **Dark only for now.** A light theme is a Phase 4 discussion.
-- **No custom fonts yet.** Georgia is the placeholder serif. If mockups demand a specific serif (Canela, GT Sectra, Tiempos, etc.), mark it as a Phase 4 change, not a blocker.
+- **No custom fonts yet.** Georgia is the placeholder serif. If mockups demand a specific serif (Canela, GT Sectra, Tiempos, etc.), mark it as a Phase 4 change, not a blocker. *(Resolved 2026-07-17: Fraunces is the bundled brand serif.)*
 - **No brand logos in-app.** Brand is typeset, not imaged. Avoids licensing and keeps the aesthetic consistent.
 - **Accessibility:** contrast ratio ≥ 4.5:1 for body text on `background`. Check `textDim` / `textMuted` before using them on anything important.
 

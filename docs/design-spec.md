@@ -66,7 +66,7 @@ Key decisions made during brainstorming:
 
 ### Distribution
 
-- **Dev:** Expo Go on my phone, Metro bundler on my dev machine
+- **Dev:** Expo Go on my phone, Metro bundler on my dev machine *(superseded 2026-07-17: the project prebuilds a native `android/` dir — dev loop is `expo run:android`, and sideload builds come from local Gradle release builds; see README)*
 - **Phase 1:** personal only, no store distribution
 - **Phase 4 (optional):** Expo EAS Build → TestFlight + Play internal testing → App Store submission
 

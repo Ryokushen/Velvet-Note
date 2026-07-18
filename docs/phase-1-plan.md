@@ -24,6 +24,7 @@ Index: [[Fragrance App Index]]
 > - **Auth is now a Provider, not a bare hook.** `hooks/useAuth.ts` exports `AuthProvider` + `useAuth` so the session has a single subscription shared across the tree. Wrap `app/_layout.tsx` in `<AuthProvider>` before consumers.
 > - **`RatingSlider` (Task 18) was replaced with `RatingDots` (10-dot tap input).** `components/RatingSlider.tsx` has been deleted; `@react-native-community/slider` is no longer in use but remains installed.
 > - **`react-native-svg` was installed but ultimately unused.** Icons render via `@expo/vector-icons` Feather (Lucide's predecessor); the bottle placeholder is plain Views. If you remove `react-native-svg` from `package.json`, use `--legacy-peer-deps`.
+> - **(2026-07-17) Georgia was replaced by bundled Fraunces.** Any `fontFamily: 'Georgia'` in this plan is historical — the serif is now `Fraunces_400Regular` (+ italic) loaded via `@expo-google-fonts/fraunces` in `app/_layout.tsx`, with all serif sizing routed through `theme/typography.ts` (`serifStyle()`). Never pair `fontWeight` with the custom serif (Android face-fallback). The Expo-template light-theme cluster (`themed-text`, `constants/theme.ts`, etc.) was deleted in the same pass.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 

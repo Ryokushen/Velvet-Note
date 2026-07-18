@@ -12,11 +12,11 @@ Some internal package/file names still use `fragrance-app`; the product name in 
    ```
 2. Copy `.env.example` to `.env.local` and fill in your Supabase URL and anon key.
 3. Apply database migrations in `supabase/migrations/` via the Supabase SQL editor or `psql`.
-4. Start the bundler:
+4. Start the dev client:
    ```bash
-   npx expo start
+   npm run android   # expo run:android — generates android/ on first run
    ```
-5. Scan the QR code with Expo Go.
+   or just the bundler (`npx expo start`) if a dev build is already installed.
 
 For web:
 ```bash
@@ -28,17 +28,22 @@ If the default port is busy:
 npm run web -- --port 8082
 ```
 
-Apple / Google sign-in are deferred to Phase 4. When they land, they will require a dev build:
+## Local Android release build
+
+The native project is generated with `npx expo prebuild -p android` (the `android/` directory is not checked in). A sideloadable release APK:
+
 ```bash
-npx expo prebuild
-npx expo run:ios   # or run:android
+npx expo prebuild -p android --no-install
+cd android
+./gradlew app:assembleRelease -PreactNativeArchitectures=arm64-v8a
+adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-## Android preview build
+> Windows note: reanimated/worklets C++ builds re-root the full source path inside `.cxx` and blow the 260-char `MAX_PATH` from deep directories (the SDK's bundled ninja ignores `LongPathsEnabled`). Build from a short path (e.g. `B:\vn`) and regenerate `android/` there — a copied `android/` dir carries stale absolute paths in its autolinking config.
+
+## EAS preview build
 
 The project is linked to EAS under `@ryokushen/fragrance-app`.
-
-Build an installable Android preview APK:
 
 ```bash
 npx eas-cli@latest build --platform android --profile preview
@@ -52,6 +57,8 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY
 ```
 
 The Android application id is `com.charlesdorfeuille.velvetnote`. The preview profile outputs an APK for direct install on Android devices.
+
+Apple / Google sign-in remain deferred to Phase 4.
 
 ## Test
 
@@ -77,6 +84,10 @@ Shipped:
 - Barcode scanner flow with exact lookup, unknown-link submissions, admin review, and barcode import tooling
 - Query cache persistence via AsyncStorage (instant shelf on cold start; full offline is Phase 3)
 - Haptic feedback on logging, filters, and key actions
+- Bundled Fraunces brand serif (dark-only UI locked via `userInterfaceStyle`), shared motion contract (`lib/motion.ts`) with reduced-motion support, and an accessibility baseline (roles/labels/44pt targets) from the 2026-07-17 app-wide UI/UX pass
+- Trigram-indexed catalog search (~50ms over 59k rows) with paged results ("showing X of Y"); searchable, recency-ordered bottle picker in the Wears day sheet
+- Transparent bottle art: all shelf imagery is background-cut PNGs in the `bottle-art` Supabase bucket; `scripts/process-new-bottle-art.py` (run nightly on the maintainer's machine) auto-processes newly added bottles, `scripts/cut-bottle-art.py` handles one-offs, and `docs/bottle-art-originals.json` records originals for revert
+- Canonical wear-date-key helpers in `lib/dateKey.ts` (local timezone enters only at "today"; DST-proof day arithmetic)
 
 Deferred to Phase 2:
 - Live barcode scan/review smoke pass
@@ -96,6 +107,6 @@ npm run import:barcodes -- path/to/barcode-linkages.csv
 
 Milestones:
 - `phase-1` tag: Phase 1 email/password collection MVP
-- `main`: Phase 1.5 Wears foundation plus Phase 2 shared catalog, imagery, barcode lookup, barcode review, personal journal foundation, Android preview build setup, and the wear-intelligence slice (suggestions, economics, wishlist, grid, heatmap, Year in Review)
+- `main`: Phase 1.5 Wears foundation plus Phase 2 shared catalog, imagery, barcode lookup, barcode review, personal journal foundation, Android preview build setup, the wear-intelligence slice (suggestions, economics, wishlist, grid, heatmap, Year in Review), and the 2026-07-17 polish pass (bundled Fraunces serif, motion/haptics/accessibility baseline, flow-trap fixes, fast paged catalog search, transparent bottle-art pipeline)
 
 See `docs/design-spec.md`, `docs/phase-1-plan.md`, `docs/phase-1.5-status.md`, `docs/parfumo-catalog-import.md`, `docs/catalog-barcode-import.md`, and `docs/barcode-live-smoke-test.md` for the full spec, roadmap, and catalog/barcode notes.

@@ -72,6 +72,7 @@ export default function CalendarScreen() {
   const [wearOccasion, setWearOccasion] = useState('');
   const [complimentCount, setComplimentCount] = useState(0);
   const [complimentNote, setComplimentNote] = useState('');
+  const [bottleQuery, setBottleQuery] = useState('');
 
   const fragranceById = useMemo(() => {
     const map = new Map<string, Fragrance>();
@@ -80,6 +81,19 @@ export default function CalendarScreen() {
     });
     return map;
   }, [fragrances.data]);
+
+  // Latest worn_on per fragrance across all wears — drives the picker's
+  // most-recently-worn-first ordering so the likely pick sits at the top.
+  const lastWornByFragrance = useMemo(() => {
+    const map = new Map<string, string>();
+    (wears.data ?? []).forEach((wear) => {
+      const prev = map.get(wear.fragrance_id);
+      if (!prev || wear.worn_on > prev) {
+        map.set(wear.fragrance_id, wear.worn_on);
+      }
+    });
+    return map;
+  }, [wears.data]);
 
   const monthWears = useMemo(
     () => (wears.data ?? []).filter((wear) => isSameMonth(parseWearDate(wear.worn_on), visibleMonth)),
@@ -144,6 +158,7 @@ export default function CalendarScreen() {
     setWearOccasion('');
     setComplimentCount(0);
     setComplimentNote('');
+    setBottleQuery('');
   }
 
   function startAddWear() {
@@ -156,6 +171,7 @@ export default function CalendarScreen() {
     setWearOccasion('');
     setComplimentCount(0);
     setComplimentNote('');
+    setBottleQuery('');
     setLoggingDay(true);
   }
 
@@ -169,6 +185,7 @@ export default function CalendarScreen() {
     setWearOccasion(wear.occasion ?? '');
     setComplimentCount(wear.compliment_count ?? 0);
     setComplimentNote(wear.compliment_note ?? '');
+    setBottleQuery('');
     setLoggingDay(true);
   }
 
@@ -247,7 +264,7 @@ export default function CalendarScreen() {
           hint={error instanceof Error ? error.message : 'Unknown error'}
         />
       ) : (
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <View style={styles.titleBlock}>
             <View style={styles.monthRow}>
               <Pressable onPress={() => changePeriod(-1)} style={styles.monthButton} hitSlop={8}>
@@ -368,9 +385,12 @@ export default function CalendarScreen() {
                   wears={selectedWears}
                   fragrances={fragrances.data ?? []}
                   fragranceById={fragranceById}
+                  lastWornByFragrance={lastWornByFragrance}
                   logging={loggingDay}
                   editing={Boolean(editingWearId)}
                   selectedFragranceId={selectedFragranceId}
+                  bottleQuery={bottleQuery}
+                  onChangeBottleQuery={setBottleQuery}
                   notes={wearNotes}
                   season={wearSeason}
                   timeOfDay={wearTimeOfDay}
@@ -464,9 +484,12 @@ function DayDetail({
   wears,
   fragrances,
   fragranceById,
+  lastWornByFragrance,
   logging,
   editing,
   selectedFragranceId,
+  bottleQuery,
+  onChangeBottleQuery,
   notes,
   season,
   timeOfDay,
@@ -496,9 +519,12 @@ function DayDetail({
   wears: Wear[];
   fragrances: Fragrance[];
   fragranceById: Map<string, Fragrance>;
+  lastWornByFragrance: Map<string, string>;
   logging: boolean;
   editing: boolean;
   selectedFragranceId: string;
+  bottleQuery: string;
+  onChangeBottleQuery: (query: string) => void;
   notes: string;
   season: Season | null;
   timeOfDay: WearTimeOfDay | null;
@@ -524,6 +550,28 @@ function DayDetail({
   onConfirmDeleteWear: (wear: Wear) => void;
   onOpenFragrance: (fragranceId: string) => void;
 }) {
+  // Most-recently-worn bottles first (latest worn_on desc), then never-worn
+  // bottles alphabetically — the likely pick lands at the top of the picker.
+  const orderedFragrances = useMemo(() => {
+    return [...fragrances].sort((a, b) => {
+      const lastA = lastWornByFragrance.get(a.id);
+      const lastB = lastWornByFragrance.get(b.id);
+      if (lastA && lastB) return lastB.localeCompare(lastA);
+      if (lastA) return -1;
+      if (lastB) return 1;
+      const byBrand = a.brand.localeCompare(b.brand);
+      return byBrand !== 0 ? byBrand : a.name.localeCompare(b.name);
+    });
+  }, [fragrances, lastWornByFragrance]);
+
+  const filteredFragrances = useMemo(() => {
+    const query = bottleQuery.trim().toLowerCase();
+    if (!query) return orderedFragrances;
+    return orderedFragrances.filter((fragrance) =>
+      `${fragrance.brand} ${fragrance.name}`.toLowerCase().includes(query),
+    );
+  }, [orderedFragrances, bottleQuery]);
+
   return (
     <View style={styles.daySheet}>
       <View style={styles.daySheetHeader}>
@@ -632,24 +680,39 @@ function DayDetail({
       {logging ? (
         <View style={styles.dayEntry}>
           <Caption style={{ marginBottom: 10 }}>{editing ? 'Edit wear' : 'Choose bottle'}</Caption>
-          <View style={styles.dayEntryBottleList}>
-            {fragrances.map((fragrance) => {
-              const selected = fragrance.id === selectedFragranceId;
-              return (
-                <Pressable
-                  key={fragrance.id}
-                  onPress={() => onSelectFragrance(fragrance.id)}
-                  style={[
-                    styles.dayEntryBottle,
-                    selected && styles.dayEntryBottleSelected,
-                  ]}
-                >
-                  <Caption style={{ marginBottom: 3 }}>{fragrance.brand}</Caption>
-                  <Text style={styles.dayEntryBottleName}>{fragrance.name}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <TextInput
+            value={bottleQuery}
+            onChangeText={onChangeBottleQuery}
+            placeholder="Search your shelf"
+            placeholderTextColor={colors.textMuted}
+            accessibilityLabel="Search your shelf"
+            autoCorrect={false}
+            style={styles.dayEntryBottleSearch}
+          />
+          {filteredFragrances.length > 0 ? (
+            <View style={styles.dayEntryBottleList}>
+              {filteredFragrances.map((fragrance) => {
+                const selected = fragrance.id === selectedFragranceId;
+                return (
+                  <Pressable
+                    key={fragrance.id}
+                    onPress={() => onSelectFragrance(fragrance.id)}
+                    style={[
+                      styles.dayEntryBottle,
+                      selected && styles.dayEntryBottleSelected,
+                    ]}
+                  >
+                    <Caption style={{ marginBottom: 3 }}>{fragrance.brand}</Caption>
+                    <Text testID="bottle-option" style={styles.dayEntryBottleName}>
+                      {fragrance.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : (
+            <Text style={styles.dayEntryBottleEmpty}>— Nothing on your shelf matches</Text>
+          )}
           <TextInput
             value={notes}
             onChangeText={onChangeNotes}
@@ -1254,8 +1317,24 @@ const styles = StyleSheet.create({
     borderTopColor: colors.borderSoft,
     paddingTop: 16,
   },
+  dayEntryBottleSearch: {
+    height: 44,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    fontSize: 15,
+    color: colors.text,
+  },
   dayEntryBottleList: {
     gap: 8,
+  },
+  dayEntryBottleEmpty: {
+    ...typography.caption,
+    color: colors.textMuted,
+    paddingVertical: 8,
   },
   dayEntryBottle: {
     borderWidth: 1,

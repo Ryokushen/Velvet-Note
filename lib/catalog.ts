@@ -67,6 +67,10 @@ type CatalogRow = {
   source: string;
 };
 
+type CatalogPageRow = CatalogRow & {
+  total_count: number | string | null;
+};
+
 type CatalogBarcodeSubmissionRow = {
   id: string;
   barcode: string;
@@ -143,6 +147,35 @@ export async function searchSupabaseCatalog(
   }
 
   return ((data ?? []) as CatalogRow[]).map(mapCatalogRow);
+}
+
+export async function searchSupabaseCatalogPage(
+  query: string,
+  opts?: { limit?: number; offset?: number },
+): Promise<{ items: CatalogFragrance[]; totalCount: number }> {
+  const q = query.trim().toLowerCase();
+  if (q.length < 2) {
+    return { items: [], totalCount: 0 };
+  }
+
+  const limit = opts?.limit ?? 25;
+  const offset = opts?.offset ?? 0;
+
+  const { data, error } = await supabase.rpc('search_catalog_fragrances_v2', {
+    search_text: q,
+    match_limit: limit,
+    match_offset: offset,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as CatalogPageRow[];
+  const items = rows.map(mapCatalogRow);
+  const totalCount = rows.length > 0 ? normalizeNumber(rows[0].total_count) ?? items.length : 0;
+
+  return { items, totalCount };
 }
 
 export async function findSupabaseCatalogByBarcode(

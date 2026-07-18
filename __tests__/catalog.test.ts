@@ -7,6 +7,7 @@ import {
   rejectCatalogBarcodeSubmission,
   searchCatalog,
   searchSupabaseCatalog,
+  searchSupabaseCatalogPage,
   submitCatalogBarcodeSubmission,
 } from '../lib/catalog';
 
@@ -110,6 +111,64 @@ describe('catalog', () => {
     await expect(searchSupabaseCatalog('c')).resolves.toEqual([]);
 
     expect(supabase.from).not.toHaveBeenCalled();
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it('pages the catalog through the v2 RPC and surfaces the total count', async () => {
+    supabase.rpc.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'catalog-1',
+          brand: 'Serge Lutens',
+          name: 'Chergui',
+          concentration: 'EDP',
+          accords: ['Sweet'],
+          notes_top: ['Tobacco Leaf'],
+          notes_middle: ['Honey'],
+          notes_base: ['Amber'],
+          release_year: 2001,
+          perfumers: ['Christopher Sheldrake'],
+          rating_value: 7.8,
+          rating_count: 1242,
+          image_url: 'https://images.example/chergui.jpg',
+          source: 'parfumo',
+          total_count: 132,
+        },
+      ],
+      error: null,
+    });
+
+    const page = await searchSupabaseCatalogPage('chergui', { limit: 25, offset: 25 });
+
+    expect(supabase.rpc).toHaveBeenCalledWith('search_catalog_fragrances_v2', {
+      search_text: 'chergui',
+      match_limit: 25,
+      match_offset: 25,
+    });
+    expect(page.totalCount).toBe(132);
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]).toMatchObject({ id: 'catalog-1', name: 'Chergui' });
+  });
+
+  it('defaults the catalog page to 25 rows from offset 0', async () => {
+    supabase.rpc.mockResolvedValueOnce({ data: [], error: null });
+
+    const page = await searchSupabaseCatalogPage('chergui');
+
+    expect(supabase.rpc).toHaveBeenCalledWith('search_catalog_fragrances_v2', {
+      search_text: 'chergui',
+      match_limit: 25,
+      match_offset: 0,
+    });
+    expect(page).toEqual({ items: [], totalCount: 0 });
+  });
+
+  it('does not page Supabase for very short catalog searches', async () => {
+    await expect(searchSupabaseCatalogPage('c')).resolves.toEqual({
+      items: [],
+      totalCount: 0,
+    });
+
     expect(supabase.rpc).not.toHaveBeenCalled();
   });
 

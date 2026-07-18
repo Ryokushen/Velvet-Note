@@ -17,7 +17,7 @@ import { useCreateFragrance, useFragrancesQuery } from '../../hooks/useFragrance
 import {
   findSupabaseCatalogByBarcode,
   notesToAccords,
-  searchSupabaseCatalog,
+  searchSupabaseCatalogPage,
   type CatalogFragrance,
 } from '../../lib/catalog';
 import { notifySuccess, notifyWarning, tapLight } from '../../lib/haptics';
@@ -51,6 +51,8 @@ import { formatAccordList } from '../../lib/accordDisplay';
 
 type SearchStatus = 'idle' | 'searching' | 'done' | 'error';
 
+const CATALOG_PAGE_SIZE = 25;
+
 type FieldErrors = {
   brand?: string;
   name?: string;
@@ -83,6 +85,8 @@ export default function Add() {
   const [catalogQuery, setCatalogQuery] = useState('');
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogFragrance | null>(null);
   const [catalogResults, setCatalogResults] = useState<CatalogFragrance[]>([]);
+  const [catalogTotal, setCatalogTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchStatus, setSearchStatus] = useState<SearchStatus>('idle');
   const [searchNonce, setSearchNonce] = useState(0);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -101,22 +105,29 @@ export default function Add() {
     const query = catalogQuery.trim();
     if (query.length < 2) {
       setCatalogResults([]);
+      setCatalogTotal(0);
+      setLoadingMore(false);
       setSearchStatus('idle');
       return undefined;
     }
 
     setSearchStatus('searching');
     const handle = setTimeout(() => {
-      searchSupabaseCatalog(query, 20)
-        .then((results) => {
+      searchSupabaseCatalogPage(query, { limit: CATALOG_PAGE_SIZE, offset: 0 })
+        .then(({ items, totalCount }) => {
           if (!cancelled) {
-            setCatalogResults(results);
+            // New query resets to page 0 and replaces prior results.
+            setCatalogResults(items);
+            setCatalogTotal(totalCount);
+            setLoadingMore(false);
             setSearchStatus('done');
           }
         })
         .catch(() => {
           if (!cancelled) {
             setCatalogResults([]);
+            setCatalogTotal(0);
+            setLoadingMore(false);
             setSearchStatus('error');
           }
         });
@@ -158,9 +169,41 @@ export default function Add() {
     setPhotoUrl('');
     setCatalogQuery('');
     setCatalogResults([]);
+    setCatalogTotal(0);
+    setLoadingMore(false);
     setSearchStatus('idle');
     clearError('brand');
     clearError('name');
+  }
+
+  async function loadMoreCatalog() {
+    if (loadingMore || searchStatus !== 'done') {
+      return;
+    }
+    const query = catalogQuery.trim();
+    if (query.length < 2 || catalogResults.length >= catalogTotal) {
+      return;
+    }
+
+    tapLight();
+    setLoadingMore(true);
+    try {
+      const { items, totalCount } = await searchSupabaseCatalogPage(query, {
+        limit: CATALOG_PAGE_SIZE,
+        offset: catalogResults.length,
+      });
+      // Append de-duped by id; server ordering is deterministic but be safe.
+      setCatalogResults((current) => {
+        const seen = new Set(current.map((entry) => entry.id));
+        const next = items.filter((entry) => !seen.has(entry.id));
+        return next.length > 0 ? [...current, ...next] : current;
+      });
+      setCatalogTotal(totalCount);
+    } catch {
+      // Leave existing results in place; a stalled page keeps the shelf usable.
+    } finally {
+      setLoadingMore(false);
+    }
   }
 
   function clearError(key: keyof FieldErrors) {
@@ -388,6 +431,23 @@ export default function Add() {
                   </Pressable>
                 ))}
               </View>
+            ) : null}
+            {catalogResults.length > 0 && catalogResults.length < catalogTotal ? (
+              <Pressable
+                onPress={loadMoreCatalog}
+                disabled={loadingMore}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: loadingMore, busy: loadingMore }}
+                hitSlop={8}
+                style={styles.loadMoreRow}
+              >
+                <Text style={styles.loadMoreText}>
+                  {`— More results · showing ${catalogResults.length} of ${catalogTotal}`}
+                </Text>
+                {loadingMore ? (
+                  <ActivityIndicator size="small" color={colors.textDim} />
+                ) : null}
+              </Pressable>
             ) : null}
             {selectedCatalog ? (
               <View style={styles.selectedCatalog}>
@@ -796,6 +856,17 @@ const styles = StyleSheet.create({
   catalogResultsContent: {
     marginTop: 10,
     gap: 8,
+  },
+  loadMoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 44,
+    marginTop: 10,
+  },
+  loadMoreText: {
+    ...typography.caption,
+    color: colors.textDim,
   },
   catalogResult: {
     flexDirection: 'row',

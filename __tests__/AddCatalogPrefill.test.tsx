@@ -1,6 +1,6 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import Add from '../app/(tabs)/add';
-import { searchSupabaseCatalog } from '../lib/catalog';
+import { searchSupabaseCatalogPage } from '../lib/catalog';
 
 const mockMutateAsync = jest.fn();
 const mockReplace = jest.fn();
@@ -31,7 +31,7 @@ jest.mock('../hooks/useFragrances', () => ({
 jest.mock('../lib/catalog', () => ({
   findSupabaseCatalogByBarcode: jest.fn(),
   notesToAccords: (notes: string[]) => notes.map((note) => note.trim().toLowerCase()).filter(Boolean),
-  searchSupabaseCatalog: jest.fn(),
+  searchSupabaseCatalogPage: jest.fn(),
 }));
 
 describe('Add catalog prefill', () => {
@@ -39,26 +39,29 @@ describe('Add catalog prefill', () => {
     mockMutateAsync.mockReset();
     mockMutateAsync.mockResolvedValue({});
     mockReplace.mockReset();
-    (searchSupabaseCatalog as jest.Mock).mockReset();
-    (searchSupabaseCatalog as jest.Mock).mockResolvedValue([
-      {
-        id: 'catalog-1',
-        brand: 'Serge Lutens',
-        name: 'Chergui',
-        concentration: 'EDP',
-        description: '',
-        notes: ['Sweet', 'Spicy', 'Tobacco Leaf'],
-        notesTop: ['Tobacco Leaf'],
-        notesMiddle: ['Honey'],
-        notesBase: ['Amber'],
-        releaseYear: 2001,
-        perfumers: ['Christopher Sheldrake'],
-        ratingValue: 7.8,
-        ratingCount: 1242,
-        imageUrl: null,
-        source: 'parfumo_tidytuesday_2024_12_10',
-      },
-    ]);
+    (searchSupabaseCatalogPage as jest.Mock).mockReset();
+    (searchSupabaseCatalogPage as jest.Mock).mockResolvedValue({
+      items: [
+        {
+          id: 'catalog-1',
+          brand: 'Serge Lutens',
+          name: 'Chergui',
+          concentration: 'EDP',
+          description: '',
+          notes: ['Sweet', 'Spicy', 'Tobacco Leaf'],
+          notesTop: ['Tobacco Leaf'],
+          notesMiddle: ['Honey'],
+          notesBase: ['Amber'],
+          releaseYear: 2001,
+          perfumers: ['Christopher Sheldrake'],
+          ratingValue: 7.8,
+          ratingCount: 1242,
+          imageUrl: null,
+          source: 'parfumo_tidytuesday_2024_12_10',
+        },
+      ],
+      totalCount: 1,
+    });
   });
 
   it('prefills the add form from a Supabase catalog result before saving', async () => {
@@ -67,7 +70,7 @@ describe('Add catalog prefill', () => {
     fireEvent.changeText(getByPlaceholderText('Search catalog by bottle, brand, or note'), 'chergui');
 
     await waitFor(() => {
-      expect(searchSupabaseCatalog).toHaveBeenCalledWith('chergui', 20);
+      expect(searchSupabaseCatalogPage).toHaveBeenCalledWith('chergui', { limit: 25, offset: 0 });
       expect(getByText('Chergui')).toBeTruthy();
       expect(getByText('2001 · Christopher Sheldrake')).toBeTruthy();
     });

@@ -8,4 +8,7 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg))',
   ],
+  // Git worktrees live under .claude/worktrees inside this checkout; without
+  // this, jest discovers their duplicate suites and reports phantom failures.
+  testPathIgnorePatterns: ['/node_modules/', '/.claude/', '\\\\.claude\\\\'],
 };

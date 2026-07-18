@@ -1,5 +1,5 @@
 {
-  "note": "Original image_url values before the 2026-07-17 bottle-art processing pass. Processed transparent PNGs live in the public Supabase storage bucket 'bottle-art'. To revert a row: UPDATE fragrances SET image_url = <original> WHERE id = <id>.",
+  "note": "Original image_url values before the 2026-07-17 bottle-art processing pass. Processed transparent PNGs live in the public Supabase storage bucket 'bottle-art'. To revert a batch-1 row: UPDATE fragrances SET image_url = <original> WHERE id = <id>. Batch 2 (2026-07-17, 20 rows / 19 files) processed the CATALOG-sourced images: those rows previously had image_url = NULL and inherited catalog_fragrances imagery via the list_fragrances_with_catalog_images RPC coalesce; the catalog rows are untouched, so reverting batch 2 is simply UPDATE fragrances SET image_url = NULL for those ids. Batch-2 files are named <catalog-image-uuid>.png in the same bucket.",
   "bucket": "bottle-art",
   "processed_url_pattern": "https://aekzcttzqfwlxbsueqrf.supabase.co/storage/v1/object/public/bottle-art/<slug>.png",
   "originals": [

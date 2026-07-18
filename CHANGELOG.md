@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-07-17 - Quiet loading state for bottle art
+
+### Summary
+
+While a bottle image downloaded, `BottleArt` rendered an empty frame that read as a broken image (the source of a false alarm during the bottle-art migration). The frame now shows the existing bottle placeholder underneath until the image loads, fades it out on load, and keeps it if the load fails. No spinners.
+
+### Shipped
+
+- `BottleArt` renders the `BottlePlaceholder` (low tint) beneath the image whenever a URL is present but not yet loaded; on `onLoad` it fades out with the shared motion contract (`durations.base` + `easeOut`, skipped under reduced motion), and on `onError` the placeholder stays so a broken URL reads as "no art yet" rather than a blank frame.
+- The image fade-in transition uses `durations.fast` from the motion contract (0 under reduced motion) instead of a hardcoded 120ms, and the loading state resets when the source URL changes.
+
+### Verification
+
+- `npx tsc --noEmit` (0 errors)
+- `npx expo lint` (0 errors, 1 pre-existing warning)
+- `npm test` (51 suites, 271 tests — includes new coverage for placeholder-under-loading, fade-out on load, retention on error, and the no-URL state)
+
 ## 2026-07-17 - App-wide UI/UX pass: brand serif, flow fixes, motion, accessibility
 
 ### Summary

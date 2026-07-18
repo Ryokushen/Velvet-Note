@@ -56,10 +56,9 @@ jest.mock('../hooks/useWears', () => ({
   }),
   useWearsQuery: () => {
     const now = new Date();
-    const currentWearDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-      2,
-      '0',
-    )}-16`;
+    const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const currentWearDate = `${monthPrefix}-16`;
+    const laterWearDate = `${monthPrefix}-17`;
 
     return {
       data: [
@@ -80,6 +79,15 @@ jest.mock('../hooks/useWears', () => ({
           notes: 'Rainy commute',
           created_at: '2026-04-16T10:00:00Z',
           updated_at: '2026-04-16T10:00:00Z',
+        },
+        {
+          id: 'wear-3',
+          user_id: 'user-1',
+          fragrance_id: 'fragrance-3',
+          worn_on: laterWearDate,
+          notes: 'Warm evening',
+          created_at: '2026-04-17T18:00:00Z',
+          updated_at: '2026-04-17T18:00:00Z',
         },
       ],
       isLoading: false,
@@ -110,6 +118,28 @@ jest.mock('../hooks/useFragrances', () => ({
         concentration: 'EDT',
         accords: ['woody'],
         rating: 8,
+        created_at: '2026-04-01T00:00:00Z',
+        updated_at: '2026-04-01T00:00:00Z',
+      },
+      {
+        id: 'fragrance-3',
+        user_id: 'user-1',
+        brand: 'Creed',
+        name: 'Aventus',
+        concentration: 'EDP',
+        accords: ['fruity'],
+        rating: 9,
+        created_at: '2026-04-01T00:00:00Z',
+        updated_at: '2026-04-01T00:00:00Z',
+      },
+      {
+        id: 'fragrance-4',
+        user_id: 'user-1',
+        brand: 'Amouage',
+        name: 'Reflection',
+        concentration: 'EDP',
+        accords: ['floral'],
+        rating: 7,
         created_at: '2026-04-01T00:00:00Z',
         updated_at: '2026-04-01T00:00:00Z',
       },
@@ -262,5 +292,64 @@ describe('Calendar wear entry', () => {
     await waitFor(() => {
       expect(mockDeleteMutateAsync).toHaveBeenCalledWith('wear-1');
     });
+  });
+
+  it('narrows the bottle picker as you search your shelf', () => {
+    const { getByLabelText, getByText, queryByText } = render(<CalendarScreen />);
+
+    fireEvent.press(getByText('15'));
+    fireEvent.press(getByLabelText('Log wear for selected day'));
+
+    // Full shelf is visible before filtering.
+    expect(getByText('Shalimar')).toBeTruthy();
+    expect(getByText('Tam Dao')).toBeTruthy();
+
+    fireEvent.changeText(getByLabelText('Search your shelf'), 'tam');
+
+    expect(getByText('Tam Dao')).toBeTruthy();
+    expect(queryByText('Shalimar')).toBeNull();
+    expect(queryByText('Aventus')).toBeNull();
+    expect(queryByText('Reflection')).toBeNull();
+  });
+
+  it('shows a quiet caption when the search matches nothing', () => {
+    const { getByLabelText, getByText, queryAllByTestId } = render(<CalendarScreen />);
+
+    fireEvent.press(getByText('15'));
+    fireEvent.press(getByLabelText('Log wear for selected day'));
+    fireEvent.changeText(getByLabelText('Search your shelf'), 'zzz nothing');
+
+    expect(getByText('— Nothing on your shelf matches')).toBeTruthy();
+    expect(queryAllByTestId('bottle-option')).toHaveLength(0);
+  });
+
+  it('orders the picker by most-recently-worn, with unworn bottles last', () => {
+    const { getByLabelText, getByText, getAllByTestId } = render(<CalendarScreen />);
+
+    fireEvent.press(getByText('15'));
+    fireEvent.press(getByLabelText('Log wear for selected day'));
+
+    const names = getAllByTestId('bottle-option').map((node) => node.props.children);
+    // Aventus was worn on the 17th, outranking the 16th's wears; Reflection is unworn.
+    expect(names[0]).toBe('Aventus');
+    expect(names[names.length - 1]).toBe('Reflection');
+    expect(names.indexOf('Aventus')).toBeLessThan(names.indexOf('Shalimar'));
+    expect(names.indexOf('Aventus')).toBeLessThan(names.indexOf('Reflection'));
+  });
+
+  it('resets the search query when the picker is reopened', () => {
+    const { getByLabelText, getByText, queryByText } = render(<CalendarScreen />);
+
+    fireEvent.press(getByText('15'));
+    fireEvent.press(getByLabelText('Log wear for selected day'));
+    fireEvent.changeText(getByLabelText('Search your shelf'), 'tam');
+    expect(queryByText('Shalimar')).toBeNull();
+
+    // Close the picker, then reopen it — the query should be cleared.
+    fireEvent.press(getByText('Cancel'));
+    fireEvent.press(getByLabelText('Log wear for selected day'));
+
+    expect(getByLabelText('Search your shelf').props.value).toBe('');
+    expect(getByText('Shalimar')).toBeTruthy();
   });
 });

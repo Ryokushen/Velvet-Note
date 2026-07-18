@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-07-17 - Fast catalog search with paging, and a searchable wear picker
+
+### Summary
+
+Catalog search was a 3.4-second sequential scan over 59k rows with a hard 25-result cap, and the calendar's add-wear bottle picker was an unsearchable full-collection scroll. Search now answers in ~50ms from trigram indexes, the Add screen pages through the full match set, and the wear picker is searchable with the most-recently-worn bottles first.
+
+### Shipped
+
+- Database: `pg_trgm` indexes over precomputed `search_doc`/`notes_doc` columns (trigger-maintained); `search_catalog_fragrances` rewritten against them in place (existing builds get fast without an update); new `search_catalog_fragrances_v2` adds offset paging and a true `total_count`.
+- Add screen: results page 25 at a time with a quiet "— More results · showing X of Y" row (de-duped appends, inline spinner, haptic); debounce and the searching/empty/error states unchanged.
+- Calendar day sheet: the bottle picker gains a "Search your shelf" filter with a filtered-empty caption, and orders bottles most-recently-worn first (unworn last, alphabetical) so the likely pick needs no scrolling.
+
+### Verification
+
+- `npx tsc --noEmit` (0 errors)
+- `npx expo lint` (0 errors, 1 pre-existing warning)
+- `npm test` (52 suites, 281 tests — new coverage for paging math, de-dupe, query reset, picker filtering, recency ordering, and the v2 RPC call shape)
+- `EXPLAIN ANALYZE` on the search RPC: 3399ms → 52ms
+
 ## 2026-07-17 - Quiet loading state for bottle art
 
 ### Summary
